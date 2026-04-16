@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/icone kaayprint.png">
+    <title>KaayPrint - Connexion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: url('images/fond.png') center center / cover no-repeat fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 2px solid #43277d;
+            max-width: 400px;
+            width: 100%;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 10px;
+            margin-top: -10px;
+        }
+
+        .logo-container img {
+            max-width: 200px;
+            height: auto;
+        }
+
+        h1 {
+            color: #43277d;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #43277d;
+            box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #43277d 0%, #341d5f 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(135deg, #341d5f 0%, #2a1650 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 39, 125, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-container">
+            <img src="images/logo.png" alt="KaayPrint">
+        </div>
+        <h1>Connexion</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Login</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+                <div class="error-message" id="usernameError"></div>
+            </div>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+                <div class="error-message" id="passwordError"></div>
+            </div>
+            <div class="error-message" id="loginError"></div>
+            <button type="submit" class="login-btn" id="loginBtn">Se connecter</button>
+        </form>
+    </div>
+
+    <script>
+        // Identifiants autorisés
+        const VALID_CREDENTIALS = {
+            username: 'InOut',
+            password: 'InOut2#'
+        };
+
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+
+        // Vérifier si déjà connecté
+        if (sessionStorage.getItem('kaayprint_authenticated') === 'true') {
+            window.location.href = 'acceuil.html';
+        }
+
+        // Gestion de la soumission du formulaire
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            // Réinitialiser les erreurs
+            hideError('usernameError');
+            hideError('passwordError');
+            hideError('loginError');
+
+            // Validation
+            if (!username) {
+                showError('usernameError', 'Le login est requis');
+                usernameInput.focus();
+                return;
+            }
+
+            if (!password) {
+                showError('passwordError', 'Le mot de passe est requis');
+                passwordInput.focus();
+                return;
+            }
+
+            // Désactiver le bouton pendant la vérification
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Connexion...';
+
+            // Simuler une petite pause pour l'UX
+            setTimeout(() => {
+                // Vérifier les identifiants
+                if (username === VALID_CREDENTIALS.username && password === VALID_CREDENTIALS.password) {
+                    // Connexion réussie
+                    sessionStorage.setItem('kaayprint_authenticated', 'true');
+                    sessionStorage.setItem('kaayprint_username', username);
+                    
+                    // Rediriger vers l'application
+                    window.location.href = 'acceuil.html';
+                } else {
+                    // Identifiants incorrects
+                    showError('loginError', 'Login ou mot de passe incorrect');
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Se connecter';
+                }
+            }, 300);
+        });
+
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+
+        function hideError(elementId) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.classList.remove('show');
+            errorElement.textContent = '';
+        }
+
+        // Focus sur le champ username au chargement
+        usernameInput.focus();
+    </script>
+</body>
+</html>
+
