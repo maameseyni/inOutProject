@@ -388,11 +388,10 @@
                     <button type="button" class="btn btn-income" id="companyProfileSave">Enregistrer les coordonnées</button>
                 </div>
         <div class="company-profile-banner action-card clients-settings-card">
-                    <div class="clients-card-head">
-                        <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clients</h2>
+                    <h2 class="clients-card-title">
+                        <span class="clients-card-title-main"><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clients</span>
                         <button type="button" id="clientProfileReminderBadge" class="client-profile-reminder-badge" hidden aria-label="Voir les fiches clients à compléter"></button>
-                    </div>
-                    <p class="clients-settings-hint">Réutilisés dans les listes déroulantes Entrant et Sortant (le nom apparaît sur la facture).</p>
+                    </h2>
                     <form id="clientAddForm" class="client-add-form" novalidate>
                         <div class="form-group">
                             <label for="clientFormName">Nom <span class="required-mark">*</span></label>
@@ -417,6 +416,7 @@
                     </form>
                     <div class="clients-card-bottom">
                         <button type="submit" form="clientAddForm" class="clients-btn clients-btn-add">Ajouter le client</button>
+                        <p class="clients-settings-hint">Les clients sont réutilisés dans les listes déroulantes Entrant et Sortant (le nom apparaît sur la facture).</p>
                         <div class="clients-form-actions">
                             <button type="button" class="clients-btn clients-btn-list" id="clientsViewAllBtn">Voir la liste</button>
                             <button type="button" class="clients-btn clients-btn-clear" id="clientsClearAllBtn">Vider la liste</button>

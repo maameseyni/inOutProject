@@ -296,7 +296,7 @@ header > div {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
-    align-items: stretch;
+    align-items: start;
     margin-bottom: 30px;
     box-sizing: border-box;
 }
@@ -305,7 +305,7 @@ header > div {
 .parametres-layout .clients-settings-card {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: auto;
     min-height: 100%;
     padding: 32px 30px;
     box-sizing: border-box;
@@ -315,11 +315,16 @@ header > div {
     grid-column: 1;
     width: 100%;
     max-width: none;
+    min-width: 0;
     margin-bottom: 0;
 }
 
 .parametres-layout .clients-settings-card {
     grid-column: 2;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
 .parametres-layout .company-profile-banner > .btn-income {
@@ -327,11 +332,101 @@ header > div {
     width: 100%;
 }
 
+.parametres-layout .company-profile-banner > h2,
+.parametres-layout .clients-settings-card > h2.clients-card-title {
+    min-height: 44px;
+    height: 44px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.3em;
+    color: #333;
+    line-height: 1.2;
+    box-sizing: border-box;
+    margin: 0 0 12px;
+}
+
+.parametres-layout .clients-settings-card > h2.clients-card-title {
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.parametres-layout .clients-card-title-main {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.parametres-layout .company-profile-banner > h2 .icon-inline,
+.parametres-layout .clients-settings-card .clients-card-title-main .icon-inline {
+    display: block;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    margin: 0;
+    flex: 0 0 24px;
+    vertical-align: unset;
+}
+
+.parametres-layout .clients-settings-card .client-add-form {
+    margin: -4px 0 0;
+    padding: 0;
+    gap: 0;
+    border: none;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.parametres-layout .clients-settings-card .client-profile-reminder-badge {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.parametres-layout .company-profile-banner > .form-group,
+.parametres-layout .clients-settings-card .client-add-form > .form-group {
+    margin-bottom: 20px;
+}
+
+.parametres-layout .clients-settings-card .client-add-form > .form-group:last-child {
+    margin-bottom: 20px;
+}
+
+.parametres-layout .company-profile-banner .form-group input,
+.parametres-layout .company-profile-banner .form-group select,
+.parametres-layout .clients-settings-card .form-group input,
+.parametres-layout .clients-settings-card .form-group select,
+.parametres-layout .clients-settings-card .form-group textarea,
+.parametres-layout .clients-settings-card .kp-select-trigger {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 16px;
+    font-size: 1em;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.parametres-layout .clients-settings-card .form-group textarea {
+    min-height: 72px;
+    resize: vertical;
+}
+
+.parametres-layout .clients-settings-card .kp-select-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
 .clients-settings-hint {
-    margin: 0 0 14px;
-    font-size: 0.9em;
+    margin: 8px 0 0;
+    font-size: 0.85em;
     color: #666;
-    line-height: 1.5;
+    line-height: 1.45;
 }
 
 .clients-card-head {
@@ -340,7 +435,7 @@ header > div {
     align-items: center;
     gap: 12px;
     width: 100%;
-    margin-bottom: 8px;
+    min-width: 0;
 }
 
 .clients-card-head h2 {
@@ -355,7 +450,11 @@ header > div {
     gap: 6px;
     margin-left: auto;
     margin-top: -16px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 62%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     padding: 6px 11px;
     font-size: 0.74em;
     white-space: nowrap;
@@ -446,6 +545,26 @@ header > div {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.clients-settings-card .form-group input,
+.clients-settings-card .form-group textarea,
+.clients-settings-card .kp-select-trigger {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 16px;
+    font-size: 1em;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.clients-settings-card .kp-select-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .clients-card-bottom {
@@ -472,7 +591,7 @@ header > div {
 
 .clients-settings-card .form-group textarea {
     min-height: 72px;
-    padding: 10px 12px;
+    resize: vertical;
 }
 
 .clients-btn-add {
@@ -1667,6 +1786,15 @@ header > div {
     margin-bottom: 20px;
     color: #333;
     font-size: 1.3em;
+}
+
+.parametres-layout .action-card h2 {
+    margin-bottom: 0;
+}
+
+.parametres-layout .company-profile-banner > h2,
+.parametres-layout .clients-settings-card > h2.clients-card-title {
+    margin-bottom: 12px;
 }
 
 .form-group {
