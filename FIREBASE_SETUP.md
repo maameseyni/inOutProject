@@ -39,6 +39,9 @@ service cloud.firestore {
     match /transactions/{document=**} {
       allow read, write: if true; // Accès public pour la collaboration
     }
+    match /companyProfiles/{userId} {
+      allow read, write: if true; // Profil facture (remplacer par auth.uid plus tard)
+    }
   }
 }
 ```

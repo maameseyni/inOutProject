@@ -4,6 +4,8 @@ Application web de gestion financière pour l'agence d'imprimerie KaayPrint.
 
 ## 📋 Fonctionnalités
 
+- ✅ **Facture** : aperçu, impression, export PNG ; client / destinataire optionnel ; QR code site/WhatsApp (si renseigné en paramètres) ; pied de remerciement.
+- ✅ **Paramètres** : onglet avec les coordonnées sur la facture (Firebase / cache local) ; **QR code** généré à partir du site / WhatsApp (aperçu, téléchargement PNG, partage ; le même QR apparaît sur la facture).
 - ✅ **Ajout d'entrants** : Enregistrer les paiements des clients
 - ✅ **Ajout de sortants** : Enregistrer les achats et dépenses
 - ✅ **Calcul automatique** : Affichage en temps réel de la recette actuelle
@@ -17,12 +19,41 @@ Application web de gestion financière pour l'agence d'imprimerie KaayPrint.
 2. Ajoutez vos entrants (revenus) et sortants (dépenses)
 3. La recette est calculée et affichée automatiquement en temps réel
 
+## 🖼️ Export facture (PNG) et navigateur
+
+Chrome et Edge bloquent souvent l’export PNG quand la page est ouverte en **`file://`** (double-clic sur `acceuil.html`). Dans ce cas, utilisez un **petit serveur local** :
+
+1. Double-cliquez sur **`start-local-server.bat`** (Python requis), **ou** dans un terminal :  
+   `cd` dans le dossier du projet puis `python -m http.server 8080`
+2. Ouvrez **`http://localhost:8080/index.html`** (puis connectez-vous comme d’habitude).
+
+L’export **Télécharger / Partager** de la facture fonctionne alors comme prévu. Sinon vous pouvez toujours utiliser **Imprimer** puis **Enregistrer en PDF**.
+
 ## 💾 Stockage des données
 
 Les données sont sauvegardées dans le **localStorage** du navigateur. Cela signifie que :
 - Les données restent même après fermeture du navigateur
 - Chaque navigateur/ordinateur a ses propres données
+- Les **coordonnées sur la facture** : avec **Firebase** actif, elles sont enregistrées dans Firestore (`companyProfiles/{compte}`), une fiche par utilisateur connecté (aujourd’hui l’identifiant = le **login** de session ; après inscription ce sera typiquement l’**UID** Firebase Auth). Un cache local par compte garde une copie sur l’appareil.
 - Pour partager avec votre collègue, vous pouvez utiliser le même navigateur ou exporter/importer les données
+
+### Règles Firestore (transactions + profil facture)
+
+Si vous voyez **« Missing or insufficient permissions »** sur le profil entreprise, la collection **`companyProfiles`** n’est pas autorisée dans vos règles.
+
+1. Ouvrez [Firebase Console](https://console.firebase.google.com/) → votre projet → **Firestore Database** → onglet **Règles**.
+2. Assurez-vous d’avoir **à la fois** `transactions` et `companyProfiles` (voir le fichier **`firestore.rules`** à la racine du dépôt pour un exemple complet).
+3. Cliquez sur **Publier**.
+
+Exemple minimal (même principe que dans `firestore.rules`) :
+
+```
+match /companyProfiles/{userId} {
+  allow read, write: if true;
+}
+```
+
+À durcir plus tard avec **Firebase Authentication** (`request.auth.uid == userId`).
 
 ## 📱 Responsive
 

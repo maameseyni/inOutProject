@@ -15,6 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- html2canvas pour export facture en image -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- QR code (site / WhatsApp : paramètres + facture) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -35,13 +37,17 @@
         </header>
 
         <nav class="main-tabs">
-            <button type="button" class="main-tab active" data-tab="transactions" id="tabTransactions">
+            <button type="button" class="main-tab active" data-tab="transactions" id="tabTransactions" title="Transactions" aria-label="Transactions">
                 <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Transactions
+                <span class="main-tab-label">Transactions</span>
             </button>
-            <button type="button" class="main-tab" data-tab="statistiques" id="tabStatistiques">
+            <button type="button" class="main-tab" data-tab="statistiques" id="tabStatistiques" title="Statistiques" aria-label="Statistiques">
                 <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 17V9M13 17V5M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Statistiques
+                <span class="main-tab-label">Statistiques</span>
+            </button>
+            <button type="button" class="main-tab" data-tab="parametres" id="tabParametres" title="Paramètres" aria-label="Paramètres">
+                <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="main-tab-label">Paramètres</span>
             </button>
         </nav>
 
@@ -72,6 +78,14 @@
                         <label for="remainingAmount">Restant à payer (FCFA)</label>
                         <input type="number" id="remainingAmount" step="0.01" min="0" placeholder="Montant dû (pour une dette : mettre 0 ci-dessus et le montant ici)">
                         <span class="error-message" id="remainingAmountError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeInvoiceClient">Client / destinataire (optionnel, sur la facture)</label>
+                        <select id="incomeInvoiceClient" class="kp-select-native">
+                            <option value="">— Aucun —</option>
+                            <option value="__new__">+ Autre (saisir un nom)</option>
+                        </select>
+                        <input type="text" id="incomeInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client ou fournisseur" hidden>
                     </div>
                     <div class="form-group">
                         <label for="incomeDescription">Description</label>
@@ -115,6 +129,14 @@
                         <label for="expenseRemainingAmount">Restant (FCFA)</label>
                         <input type="number" id="expenseRemainingAmount" step="0.01" min="0" placeholder="Montant restant à payer">
                         <span class="error-message" id="expenseRemainingAmountError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseInvoiceClient">Client / destinataire (optionnel, sur la facture)</label>
+                        <select id="expenseInvoiceClient" class="kp-select-native">
+                            <option value="">— Aucun —</option>
+                            <option value="__new__">+ Autre (saisir un nom)</option>
+                        </select>
+                        <input type="text" id="expenseInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client ou fournisseur" hidden>
                     </div>
                     <div class="form-group">
                         <label for="expenseDescription">Description</label>
@@ -184,6 +206,13 @@
                 <button class="filter-btn" data-filter="income">Entrants</button>
                 <button class="filter-btn" data-filter="expense">Sortants</button>
                 <button class="filter-btn" data-filter="pending">En attente de complément</button>
+            </div>
+            <div class="client-transaction-filter" id="clientTransactionFilterBar" hidden>
+                <div class="client-transaction-filter-left">
+                    <span class="client-transaction-filter-text">Transactions du client : <strong id="clientTransactionFilterLabel"></strong></span>
+                    <span class="client-transaction-filter-total" id="clientTransactionFilterTotal" hidden></span>
+                </div>
+                <button type="button" class="clear-filters-btn" onclick="clearClientTransactionFilter()">Effacer le filtre client</button>
             </div>
             <div class="transactions-list" id="transactionsList">
                 <p class="empty-state">Aucune transaction pour le moment</p>
@@ -267,45 +296,134 @@
                     <h3 class="chart-title">Entrants vs Sortants par mois</h3>
                     <p class="chart-subtitle">Comparaison des revenus et dépenses par mois</p>
                     <p class="chart-empty" id="chartIncomeVsExpenseEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
                     <div class="chart-container" id="chartIncomeVsExpenseContainer">
                         <canvas id="chartIncomeVsExpense"></canvas>
                     </div>
-                </div>
-                <div class="charts-row">
-                    <div class="chart-card">
-                        <h3 class="chart-title">Top 5 sortants</h3>
-                        <p class="chart-subtitle">Les 5 plus grosses dépenses</p>
-                        <p class="chart-empty" id="chartTop5ExpensesEmpty">Aucune donnée</p>
-                        <div class="chart-container" id="chartTop5ExpensesContainer">
-                            <canvas id="chartTop5Expenses"></canvas>
-                        </div>
                     </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Top 5 entrants</h3>
-                        <p class="chart-subtitle">Les 5 plus gros revenus</p>
-                        <p class="chart-empty" id="chartTop5IncomeEmpty">Aucune donnée</p>
-                        <div class="chart-container" id="chartTop5IncomeContainer">
-                            <canvas id="chartTop5Income"></canvas>
-                        </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Top 5 sortants</h3>
+                    <p class="chart-subtitle">Les 5 plus grosses dépenses</p>
+                    <p class="chart-empty" id="chartTop5ExpensesEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartTop5ExpensesContainer">
+                        <canvas id="chartTop5Expenses"></canvas>
+                    </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Top 5 entrants</h3>
+                    <p class="chart-subtitle">Les 5 plus gros revenus</p>
+                    <p class="chart-empty" id="chartTop5IncomeEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartTop5IncomeContainer">
+                        <canvas id="chartTop5Income"></canvas>
+                    </div>
                     </div>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Évolution de la recette</h3>
                     <p class="chart-subtitle">Solde cumulé au fil du temps</p>
                     <p class="chart-empty" id="chartBalanceEvolutionEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
                     <div class="chart-container" id="chartBalanceEvolutionContainer">
                         <canvas id="chartBalanceEvolution"></canvas>
+                    </div>
                     </div>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Bénéfice par mois</h3>
                     <p class="chart-subtitle">Entrants − sortants par mois</p>
                     <p class="chart-empty" id="chartBenefitByMonthEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
                     <div class="chart-container" id="chartBenefitByMonthContainer">
                         <canvas id="chartBenefitByMonth"></canvas>
                     </div>
+                    </div>
                 </div>
             </div>
+        </section>
+
+        <section id="section-parametres" class="main-section">
+        <div class="parametres-layout">
+        <div class="company-profile-banner action-card">
+                    <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 22V12h6v10" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Coordonnées sur la facture</h2>
+                    <div class="form-group">
+                        <label for="companyName">Raison sociale / nom commercial</label>
+                        <input type="text" id="companyName" maxlength="120" placeholder="Ex. KaayPrint">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyAddress">Adresse</label>
+                        <input type="text" id="companyAddress" maxlength="500" placeholder="Rue, ville, pays…">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyPhone">Téléphone</label>
+                        <input type="text" id="companyPhone" maxlength="40" placeholder="+221 …">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyEmail">E-mail</label>
+                        <input type="email" id="companyEmail" maxlength="80" placeholder="contact@…">
+                    </div>
+                    <div class="form-group form-group-company-website">
+                        <label for="companyWebsite">Site web ou WhatsApp pro</label>
+                        <div class="company-website-panel">
+                            <input type="text" id="companyWebsite" maxlength="120" placeholder="https://… ou lien wa.me/…" class="company-website-field">
+                            <div id="companyWebsiteQrSection" class="company-website-qr-block" hidden>
+                                <div class="company-website-qr-frame" title="Aperçu du QR code">
+                                    <img id="companyWebsiteQrImg" class="company-website-qr-img" alt="Aperçu du QR code">
+                                </div>
+                                <div class="company-website-qr-actions">
+                                    <button type="button" class="company-website-qr-btn" id="companyWebsiteQrDownload" title="Télécharger le QR (PNG)" aria-label="Télécharger le QR code">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    </button>
+                                    <button type="button" class="company-website-qr-btn" id="companyWebsiteQrShare" title="Partager le QR" aria-label="Partager le QR code">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.82 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="companyWebsiteQrHint" class="company-website-qr-hint" hidden>QR code généré à partir du lien : il apparaît sur la facture ; vous pouvez aussi le télécharger ou le partager seul.</p>
+                    </div>
+                    <button type="button" class="btn btn-income" id="companyProfileSave">Enregistrer les coordonnées</button>
+                </div>
+        <div class="company-profile-banner action-card clients-settings-card">
+                    <div class="clients-card-head">
+                        <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clients</h2>
+                        <button type="button" id="clientProfileReminderBadge" class="client-profile-reminder-badge" hidden aria-label="Voir les fiches clients à compléter"></button>
+                    </div>
+                    <p class="clients-settings-hint">Réutilisés dans les listes déroulantes Entrant et Sortant (le nom apparaît sur la facture).</p>
+                    <form id="clientAddForm" class="client-add-form" novalidate>
+                        <div class="form-group">
+                            <label for="clientFormName">Nom <span class="required-mark">*</span></label>
+                            <input type="text" id="clientFormName" maxlength="200" placeholder="Nom du client ou fournisseur" required>
+                            <span class="error-message" id="clientFormNameError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormProvenance">Provenance <span class="required-mark">*</span></label>
+                            <select id="clientFormProvenance" class="kp-select-native" required>
+                                <option value="">— Choisir —</option>
+                            </select>
+                            <span class="error-message" id="clientFormProvenanceError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormPhone">Numéro</label>
+                            <input type="text" id="clientFormPhone" maxlength="40" placeholder="+221 77 …">
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormNote">Notes</label>
+                            <textarea id="clientFormNote" rows="3" maxlength="500" placeholder="Infos utiles (optionnel)"></textarea>
+                        </div>
+                    </form>
+                    <div class="clients-card-bottom">
+                        <button type="submit" form="clientAddForm" class="clients-btn clients-btn-add">Ajouter le client</button>
+                        <div class="clients-form-actions">
+                            <button type="button" class="clients-btn clients-btn-list" id="clientsViewAllBtn">Voir la liste</button>
+                            <button type="button" class="clients-btn clients-btn-clear" id="clientsClearAllBtn">Vider la liste</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
         </section>
     </div>
 
@@ -358,8 +476,16 @@
                     <span class="error-message" id="editRemainingError"></span>
                 </div>
                 <div class="form-group">
+                    <label for="editInvoiceClient">Client / destinataire (optionnel, sur la facture)</label>
+                    <select id="editInvoiceClient" class="kp-select-native">
+                        <option value="">— Aucun —</option>
+                        <option value="__new__">+ Autre (saisir un nom)</option>
+                    </select>
+                    <input type="text" id="editInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client ou fournisseur" hidden>
+                </div>
+                <div class="form-group">
                     <label for="editDescription">Description</label>
-                    <input type="text" id="editDescription" required maxlength="200">
+                    <textarea id="editDescription" required maxlength="200" rows="4" placeholder="Ex: Paiement client - Impression flyers"></textarea>
                     <div class="char-counter">
                         <span id="editDescriptionCounter">0</span>/200 caractères
                     </div>
@@ -398,6 +524,104 @@
                 </button>
                 <button type="button" class="btn-invoice-icon-btn" onclick="printInvoice()" title="Imprimer">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal liste des clients -->
+    <div id="clientsListModal" class="modal">
+        <div class="modal-content modal-content-clients">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span id="clientsListModalTitle">Tous les clients</span></h2>
+                <button type="button" class="modal-close" onclick="closeClientsListModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="clients-modal-toolbar" id="clientsModalToolbar" hidden>
+                <div class="clients-modal-toolbar-top">
+                    <span class="clients-modal-count" id="clientsModalCount"></span>
+                    <button type="button" class="export-btn clients-export-btn" id="clientsExportExcelBtn" title="Exporter en Excel" aria-label="Exporter la liste en Excel">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="clients-modal-filters-row">
+                    <div class="clients-modal-search-wrap">
+                        <svg class="clients-modal-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="search" id="clientsModalSearch" class="clients-modal-search" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+                    <select id="clientsModalProvenanceFilter" class="kp-select-native clients-modal-provenance-filter" aria-label="Filtrer par provenance">
+                        <option value="">Toutes les provenances</option>
+                    </select>
+                </div>
+            </div>
+            <p class="clients-modal-empty" id="clientsModalEmpty" hidden>Aucun client enregistré.</p>
+            <p class="clients-modal-no-results" id="clientsModalNoResults" hidden>Aucun client ne correspond à votre recherche.</p>
+            <p class="clients-modal-incomplete-hint" id="clientsModalIncompleteHint" hidden>Cliquez sur un client pour compléter sa fiche.</p>
+            <div class="clients-list-wrap" id="clientsTableWrap">
+                <div class="clients-list" id="clientsList" aria-label="Liste des clients"></div>
+            </div>
+            <div class="pagination clients-pagination" id="clientsPagination" hidden>
+                <button type="button" class="pagination-btn" id="clientsPrevBtn">Précédent</button>
+                <span class="pagination-info" id="clientsPageInfo">Page 1 sur 1</span>
+                <button type="button" class="pagination-btn" id="clientsNextBtn">Suivant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal modification client -->
+    <div id="clientEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier le client</h2>
+                <button type="button" class="modal-close" onclick="closeClientEditModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="clientEditForm" novalidate>
+                <input type="hidden" id="clientEditId">
+                <div class="form-group">
+                    <label for="clientEditName">Nom <span class="required-mark">*</span></label>
+                    <input type="text" id="clientEditName" maxlength="200" required>
+                    <span class="error-message" id="clientEditNameError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="clientEditProvenance">Provenance <span class="required-mark">*</span></label>
+                    <select id="clientEditProvenance" class="kp-select-native" required>
+                        <option value="">— Choisir —</option>
+                    </select>
+                    <span class="error-message" id="clientEditProvenanceError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="clientEditPhone">Numéro</label>
+                    <input type="text" id="clientEditPhone" maxlength="40" placeholder="+221 77 …">
+                </div>
+                <div class="form-group">
+                    <label for="clientEditNote">Notes</label>
+                    <textarea id="clientEditNote" rows="3" maxlength="500"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeClientEditModal()">Annuler</button>
+                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal confirmation suppression -->
+    <div id="deleteConfirmModal" class="modal modal-delete-confirm" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" hidden>
+        <div class="modal-content modal-content-delete">
+            <h2 class="delete-confirm-title">
+                <svg class="delete-confirm-title-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span id="deleteConfirmTitle">Confirmer la suppression</span>
+            </h2>
+            <p id="deleteConfirmMessage" class="delete-confirm-message"></p>
+            <p id="deleteConfirmDetail" class="delete-confirm-detail" hidden></p>
+            <div class="delete-confirm-actions">
+                <button type="button" class="btn delete-confirm-btn-cancel" id="deleteConfirmCancel">Annuler</button>
+                <button type="button" class="btn delete-confirm-btn-ok" id="deleteConfirmOk">
+                    <span id="deleteConfirmOkLabel">Supprimer</span>
                 </button>
             </div>
         </div>
