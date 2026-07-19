@@ -1443,11 +1443,15 @@ function loadClientsFromLocalStorage(accountId) {
 
 function persistClientsLocal(accountId, data) {
     const n = normalizeClientListPayload(data);
+    const prevJson = JSON.stringify(cachedClients);
+    const nextJson = JSON.stringify(n.clients);
     localStorage.setItem(clientListLocalStorageKey(accountId), JSON.stringify(n));
     cachedClients = n.clients.slice();
     refreshClientSelectOptions();
     renderClientsModalTable();
     updateClientProfileReminderBadge();
+    // Éviter un 2e refresh du tableau historique si la liste clients n'a pas changé
+    if (prevJson === nextJson) return;
     hydrateTransactionClientLinks();
     if (transactions.length) updateDisplay();
     syncTransactionClientLinks();
@@ -1531,11 +1535,15 @@ function loadCategoriesFromLocalStorage(accountId) {
 
 function persistCategoriesLocal(accountId, data) {
     const n = normalizeCategoryListPayload(data);
+    const prevJson = JSON.stringify(cachedProductCategoryRecords);
+    const nextJson = JSON.stringify(n.categories);
     localStorage.setItem(categoryListLocalStorageKey(accountId), JSON.stringify(n));
     cachedProductCategoryRecords = n.categories.slice();
     cachedProductCategories = n.categories.map(function (category) { return category.name; });
     refreshCategorySelectOptions();
     renderCategoriesList();
+    // Éviter un 2e refresh du tableau historique si les catégories n'ont pas changé
+    if (prevJson === nextJson) return;
     if (transactions.length) updateDisplay();
 }
 
@@ -2204,13 +2212,13 @@ function buildNoteItemHtml(note, index) {
     const preview = escapeHtml(truncateNotePreview(note.content, 220));
     const linkBits = [];
     if (note.clientName) {
-        linkBits.push('<span class="note-item-link">' + escapeHtml(note.clientName) + '</span>');
+        linkBits.push('<span class="transaction-client"><span class="transaction-client-label">Client\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.clientName) + '</span></span>');
     }
     if (note.category) {
-        linkBits.push('<span class="note-item-link note-item-link--category">' + escapeHtml(note.category) + '</span>');
+        linkBits.push('<span class="transaction-category"><span class="transaction-client-label">Catégorie\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.category) + '</span></span>');
     }
     const isNew = lastAddedNoteId && note.id === lastAddedNoteId;
-    return '<article class="note-item note-card ' + noteColorClass(note.id) + ' visible' + (isNew ? ' note-item--new' : '') + '"'
+    return '<article class="note-item note-card visible' + (isNew ? ' note-item--new' : '') + '"'
         + ' data-note-open="' + escapeHtml(note.id) + '"'
         + ' title="Cliquer pour lire la note"'
         + ' style="animation-delay:' + (index * 0.04) + 's">'
@@ -2241,7 +2249,9 @@ function renderNotesList() {
         return;
     }
 
-    listEl.innerHTML = notes.map(function (note, index) {
+    // Panneau « Mes notes » : uniquement les 2 plus récentes ; le reste via « Voir toutes les notes »
+    const previewNotes = notes.slice(0, 2);
+    listEl.innerHTML = previewNotes.map(function (note, index) {
         return buildNoteItemHtml(note, index);
     }).join('');
 
@@ -2365,10 +2375,10 @@ function openNoteViewModal(noteId) {
     if (metaEl) {
         const bits = [];
         if (note.clientName) {
-            bits.push('<span class="note-item-link">' + escapeHtml(note.clientName) + '</span>');
+            bits.push('<span class="transaction-client"><span class="transaction-client-label">Client\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.clientName) + '</span></span>');
         }
         if (note.category) {
-            bits.push('<span class="note-item-link note-item-link--category">' + escapeHtml(note.category) + '</span>');
+            bits.push('<span class="transaction-category"><span class="transaction-client-label">Catégorie\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.category) + '</span></span>');
         }
         metaEl.innerHTML = bits.join('');
         metaEl.hidden = bits.length === 0;
@@ -7595,6 +7605,7 @@ function attachEventListeners() {
                         updateBenefitDisplays();
                         refreshAllCharts();
                         closeEditModal();
+                        showNotification('Transaction modifiée avec succès !', 'success');
                     } else if (!(success && success.notified)) {
                         showNotification('Erreur lors de la modification', 'error');
                     }

@@ -386,6 +386,13 @@
         return type + ':' + String(id);
     }
 
+    function locksRenderKey(map) {
+        return Object.keys(map).filter(function (key) {
+            const lock = map[key];
+            return !(cfg.userId && lock.utilisateurId && String(lock.utilisateurId) === String(cfg.userId));
+        }).sort().join('||');
+    }
+
     async function loadActiveLocksFromApi() {
         const previous = Object.assign({}, activeLocksMap);
         try {
@@ -407,8 +414,14 @@
                 });
             }
             locksInitialLoadDone = true;
-            if (typeof updateDisplay === 'function') updateDisplay();
-            if (typeof renderClientsList === 'function') renderClientsList();
+            // Ne re-rendre l'UI que si les verrous des AUTRES utilisateurs ont changé :
+            // nos propres verrous sont invisibles à l'écran, et expireLe bouge à chaque
+            // heartbeat sans impact visuel (évite l'effet de « refresh »).
+            const locksChanged = locksRenderKey(previous) !== locksRenderKey(activeLocksMap);
+            if (locksChanged) {
+                if (typeof updateDisplay === 'function') updateDisplay();
+                if (typeof renderClientsList === 'function') renderClientsList();
+            }
         } catch (e) {
             console.warn('Verrous actifs non chargés', e);
         }
@@ -429,8 +442,26 @@
         return lock.message || (lock.utilisateurNom + ' est en train de modifier cette ressource, patientez.');
     };
 
+    let reloadAfterWritePromise = null;
+
     async function xalissReloadAfterWrite() {
+        // Coalescer les rechargements concurrents (écriture + événement SSE de sa
+        // propre modification) en un seul, pour éviter les re-rendus en rafale.
+        if (reloadAfterWritePromise) return reloadAfterWritePromise;
+        reloadAfterWritePromise = doReloadAfterWrite().finally(function () {
+            reloadAfterWritePromise = null;
+        });
+        return reloadAfterWritePromise;
+    }
+
+    async function doReloadAfterWrite() {
         try {
+            // Mettre à jour lastSyncSeq AVANT les rechargements : l'événement SSE
+            // déclenché par notre propre écriture ne provoquera pas un 2e rechargement.
+            const syncData = await apiFetch('/sync/');
+            if (syncData && syncData.syncSeq !== undefined) {
+                lastSyncSeq = syncData.syncSeq;
+            }
             await Promise.all([
                 loadTransactionsFromApi(),
                 loadClientsFromApi(),
@@ -438,10 +469,6 @@
                 loadCategoriesFromApi(),
                 loadActiveLocksFromApi()
             ]);
-            const syncData = await apiFetch('/sync/');
-            if (syncData && syncData.syncSeq !== undefined) {
-                lastSyncSeq = syncData.syncSeq;
-            }
             if (typeof window.xalissCheckScheduledNotifications === 'function') {
                 window.xalissCheckScheduledNotifications();
             }
@@ -599,11 +626,18 @@
 
     async function loadTransactionsFromApi() {
         const data = await apiFetch('/transactions/');
-        transactions = data.transactions || [];
+        const incoming = data.transactions || [];
+        // Comparer avec ce qui est DÉJÀ affiché (après hydratation des liens clients) :
+        // si l'écriture a déjà mis à jour la ligne localement, on ne re-rend pas une 2e fois.
+        const displayedJson = JSON.stringify(transactions);
+        transactions = incoming;
         hydrateTransactionClientLinks();
-        updateDisplay();
-        syncTransactionClientLinks();
-        maybeImportClientsFromTransactions();
+        const unchanged = JSON.stringify(transactions) === displayedJson;
+        if (!unchanged) {
+            updateDisplay();
+            syncTransactionClientLinks();
+            maybeImportClientsFromTransactions();
+        }
         await persistOfflineSnapshot();
         await refreshOfflineConnectionStatus();
     }
@@ -761,18 +795,21 @@
                 syncTransactionClientLinks();
             }
         }).then(function (result) {
-            if (result.queued) {
-                if (typeof notifyUnusualExpenseIfNeeded === 'function') {
-                    notifyUnusualExpenseIfNeeded(amt, description, unusualExpenseBenchmark);
-                }
-                return result;
+            if (typeof notifyUnusualExpenseIfNeeded === 'function') {
+                notifyUnusualExpenseIfNeeded(amt, description, unusualExpenseBenchmark);
             }
-            return xalissReloadAfterWrite().then(function () {
-                if (typeof notifyUnusualExpenseIfNeeded === 'function') {
-                    notifyUnusualExpenseIfNeeded(amt, description, unusualExpenseBenchmark);
-                }
-                return result;
-            });
+            if (result.queued) return result;
+            // Affichage immédiat de la nouvelle ligne, rechargement complet en arrière-plan
+            if (result.data && result.data.transaction) {
+                transactions.unshift(result.data.transaction);
+                hydrateTransactionClientLinks();
+                updateDisplay();
+            }
+            xalissReloadAfterWrite();
+            if (!offline || offline.isOnline()) {
+                showNotification('Transaction ajoutée avec succès', 'success');
+            }
+            return result;
         }).catch(function (error) {
             notifyApiError(error, 'Impossible d\'ajouter la transaction.');
         });
@@ -804,7 +841,15 @@
                     }
                 }).then(function (result) {
                     if (result.queued) return;
-                    return xalissReloadAfterWrite();
+                    // Retrait immédiat de la ligne, rechargement complet en arrière-plan
+                    transactions = transactions.filter(function (t) {
+                        return String(t.id) !== transactionId;
+                    });
+                    updateDisplay();
+                    xalissReloadAfterWrite();
+                    if (!offline || offline.isOnline()) {
+                        showNotification('Transaction supprimée avec succès', 'success');
+                    }
                 }).catch(function (error) {
                     notifyApiError(error, 'Impossible de supprimer la transaction.');
                 });
@@ -873,9 +918,18 @@
                 }
             }
         }).then(function (result) {
-            if (result.queued) return true;
-            return xalissReloadAfterWrite();
-        }).then(function () {
+            if (!result.queued) {
+                // Mise à jour immédiate de la ligne, rechargement complet en arrière-plan
+                if (result.data && result.data.transaction) {
+                    const idx = transactions.findIndex(function (t) { return String(t.id) === String(id); });
+                    if (idx !== -1) {
+                        transactions[idx] = result.data.transaction;
+                        hydrateTransactionClientLinks();
+                        updateDisplay();
+                    }
+                }
+                xalissReloadAfterWrite();
+            }
             return true;
         }).catch(function (error) {
             if (isSessionExpiredError(error)) {
@@ -930,9 +984,22 @@
                 updateDisplay();
             }
         }).then(function (result) {
-            if (result.queued) return true;
-            return xalissReloadAfterWrite();
-        }).then(function () {
+            if (!result.queued) {
+                // Mise à jour immédiate de la ligne, rechargement complet en arrière-plan
+                if (result.data && result.data.transaction) {
+                    const idx = transactions.findIndex(function (t) {
+                        return String(t.id) === String(transactionId);
+                    });
+                    if (idx !== -1) {
+                        transactions[idx] = result.data.transaction;
+                        updateDisplay();
+                    }
+                }
+                xalissReloadAfterWrite();
+                if (!offline || offline.isOnline()) {
+                    showNotification('Paiement complété avec succès !', 'success');
+                }
+            }
             return true;
         }).catch(function (error) {
             if (isSessionExpiredError(error)) {

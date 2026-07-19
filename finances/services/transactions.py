@@ -70,6 +70,7 @@ def create_transaction(org, user, membre, data: dict) -> dict:
             type=parsed['type'],
             montant=parsed['montant'],
             description=parsed['description'],
+            categorie_produit=parsed['categorie_produit'],
             date=parsed['date'],
             montant_restant=parsed['montant_restant'],
             nom_client_facture=nom_client,
@@ -108,8 +109,9 @@ def update_transaction(org, transaction_id: str, data: dict) -> dict:
 
     merged = {**transaction_to_js(tx), **data}
     parsed = transaction_from_js(merged)
-    if 'payments' not in data:
-        parsed['payments'] = [{'montant': parsed['montant'], 'paye_le': parsed['date']}]
+    # Ne resynchroniser les paiements que s'ils sont dans le PATCH.
+    # Sinon un PATCH partiel (catégorie, client…) écrase l'historique des paiements.
+    sync_payments = 'payments' in data
     if parsed['montant'] <= 0 and parsed['montant_restant'] is None:
         raise TransactionServiceError('Le montant doit être supérieur à 0.')
 
@@ -119,12 +121,14 @@ def update_transaction(org, transaction_id: str, data: dict) -> dict:
         tx.type = parsed['type']
         tx.montant = parsed['montant']
         tx.description = parsed['description']
+        tx.categorie_produit = parsed['categorie_produit']
         tx.date = parsed['date']
         tx.montant_restant = parsed['montant_restant']
         tx.nom_client_facture = nom_client
         tx.client = client
         tx.save()
-        _sync_paiements(tx, parsed['payments'])
+        if sync_payments:
+            _sync_paiements(tx, parsed['payments'])
 
     notifier_changement_organisation(org)
 
