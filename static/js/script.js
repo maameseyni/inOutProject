@@ -2079,6 +2079,7 @@ function resetNoteForm() {
 function startEditNote(noteId) {
     const note = cachedNotes.find(function (n) { return n.id === noteId; });
     if (!note) return;
+    closeNoteViewModal();
     closeNotesListModal();
     editingNoteId = noteId;
     const idEl = document.getElementById('noteEditId');
@@ -2167,6 +2168,13 @@ function getFilteredNotes() {
     return filterNotesByQuery(getNotesSearchQuery('noteSearch'), notesQuickFilter);
 }
 
+function truncateNotePreview(text, maxLen) {
+    const raw = String(text || '').trim().replace(/\s+/g, ' ');
+    if (!raw) return '';
+    if (raw.length <= maxLen) return raw;
+    return raw.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
+}
+
 function getNotesEmptyStateHtml(isSearchOrFilter) {
     if (isSearchOrFilter) {
         return '<div class="notes-empty-state" id="notesEmptyState">'
@@ -2193,7 +2201,7 @@ function buildNoteItemHtml(note, index) {
     const isoDate = note.updatedAt || note.createdAt;
     const dateLabel = formatNoteRelativeDate(isoDate);
     const dateFull = formatNoteDate(isoDate);
-    const preview = escapeHtml(String(note.content || '').trim());
+    const preview = escapeHtml(truncateNotePreview(note.content, 220));
     const linkBits = [];
     if (note.clientName) {
         linkBits.push('<span class="note-item-link">' + escapeHtml(note.clientName) + '</span>');
@@ -2204,7 +2212,7 @@ function buildNoteItemHtml(note, index) {
     const isNew = lastAddedNoteId && note.id === lastAddedNoteId;
     return '<article class="note-item note-card ' + noteColorClass(note.id) + ' visible' + (isNew ? ' note-item--new' : '') + '"'
         + ' data-note-open="' + escapeHtml(note.id) + '"'
-        + ' title="Cliquer pour modifier"'
+        + ' title="Cliquer pour lire la note"'
         + ' style="animation-delay:' + (index * 0.04) + 's">'
         + '<h3 class="note-card-title">' + escapeHtml(note.title) + '</h3>'
         + (linkBits.length ? '<div class="note-item-links">' + linkBits.join('') + '</div>' : '')
@@ -2341,6 +2349,62 @@ window.openNotesListModal = openNotesListModal;
 window.closeNotesListModal = closeNotesListModal;
 window.changeNotesPage = changeNotesPage;
 
+function openNoteViewModal(noteId) {
+    const note = cachedNotes.find(function (n) { return n.id === noteId; });
+    if (!note) return;
+    const modal = document.getElementById('noteViewModal');
+    const titleEl = document.getElementById('noteViewTitle');
+    const metaEl = document.getElementById('noteViewMeta');
+    const bodyEl = document.getElementById('noteViewBody');
+    const dateEl = document.getElementById('noteViewDate');
+    const editBtn = document.getElementById('noteViewEditBtn');
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = note.title || 'Note';
+
+    if (metaEl) {
+        const bits = [];
+        if (note.clientName) {
+            bits.push('<span class="note-item-link">' + escapeHtml(note.clientName) + '</span>');
+        }
+        if (note.category) {
+            bits.push('<span class="note-item-link note-item-link--category">' + escapeHtml(note.category) + '</span>');
+        }
+        metaEl.innerHTML = bits.join('');
+        metaEl.hidden = bits.length === 0;
+    }
+
+    if (bodyEl) {
+        const content = String(note.content || '').trim();
+        bodyEl.textContent = content || 'Aucun contenu.';
+        bodyEl.classList.toggle('note-view-body--empty', !content);
+    }
+
+    if (dateEl) {
+        const iso = note.updatedAt || note.createdAt;
+        const relative = formatNoteRelativeDate(iso);
+        const full = formatNoteDate(iso);
+        dateEl.textContent = relative || full || '';
+        dateEl.title = full || '';
+    }
+
+    if (editBtn) editBtn.setAttribute('data-note-edit', note.id);
+
+    modal.style.display = 'flex';
+    lockPageScroll();
+}
+
+function closeNoteViewModal() {
+    const modal = document.getElementById('noteViewModal');
+    if (modal) modal.style.display = 'none';
+    const listModal = document.getElementById('notesListModal');
+    if (!listModal || listModal.style.display !== 'flex') {
+        unlockPageScroll();
+    }
+}
+window.openNoteViewModal = openNoteViewModal;
+window.closeNoteViewModal = closeNoteViewModal;
+
 function clearAllNotes() {
     if (cachedNotes.length === 0) {
         showNotification('La liste est déjà vide.', 'info');
@@ -2355,6 +2419,7 @@ function clearAllNotes() {
             const accountId = getCurrentAccountId();
             saveNotesList(accountId, { notes: [] }).then(function () {
                 resetNoteForm();
+                closeNoteViewModal();
                 closeNotesListModal();
                 showNotification('Notes vidées avec succès.', 'success');
             });
@@ -2449,6 +2514,7 @@ function deleteNoteEntry(noteId) {
             const next = cachedNotes.filter(function (n) { return n.id !== noteId; });
             saveNotesList(accountId, { notes: next }).then(function () {
                 if (editingNoteId === noteId) resetNoteForm();
+                closeNoteViewModal();
                 showNotification('Note supprimée avec succès.', 'success');
             });
         }
@@ -2540,11 +2606,29 @@ function bindNotesListeners() {
         }
         const card = e.target.closest('[data-note-open]');
         if (card) {
-            startEditNote(card.getAttribute('data-note-open'));
+            openNoteViewModal(card.getAttribute('data-note-open'));
         }
     }
     if (listEl) listEl.addEventListener('click', onNotesListClick);
     if (modalList) modalList.addEventListener('click', onNotesListClick);
+
+    const viewModal = document.getElementById('noteViewModal');
+    const viewEditBtn = document.getElementById('noteViewEditBtn');
+    const viewCloseBtn = document.getElementById('noteViewCloseBtn');
+    if (viewEditBtn) {
+        viewEditBtn.addEventListener('click', function () {
+            const id = viewEditBtn.getAttribute('data-note-edit');
+            if (id) startEditNote(id);
+        });
+    }
+    if (viewCloseBtn) {
+        viewCloseBtn.addEventListener('click', closeNoteViewModal);
+    }
+    if (viewModal) {
+        viewModal.addEventListener('click', function (e) {
+            if (e.target === viewModal) closeNoteViewModal();
+        });
+    }
 }
 
 function initNotesUI() {

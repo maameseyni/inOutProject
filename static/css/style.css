@@ -1245,6 +1245,11 @@ body.app-tab-notes header {
     font-size: 1rem;
     line-height: 1.35;
     word-break: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 .note-card-text {
@@ -1254,7 +1259,11 @@ body.app-tab-notes header {
     font-weight: 400;
     line-height: 1.5;
     word-break: break-word;
-    white-space: pre-wrap;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    overflow: hidden;
 }
 
 .note-item-links {
@@ -1310,6 +1319,77 @@ body.app-tab-notes header {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.modal-content.modal-content-note-view {
+    max-width: 560px;
+    width: 92%;
+    max-height: min(86vh, 720px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-content.modal-content-note-view .modal-header {
+    flex-shrink: 0;
+}
+
+.modal-content.modal-content-note-view .modal-header h2 {
+    font-size: 1.2rem;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.note-view-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 12px;
+    flex-shrink: 0;
+}
+
+.note-view-meta[hidden] {
+    display: none;
+}
+
+.note-view-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0 0 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #f8f6fc;
+    border: 1px solid #ded4f0;
+    color: #1e293b;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.note-view-body--empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.note-view-date {
+    margin: 0 0 16px;
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.note-view-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.note-view-actions .clients-btn {
+    flex: 1 1 140px;
 }
 
 @media (max-width: 900px) {

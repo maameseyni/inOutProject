@@ -848,6 +848,23 @@
         </div>
     </div>
 
+    <!-- Modal lecture d'une note -->
+    <div id="noteViewModal" class="modal">
+        <div class="modal-content modal-content-note-view">
+            <div class="modal-header">
+                <h2 id="noteViewTitle">Note</h2>
+                <button type="button" class="modal-close" onclick="closeNoteViewModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="note-view-meta" id="noteViewMeta"></div>
+            <div class="note-view-body" id="noteViewBody"></div>
+            <p class="note-view-date" id="noteViewDate"></p>
+            <div class="note-view-actions">
+                <button type="button" class="clients-btn clients-btn-list" id="noteViewEditBtn">Modifier</button>
+                <button type="button" class="clients-btn clients-btn-clear" id="noteViewCloseBtn">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal liste des notes -->
     <div id="notesListModal" class="modal">
         <div class="modal-content modal-content-clients">
