@@ -1,0 +1,115 @@
+{% extends 'comptes/base_auth.html' %}
+{% load socialaccount static %}
+
+{% block title %}Connexion — Xaliss{% endblock %}
+
+{% block body_attrs %} data-auth-tab="{{ active_tab }}"{% endblock %}
+
+{% block content %}
+<div class="auth-header">
+    <div class="auth-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+        </svg>
+    </div>
+    <h1>Bienvenue</h1>
+    <p class="auth-subtitle">Veuillez vous connecter pour continuer</p>
+</div>
+
+<div class="auth-tabs-wrap">
+<div class="auth-tabs" role="tablist" aria-label="Connexion ou inscription">
+    <span class="auth-tabs-slider" aria-hidden="true"></span>
+    <button type="button" class="auth-tab{% if active_tab == 'connexion' %} is-active{% endif %}" role="tab" data-tab="connexion" aria-selected="{% if active_tab == 'connexion' %}true{% else %}false{% endif %}">
+        Connexion
+    </button>
+    <button type="button" class="auth-tab{% if active_tab == 'inscription' %} is-active{% endif %}" role="tab" data-tab="inscription" aria-selected="{% if active_tab == 'inscription' %}true{% else %}false{% endif %}">
+        Inscription
+    </button>
+</div>
+</div>
+
+<div class="auth-panel" data-panel="connexion" role="tabpanel"{% if active_tab != 'connexion' %} hidden{% endif %}>
+    {% if login_form.non_field_errors %}
+    <div class="non-field-errors">{{ login_form.non_field_errors|join:', ' }}</div>
+    {% endif %}
+
+    <form method="post" novalidate class="auth-form-stack">
+        {% csrf_token %}
+        <input type="hidden" name="auth_mode" value="connexion">
+
+        {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="2"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' %}
+        {% include 'comptes/partials/auth_field.html' with field=login_form.username icon=icon required=True %}
+        {% endwith %}
+
+        {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' %}
+        {% include 'comptes/partials/auth_field.html' with field=login_form.password icon=icon password=True required=True %}
+        {% endwith %}
+
+        <div class="auth-options-row">
+            <label class="auth-remember" for="{{ login_form.remember_me.id_for_label }}">
+                {{ login_form.remember_me }}
+                <span>{{ login_form.remember_me.label }}</span>
+            </label>
+            <a class="auth-forgot-link" href="{% url 'mot_de_passe_oublie' %}">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" class="auth-btn">Se connecter</button>
+    </form>
+
+    <div class="auth-divider">ou continuer avec</div>
+    <div class="auth-google-wrap">
+        <form action="{% provider_login_url 'google' %}" method="post" class="auth-google-form">
+            {% csrf_token %}
+            <button type="submit" class="auth-google-btn">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span>Google</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="auth-panel" data-panel="inscription" role="tabpanel"{% if active_tab != 'inscription' %} hidden{% endif %}>
+    {% if signup_form.non_field_errors %}
+    <div class="non-field-errors">{{ signup_form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="auth_mode" value="inscription">
+
+        <div class="auth-form-grid">
+            {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/></svg>' %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.prenom icon=icon required=True %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.nom icon=icon required=True %}
+            {% endwith %}
+
+            {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="2"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.email icon=icon required=True %}
+            {% endwith %}
+
+            {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 21h18" stroke="currentColor" stroke-width="2"/><path d="M5 21V9l7-5 7 5v12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>' %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.nom_organisation icon=icon required=True %}
+            {% endwith %}
+
+            {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.54 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.06a2 2 0 0 1 2.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0 1 22 16.92Z" stroke="currentColor" stroke-width="2"/></svg>' %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.telephone icon=icon required=True %}
+            {% endwith %}
+
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.libelle_devise required=True kp_select=True %}
+
+            {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.mot_de_passe icon=icon password=True required=True %}
+            {% include 'comptes/partials/auth_field.html' with field=signup_form.confirmation_mot_de_passe icon=icon password=True required=True %}
+            {% endwith %}
+        </div>
+
+        <button type="submit" class="auth-btn">Créer mon compte</button>
+    </form>
+</div>
+{% endblock %}

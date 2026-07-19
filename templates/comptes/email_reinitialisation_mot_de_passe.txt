@@ -1,0 +1,10 @@
+Bonjour,
+
+Vous avez demandé la réinitialisation de votre mot de passe sur {{ app_name }}.
+
+Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :
+{{ protocol }}://{{ domain }}{% url 'reinitialiser_mot_de_passe' uidb64=uid token=token %}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.
+
+L'équipe {{ app_name }}

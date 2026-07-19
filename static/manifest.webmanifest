@@ -1,0 +1,33 @@
+{
+  "name": "Xaliss — Gestion financière",
+  "short_name": "Xaliss",
+  "description": "Suivi des entrées, sorties et contacts pour votre activité.",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#43277d",
+  "theme_color": "#43277d",
+  "lang": "fr",
+  "categories": ["finance", "business", "productivi²ty"],
+  "icons": [
+    {
+      "src": "/static/images/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

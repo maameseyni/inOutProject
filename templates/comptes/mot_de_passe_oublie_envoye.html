@@ -1,0 +1,15 @@
+{% extends 'comptes/base_auth.html' %}
+{% block title %}E-mail envoyé — Xaliss{% endblock %}
+{% block content %}
+<div class="auth-header">
+    <div class="auth-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="2"/>
+            <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <h1>Vérifiez votre e-mail</h1>
+    <p class="auth-subtitle">Si un compte existe avec cette adresse, vous recevrez un lien pour réinitialiser votre mot de passe.</p>
+</div>
+<a class="auth-btn" href="{% url 'connexion' %}">Retour à la connexion</a>
+{% endblock %}

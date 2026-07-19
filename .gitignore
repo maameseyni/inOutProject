@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+staticfiles/
+.env
+
+# Django
+*.log
+db.sqlite3
+local_settings.py
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.pem
+
+# Exports / sauvegardes locales
+scripts/backups/
+*.dump
+*.sql.gz

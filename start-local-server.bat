@@ -1,14 +1,14 @@
 @echo off
 cd /d "%~dp0"
 echo.
-echo Serveur local KaayPrint sur http://localhost:8080
-echo Ouvre : http://localhost:8080/index.html
-echo (ou http://localhost:8080/acceuil.html apres connexion)
+echo Serveur Django Xaliss / KaayPrint sur http://127.0.0.1:8000
+echo Connexion : http://127.0.0.1:8000/connexion/
+echo Application : http://127.0.0.1:8000/app/
 echo Ctrl+C pour arreter.
 echo.
-py -m http.server 8080
-if errorlevel 1 python -m http.server 8080
+py manage.py runserver
+if errorlevel 1 python manage.py runserver
 if errorlevel 1 (
-  echo Erreur : Python non trouve. Installe Python depuis python.org
+  echo Erreur : Python ou Django non trouve. Voir DJANGO.md
   pause
 )

@@ -1,0 +1,6 @@
+{% if messages %}
+<script id="xaliss-django-messages" type="application/json">[
+{% for message in messages %}{"text": "{{ message|escapejs }}", "tags": "{{ message.tags|default:'info' }}"}{% if not forloop.last %},{% endif %}
+{% endfor %}
+]</script>
+{% endif %}

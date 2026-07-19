@@ -1,0 +1,25 @@
+<div class="form-group{% if full_width %} form-group--full{% endif %}{% if kp_select %} form-group--kp-select{% endif %}">
+    <label class="auth-label" for="{{ field.id_for_label }}">{{ field.label }}{% if required %} *{% endif %}</label>
+    {% if kp_select %}
+    {{ field }}
+    {% else %}
+    <div class="auth-field-wrap{% if password %} auth-field-wrap--password{% endif %}">
+        {% if icon %}
+        <span class="auth-field-icon" aria-hidden="true">{{ icon|safe }}</span>
+        {% endif %}
+        {{ field }}
+        {% if password %}
+        <button type="button" class="auth-password-toggle" aria-label="Afficher le mot de passe">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% if hint %}<p class="auth-hint">{{ hint }}</p>{% endif %}
+    {% for error in field.errors %}
+    <div class="field-error">{{ error }}</div>
+    {% endfor %}
+</div>

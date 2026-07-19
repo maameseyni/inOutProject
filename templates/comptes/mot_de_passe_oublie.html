@@ -1,0 +1,40 @@
+{% extends 'comptes/base_auth.html' %}
+{% block title %}Mot de passe oublié — Xaliss{% endblock %}
+{% block content %}
+<a class="auth-back-link" href="{% url 'connexion' %}">← Retour à la connexion</a>
+
+<div class="auth-header">
+    <div class="auth-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <h1>Mot de passe oublié</h1>
+    <p class="auth-subtitle">Indiquez votre e-mail pour recevoir un lien de réinitialisation.</p>
+</div>
+
+{% if form.non_field_errors %}
+<div class="non-field-errors">{{ form.non_field_errors }}</div>
+{% endif %}
+
+<form method="post" novalidate class="auth-form-stack">
+    {% csrf_token %}
+    <div class="form-group">
+        <label class="auth-label" for="{{ form.email.id_for_label }}">E-mail</label>
+        <div class="auth-field-wrap">
+            <span class="auth-field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="2"/>
+                    <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <input type="email" name="email" id="{{ form.email.id_for_label }}" class="auth-input" required autocomplete="email" placeholder="vous@exemple.com"{% if form.email.value %} value="{{ form.email.value }}"{% endif %}>
+        </div>
+        {% for error in form.email.errors %}
+        <div class="field-error">{{ error }}</div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="auth-btn">Envoyer le lien</button>
+</form>
+{% endblock %}

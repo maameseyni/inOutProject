@@ -1,0 +1,14 @@
+{% extends 'comptes/base_auth.html' %}
+{% block title %}Mot de passe réinitialisé — Xaliss{% endblock %}
+{% block content %}
+<div class="auth-header">
+    <div class="auth-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
+    <h1>Mot de passe mis à jour</h1>
+    <p class="auth-subtitle">Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
+</div>
+<a class="auth-btn" href="{% url 'connexion' %}">Se connecter</a>
+{% endblock %}

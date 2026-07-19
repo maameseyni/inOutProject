@@ -1,0 +1,1028 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'partials/pwa_head.html' %}
+    <title>Xaliss - Gestion Financière</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <!-- jsPDF pour l'export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- html2canvas pour export facture en image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- QR code (site / WhatsApp : paramètres + facture) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script>
+    window.XALISS_DJANGO = {
+        apiBase: '/app/api',
+        loginUrl: '{% url "connexion" %}',
+        logoutUrl: '{% url "deconnexion" %}',
+        csrfToken: '{{ csrf_token }}',
+        userEmail: '{{ request.user.email|escapejs }}',
+        userId: {{ request.user.id }},
+        orgSlug: '{{ organisation.slug|escapejs }}',
+        logoUrl: '{% static "images/logo.png" %}',
+        permissions: {{ permissions_json|safe }}
+    };
+    </script>
+</head>
+<body class="app-body app-tab-{{ initial_tab }}">
+    {% include 'partials/django_messages_data.html' %}
+    <form id="djangoLogoutForm" method="post" action="{% url 'deconnexion' %}" hidden>
+        {% csrf_token %}
+    </form>
+
+    <div class="app-shell">
+        <aside class="app-sidebar" id="appSidebar" aria-label="Menu principal">
+            <div class="app-sidebar-panel">
+                <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Réduire le menu" aria-expanded="true">
+                    <svg class="sidebar-toggle-icon sidebar-toggle-icon--collapse" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="sidebar-toggle-icon sidebar-toggle-icon--expand" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="sidebar-toggle-label">Réduire</span>
+                </button>
+                <nav class="main-tabs app-sidebar-nav" aria-label="Navigation">
+                    <div class="app-sidebar-profile" id="sidebarProfile" title="{{ membre.get_nom_profil }}">
+                        <span class="app-sidebar-profile-icon" aria-hidden="true">
+                            <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </span>
+                        <span class="main-tab-label" id="sidebarProfileName">{{ membre.get_nom_profil }}</span>
+                    </div>
+                    {% include 'partials/app_nav_tabs.html' with active_tab=initial_tab %}
+                </nav>
+                <div class="app-sidebar-footer">
+                    <button type="button" id="logoutBtn" class="sidebar-logout-btn" title="Déconnexion" aria-label="Déconnexion">
+                        <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="main-tab-label">Déconnexion</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+    <div class="container">
+        <header>
+            <img src="{% static 'images/logo.png' %}" alt="Xaliss" class="logo">
+            <button type="button" class="app-notifications-btn" id="notificationsBtn" title="Notifications" aria-label="Ouvrir les notifications">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="notifications-count" id="notificationsCount" hidden>0</span>
+            </button>
+        </header>
+
+        <section id="section-transactions" class="main-section{% if initial_tab == 'transactions' %} active{% endif %}">
+        <div class="transactions-layout">
+        <div class="actions">
+            <div class="action-card">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter un Entrant</h2>
+                <form id="incomeForm">
+                    <div class="form-group">
+                        <label for="incomeAmount">Montant (<span class="js-currency-label">FCFA</span>)</label>
+                        <input type="number" id="incomeAmount" step="0.01" min="0" required>
+                        <span class="error-message" id="incomeAmountError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Type de paiement</label>
+                        <div class="payment-type-group">
+                            <label class="radio-label">
+                                <input type="radio" name="paymentType" id="paymentComplete" value="complete" checked>
+                                <span>Paiement complet</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="paymentType" id="paymentPartial" value="partial">
+                                <span>Paiement partiel</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="remainingAmountGroup" style="display: none;">
+                        <label for="remainingAmount">Restant à payer (<span class="js-currency-label">FCFA</span>)</label>
+                        <input type="number" id="remainingAmount" step="0.01" min="0" placeholder="Montant dû (pour une dette : mettre 0 ci-dessus et le montant ici)">
+                        <span class="error-message" id="remainingAmountError"></span>
+                    </div>
+                    <div class="income-client-category-row">
+                        <div class="form-group">
+                            <label for="incomeInvoiceClient">Client (optionnel, sur la facture)</label>
+                            <select id="incomeInvoiceClient" class="kp-select-native">
+                                <option value="">— Aucun —</option>
+                                <option value="__new__">+ Ajouter</option>
+                            </select>
+                            <input type="text" id="incomeInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client" hidden>
+                        </div>
+                        <div class="form-group">
+                            <label for="incomeCategory">Catégorie</label>
+                            <select id="incomeCategory" class="kp-select-native">
+                                <option value="">— Non catégorisé —</option>
+                                <option value="__new__">+ Ajouter</option>
+                            </select>
+                            <input type="text" id="incomeCategoryOther" class="client-other-input" maxlength="120" placeholder="Nom de la catégorie" hidden>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDescription">Description</label>
+                        <textarea id="incomeDescription" placeholder="Ex: Paiement client - Impression flyers" required maxlength="500" rows="4"></textarea>
+                        <div class="char-counter">
+                            <span id="incomeDescriptionCounter">0</span>/500 caractères
+                        </div>
+                        <span class="error-message" id="incomeDescriptionError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDate">Date (optionnel - date actuelle par défaut)</label>
+                        <input type="datetime-local" id="incomeDate">
+                        <span class="error-message" id="incomeDateError"></span>
+                    </div>
+                    <button type="submit" class="btn btn-income transactions-btn-submit">Ajouter Entrant</button>
+                </form>
+            </div>
+
+            <div class="action-card">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter un Sortant</h2>
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label for="expenseAmount">Montant (<span class="js-currency-label">FCFA</span>)</label>
+                        <input type="number" id="expenseAmount" step="0.01" min="0" required>
+                        <span class="error-message" id="expenseAmountError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Type de paiement</label>
+                        <div class="payment-type-group">
+                            <label class="radio-label">
+                                <input type="radio" name="expensePaymentType" id="expensePaymentComplete" value="complete" checked>
+                                <span>Paiement complet</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="expensePaymentType" id="expensePaymentPartial" value="partial">
+                                <span>Paiement partiel</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="expenseRemainingAmountGroup" style="display: none;">
+                        <label for="expenseRemainingAmount">Restant (<span class="js-currency-label">FCFA</span>)</label>
+                        <input type="number" id="expenseRemainingAmount" step="0.01" min="0" placeholder="Montant restant à payer">
+                        <span class="error-message" id="expenseRemainingAmountError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseInvoiceClient">Payé à (optionnel)</label>
+                        <select id="expenseInvoiceClient" class="kp-select-native">
+                            <option value="">— Aucun —</option>
+                            <option value="__new__">+ Ajouter</option>
+                        </select>
+                        <input type="text" id="expenseInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du prestataire" hidden>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDescription">Description</label>
+                        <textarea id="expenseDescription" placeholder="Ex: Achat papier A4" required maxlength="500" rows="4"></textarea>
+                        <div class="char-counter">
+                            <span id="expenseDescriptionCounter">0</span>/500 caractères
+                        </div>
+                        <span class="error-message" id="expenseDescriptionError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDate">Date (optionnel - date actuelle par défaut)</label>
+                        <input type="datetime-local" id="expenseDate">
+                        <span class="error-message" id="expenseDateError"></span>
+                    </div>
+                    <button type="submit" class="btn btn-expense transactions-btn-submit">Ajouter Sortant</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="transactions-section">
+            <div class="section-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Historique des Transactions</h2>
+                <div class="transactions-export-actions">
+                    <button class="export-btn" onclick="exportToPDF()" title="Exporter en PDF">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="export-btn" onclick="exportToExcel()" title="Exporter en Excel">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="search-container">
+                <div class="search-box">
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="11" cy="11" r="8" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="m21 21-4.35-4.35" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par description ou montant...">
+                    </div>
+                </div>
+                <div class="date-filters">
+                    <div class="date-filter-group">
+                        <label for="singleDate"><svg class="icon-inline-small" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Filtrer par jour</label>
+                        <input type="date" id="singleDate" class="date-input">
+                    </div>
+                    <div class="date-filter-group">
+                        <label for="dateFrom">Du</label>
+                        <input type="date" id="dateFrom" class="date-input">
+                    </div>
+                    <div class="date-filter-group">
+                        <label for="dateTo">Au</label>
+                        <input type="date" id="dateTo" class="date-input">
+                    </div>
+                    <button class="clear-filters-btn" onclick="clearFilters()">Effacer filtres</button>
+                </div>
+            </div>
+            
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">Tout</button>
+                <button class="filter-btn" data-filter="income">Entrants</button>
+                <button class="filter-btn" data-filter="expense">Sortants</button>
+                <button class="filter-btn" data-filter="pending">En attente de complément</button>
+            </div>
+            <div class="client-transaction-filter" id="clientTransactionFilterBar" hidden>
+                <div class="client-transaction-filter-left">
+                    <span class="client-transaction-filter-text">Transactions liées à : <strong id="clientTransactionFilterLabel"></strong></span>
+                    <span class="client-transaction-filter-total" id="clientTransactionFilterTotal" hidden></span>
+                </div>
+                <button type="button" class="clear-filters-btn" onclick="clearClientTransactionFilter()">Effacer le filtre</button>
+            </div>
+            <div class="client-transaction-filter category-transaction-filter" id="categoryTransactionFilterBar" hidden>
+                <div class="client-transaction-filter-left">
+                    <span class="client-transaction-filter-text">Transactions de la catégorie : <strong id="categoryTransactionFilterLabel"></strong></span>
+                    <span class="client-transaction-filter-total" id="categoryTransactionFilterTotal" hidden></span>
+                </div>
+                <button type="button" class="clear-filters-btn" onclick="clearCategoryTransactionFilter()">Effacer le filtre</button>
+            </div>
+            <div class="transactions-list" id="transactionsList">
+                <p class="list-empty-state" id="transactionsEmptyState">Aucune transaction pour le moment.</p>
+            </div>
+            <div class="pagination" id="pagination" style="display: none;">
+                <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)">Précédent</button>
+                <span class="pagination-info" id="pageInfo">Page 1 sur 1</span>
+                <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Suivant</button>
+            </div>
+        </div>
+        </div>
+        </section>
+
+        <section id="section-statistiques" class="main-section{% if initial_tab == 'statistiques' %} active{% endif %}">
+            <div class="dashboard">
+                <div class="stat-card balance">
+                    <div class="stat-info">
+                        <h3>Recette Actuelle</h3>
+                        <p class="stat-value" id="balance">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                    </div>
+                </div>
+                <div class="stat-card income">
+                    <div class="stat-info">
+                        <h3>Total Entrants</h3>
+                        <p class="stat-value" id="totalIncome">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                    </div>
+                </div>
+                <div class="stat-card expense">
+                    <div class="stat-info">
+                        <h3>Total Sortants</h3>
+                        <p class="stat-value" id="totalExpense">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-benefits">
+                <div class="benefit-card benefit-main">
+                    <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Bénéfice</h3>
+                    <div class="benefit-mode-group">
+                        <label class="radio-label"><input type="radio" name="benefitMode" id="benefitModeDay" value="day" checked> Par jour</label>
+                        <label class="radio-label"><input type="radio" name="benefitMode" id="benefitModePeriod" value="period"> Par période</label>
+                    </div>
+                    <div id="benefitDayBlock" class="benefit-controls benefit-controls-row">
+                        <div class="benefit-input-wrap">
+                            <label for="benefitDayDate">Date</label>
+                            <input type="date" id="benefitDayDate" class="date-input">
+                        </div>
+                        <button type="button" class="clear-benefit-btn" onclick="clearBenefitCardFilter()" title="Effacer">Effacer</button>
+                    </div>
+                    <div id="benefitPeriodBlock" class="benefit-controls period benefit-controls-row" style="display: none;">
+                        <div class="benefit-input-wrap">
+                            <label for="benefitCardPeriodFrom">Du</label>
+                            <input type="date" id="benefitCardPeriodFrom" class="date-input">
+                        </div>
+                        <div class="benefit-input-wrap">
+                            <label for="benefitCardPeriodTo">Au</label>
+                            <input type="date" id="benefitCardPeriodTo" class="date-input">
+                        </div>
+                        <button type="button" class="clear-benefit-btn" onclick="clearBenefitCardFilter()" title="Effacer">Effacer</button>
+                    </div>
+                    <p class="benefit-value" id="benefitDayValue">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                </div>
+                <div class="benefit-card benefit-period">
+                    <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 3H2v2.18l6.5 8.59V21h7v-7.23L22 5.18V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Filtrer les graphiques</h3>
+                    <p class="benefit-period-hint">Période utilisée pour les graphiques ci-dessous</p>
+                    <div class="benefit-controls period benefit-controls-row">
+                        <div class="benefit-input-wrap">
+                            <label for="benefitPeriodFrom">Du</label>
+                            <input type="date" id="benefitPeriodFrom" class="date-input">
+                        </div>
+                        <div class="benefit-input-wrap">
+                            <label for="benefitPeriodTo">Au</label>
+                            <input type="date" id="benefitPeriodTo" class="date-input">
+                        </div>
+                        <button type="button" class="clear-benefit-btn" onclick="clearStatsFiltersPeriod()" title="Effacer les filtres">Effacer</button>
+                    </div>
+                    <p class="charts-filter-period-label" id="chartsFilterPeriodLabel">Toutes les données</p>
+                </div>
+            </div>
+            <!-- Graphiques (étape par étape) -->
+            <div class="charts-section">
+                <div class="chart-card">
+                    <h3 class="chart-title">Entrants vs Sortants par mois</h3>
+                    <p class="chart-subtitle">Comparaison des revenus et dépenses par mois</p>
+                    <p class="chart-empty" id="chartIncomeVsExpenseEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartIncomeVsExpenseContainer">
+                        <canvas id="chartIncomeVsExpense"></canvas>
+                    </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Top 5 sortants</h3>
+                    <p class="chart-subtitle">Les 5 plus grosses dépenses</p>
+                    <p class="chart-empty" id="chartTop5ExpensesEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartTop5ExpensesContainer">
+                        <canvas id="chartTop5Expenses"></canvas>
+                    </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Top 5 entrants</h3>
+                    <p class="chart-subtitle">Les 5 plus gros revenus</p>
+                    <p class="chart-empty" id="chartTop5IncomeEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartTop5IncomeContainer">
+                        <canvas id="chartTop5Income"></canvas>
+                    </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Évolution de la recette</h3>
+                    <p class="chart-subtitle">Solde cumulé au fil du temps</p>
+                    <p class="chart-empty" id="chartBalanceEvolutionEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartBalanceEvolutionContainer">
+                        <canvas id="chartBalanceEvolution"></canvas>
+                    </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Bénéfice par mois</h3>
+                    <p class="chart-subtitle">Entrants − sortants par mois</p>
+                    <p class="chart-empty" id="chartBenefitByMonthEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartBenefitByMonthContainer">
+                        <canvas id="chartBenefitByMonth"></canvas>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        </section>
+
+        <section id="section-notes" class="main-section{% if initial_tab == 'notes' %} active{% endif %}">
+            <div class="notes-layout">
+                <div class="action-card notes-form-card">
+                    <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Notes utiles</h2>
+                    <p class="notes-intro">Gardez ici des rappels, idées ou infos pratiques pour l’équipe.</p>
+                    <form id="noteForm" class="note-form" novalidate>
+                        <input type="hidden" id="noteEditId" value="">
+                        <div class="form-group">
+                            <label for="noteTitle">Titre <span class="required-mark">*</span></label>
+                            <input type="text" id="noteTitle" maxlength="200" placeholder="Ex. Relancer le fournisseur papier" required>
+                            <span class="error-message" id="noteTitleError"></span>
+                        </div>
+                        <div class="form-group note-content-group">
+                            <label for="noteContent">Contenu</label>
+                            <textarea id="noteContent" rows="8" maxlength="4000" placeholder="Détails, numéros, prochaines étapes…"></textarea>
+                        </div>
+                        <p class="notes-attach-label">Rattacher la note à :</p>
+                        <div class="notes-attach-row">
+                            <div class="form-group">
+                                <label for="noteClient">Client</label>
+                                <select id="noteClient" class="kp-select-native">
+                                    <option value="">— Aucun —</option>
+                                    <option value="__new__">+ Ajouter</option>
+                                </select>
+                                <input type="text" id="noteClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client" hidden>
+                            </div>
+                            <div class="form-group">
+                                <label for="noteCategory">Catégorie</label>
+                                <select id="noteCategory" class="kp-select-native">
+                                    <option value="">— Non catégorisé —</option>
+                                    <option value="__new__">+ Ajouter</option>
+                                </select>
+                                <input type="text" id="noteCategoryOther" class="client-other-input" maxlength="120" placeholder="Nom de la catégorie" hidden>
+                            </div>
+                        </div>
+                        <div class="notes-form-actions">
+                            <button type="submit" class="btn btn-income parametres-btn-compact" id="noteFormSubmit">Ajouter la note</button>
+                            <button type="button" class="clients-btn clients-btn-clear" id="noteFormCancel">Annuler</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="action-card notes-list-card">
+                    <h2 class="notes-list-title">Mes notes</h2>
+                    <div class="form-group notes-panel-search">
+                        <label for="noteSearch">Rechercher</label>
+                        <input type="text" id="noteSearch" placeholder="Titre, contenu, client…" autocomplete="off" aria-label="Rechercher une note">
+                    </div>
+                    <div class="notes-filter-chips" role="group" aria-label="Filtrer les notes">
+                        <button type="button" class="notes-filter-chip active" data-notes-filter="all">Toutes</button>
+                        <button type="button" class="notes-filter-chip" data-notes-filter="client">Client</button>
+                        <button type="button" class="notes-filter-chip" data-notes-filter="category">Catégorie</button>
+                    </div>
+                    <div class="notes-list" id="notesList" aria-label="Liste des notes">
+                        <div class="notes-empty-state" id="notesEmptyState">
+                            <svg class="notes-empty-illustration" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <rect x="28" y="12" width="64" height="72" rx="8" stroke="#43277d" stroke-width="2.5" fill="#f8f6fc"/>
+                                <path d="M44 12v10a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V12" stroke="#43277d" stroke-width="2.5"/>
+                                <path d="M44 44h32M44 56h24M44 68h28" stroke="#43277d" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+                            </svg>
+                            <p class="notes-empty-title">Aucune note pour le moment</p>
+                            <p class="notes-empty-hint">Ajoutez une note à gauche pour la retrouver ici.</p>
+                        </div>
+                    </div>
+                    <div class="notes-list-card-bottom">
+                        <div class="clients-form-actions">
+                            <button type="button" class="clients-btn clients-btn-list" id="notesViewAllBtn">Voir toutes les notes</button>
+                            <button type="button" class="clients-btn clients-btn-clear" id="notesClearAllBtn">Vider les notes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-parametres" class="main-section{% if initial_tab == 'parametres' %} active{% endif %}">
+        <div class="parametres-layout">
+        <div class="action-card parametres-settings-card parametres-personal-card">
+                    <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Mes informations personnelles</h2>
+                    <div class="parametres-form-row">
+                        <div class="form-group">
+                            <label for="userFirstName">Prénom <span class="required-mark">*</span></label>
+                            <input type="text" id="userFirstName" maxlength="150" placeholder="Prénom" autocomplete="given-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="userLastName">Nom <span class="required-mark">*</span></label>
+                            <input type="text" id="userLastName" maxlength="150" placeholder="Nom" autocomplete="family-name">
+                        </div>
+                    </div>
+                    <div class="parametres-form-row">
+                        <div class="form-group">
+                            <label for="userEmail">E-mail de connexion <span class="required-mark">*</span></label>
+                            <input type="email" id="userEmail" maxlength="254" placeholder="vous@exemple.com" autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="userCurrencyLabel">Devise affichée <span class="required-mark">*</span></label>
+                            <select id="userCurrencyLabel" class="kp-select-native">
+                                {% for code, label in devise_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% empty %}
+                                <option value="XOF">XOF (FCFA)</option>
+                                <option value="EUR">EUR (Euro)</option>
+                                <option value="USD">USD (Dollar US)</option>
+                                <option value="GBP">GBP (Livre sterling)</option>
+                                <option value="MAD">MAD (Dirham)</option>
+                                <option value="GNF">GNF (Franc guinéen)</option>
+                                <option value="CHF">CHF (Franc suisse)</option>
+                                <option value="CAD">CAD (Dollar canadien)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="parametres-form-row">
+                        <div class="form-group">
+                            <label for="userCountry">Pays <span class="required-mark">*</span></label>
+                            <select id="userCountry" class="kp-select-native" data-kp-searchable="1">
+                                <option value="">— Choisir un pays —</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="userCity">Ville <span class="required-mark">*</span></label>
+                            <select id="userCity" class="kp-select-native" data-kp-searchable="1" disabled>
+                                <option value="">— Choisir d'abord un pays —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="parametres-personal-footer">
+                        <button type="button" class="btn btn-income parametres-btn-compact" id="userProfileSave">Enregistrer mon profil</button>
+                    </div>
+                    <h3 class="parametres-subsection-title parametres-security-title">Sécurité</h3>
+                    <div class="form-group" id="userCurrentPasswordGroup">
+                        <label for="userCurrentPassword">Mot de passe actuel</label>
+                        <div class="parametres-password-wrap">
+                            <input type="password" id="userCurrentPassword" maxlength="128" placeholder="••••••••" autocomplete="current-password">
+                            <button type="button" class="parametres-password-toggle" aria-label="Afficher le mot de passe">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="parametres-form-row parametres-form-row--password">
+                        <div class="form-group">
+                            <label for="userNewPassword">Nouveau mot de passe</label>
+                            <div class="parametres-password-wrap">
+                                <input type="password" id="userNewPassword" maxlength="128" placeholder="••••••••" autocomplete="new-password">
+                                <button type="button" class="parametres-password-toggle" aria-label="Afficher le mot de passe">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/>
+                                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="userConfirmPassword">Confirmer le nouveau mot de passe</label>
+                            <div class="parametres-password-wrap">
+                                <input type="password" id="userConfirmPassword" maxlength="128" placeholder="••••••••" autocomplete="new-password">
+                                <button type="button" class="parametres-password-toggle" aria-label="Afficher le mot de passe">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2"/>
+                                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="parametres-personal-footer parametres-personal-footer--password">
+                        <button type="button" class="btn btn-income parametres-btn-compact" id="userPasswordSave">Changer le mot de passe</button>
+                    </div>
+                </div>
+        <div class="action-card parametres-settings-card parametres-categories-card">
+                    <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Mes catégories de produits</h2>
+                    <form id="categoryAddForm" class="category-add-form" novalidate>
+                        <div class="form-group">
+                            <label for="categoryFormName">Nom de la catégorie <span class="required-mark">*</span></label>
+                            <input type="text" id="categoryFormName" maxlength="120" placeholder="Ex. Flyers, cartes de visite, bâches…" required>
+                            <span class="error-message" id="categoryFormNameError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoryFormDescription">Description</label>
+                            <textarea id="categoryFormDescription" rows="5" maxlength="500" placeholder="Ex. Travaux d'impression papier, formats et finitions habituels…"></textarea>
+                            <p class="clients-settings-hint">La description sert à clarifier la catégorie, pas à fixer un prix unique.</p>
+                        </div>
+                    </form>
+                    <div class="clients-card-bottom">
+                        <button type="submit" form="categoryAddForm" class="btn btn-income parametres-btn-compact">Ajouter la catégorie</button>
+                        <p class="clients-settings-hint">Ces catégories sont proposées dans le formulaire Entrant et alimentent les statistiques.</p>
+                        <div class="clients-form-actions">
+                            <button type="button" class="clients-btn clients-btn-list" id="categoriesViewAllBtn">Voir la liste</button>
+                        </div>
+                    </div>
+                </div>
+        <div class="company-profile-banner action-card">
+                    <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 22V12h6v10" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Entreprise &amp; application</h2>
+                    <div class="company-profile-body">
+                    <h3 class="parametres-subsection-title">Coordonnées sur la facture</h3>
+                    <div class="form-group">
+                        <label for="companyName">Raison sociale / nom commercial</label>
+                        <input type="text" id="companyName" maxlength="120" placeholder="Ex. Ma Boutique, Atelier…">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyAddress">Adresse</label>
+                        <input type="text" id="companyAddress" maxlength="500" placeholder="Rue, ville, pays…">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyPhone">Téléphone</label>
+                        <input type="text" id="companyPhone" maxlength="40" placeholder="+221 …">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyEmail">E-mail</label>
+                        <input type="email" id="companyEmail" maxlength="80" placeholder="contact@…">
+                    </div>
+                    <div class="form-group form-group-company-website">
+                        <label for="companyWebsite">Site web ou WhatsApp pro</label>
+                        <div class="company-website-panel">
+                            <input type="text" id="companyWebsite" maxlength="120" placeholder="https://… ou lien wa.me/…" class="company-website-field">
+                            <div id="companyWebsiteQrSection" class="company-website-qr-block" hidden>
+                                <div class="company-website-qr-frame" id="companyWebsiteQrFrame">
+                                    <img id="companyWebsiteQrImg" class="company-website-qr-img" alt="" aria-hidden="true">
+                                </div>
+                                <div class="company-website-qr-actions">
+                                    <button type="button" class="company-website-qr-btn" id="companyWebsiteQrDownload" title="Télécharger le QR (PNG)" aria-label="Télécharger le QR code">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    </button>
+                                    <button type="button" class="company-website-qr-btn" id="companyWebsiteQrShare" title="Partager le QR" aria-label="Partager le QR code">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.82 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="companyWebsiteQrHint" class="company-website-qr-hint">QR code généré à partir du lien : il apparaît sur la facture ; vous pouvez aussi le télécharger ou le partager seul.</p>
+                    </div>
+                    </div>
+                    <div class="company-profile-footer">
+                        <button type="button" class="btn btn-income parametres-btn-compact" id="companyProfileSave">Enregistrer les coordonnées</button>
+                        <div id="pwaSettingsBlock" class="pwa-settings-block" hidden>
+                            <h3 class="parametres-subsection-title">Sur votre appareil</h3>
+                            <p class="pwa-settings-hint">Installez Xaliss pour un accès rapide depuis l'écran d'accueil, même hors ligne.</p>
+                            <button type="button" id="pwaInstallBtn" class="clients-btn clients-btn-list pwa-install-btn--card" title="Installer l'application">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M12 3v12M7 10l5 5 5-5M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="pwa-install-btn-text">Installer l'application</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+        <div class="company-profile-banner action-card clients-settings-card">
+                    <h2 class="clients-card-title">
+                        <span class="clients-card-title-main"><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clients et prestataires</span>
+                        <button type="button" id="clientProfileReminderBadge" class="client-profile-reminder-badge" hidden aria-label="Voir les contacts à compléter"></button>
+                    </h2>
+                    <form id="clientAddForm" class="client-add-form" novalidate>
+                        <div class="form-group">
+                            <label for="clientFormName">Nom <span class="required-mark">*</span></label>
+                            <input type="text" id="clientFormName" maxlength="200" placeholder="Nom du client ou du prestataire" required>
+                            <span class="error-message" id="clientFormNameError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormProvenance">Provenance <span class="required-mark">*</span></label>
+                            <select id="clientFormProvenance" class="kp-select-native" required>
+                                <option value="">— Choisir —</option>
+                            </select>
+                            <span class="error-message" id="clientFormProvenanceError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormPhone">Numéro</label>
+                            <input type="text" id="clientFormPhone" maxlength="40" placeholder="+221 77 …">
+                        </div>
+                        <div class="form-group">
+                            <label for="clientFormNote">Notes</label>
+                            <textarea id="clientFormNote" rows="3" maxlength="500" placeholder="Infos utiles (optionnel)"></textarea>
+                            <p class="clients-settings-hint">Pour vous uniquement : rappel de commande, préférences, adresse… Ces notes ne s'affichent pas sur la facture.</p>
+                        </div>
+                    </form>
+                    <div class="clients-card-bottom">
+                        <button type="submit" form="clientAddForm" class="btn btn-income parametres-btn-compact">Ajouter à la liste</button>
+                        <p class="clients-settings-hint">Les clients et prestataires sont réutilisés dans les formulaires Entrant et Sortant (le nom apparaît sur la facture ou la note de paiement).</p>
+                        <div class="clients-form-actions">
+                            <button type="button" class="clients-btn clients-btn-list" id="clientsViewAllBtn">Voir la liste</button>
+                            <button type="button" class="clients-btn clients-btn-clear" id="clientsClearAllBtn">Vider la liste</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        </section>
+    </div>
+        </div>
+    </div>
+
+    <nav class="app-bottom-nav main-tabs" aria-label="Navigation mobile">
+        {% include 'partials/app_nav_tabs.html' with active_tab=initial_tab %}
+        <button type="button" class="sidebar-logout-btn app-bottom-nav-logout" title="Déconnexion" aria-label="Déconnexion">
+            <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="main-tab-label">Déconnexion</span>
+        </button>
+    </nav>
+
+    <!-- Modal de complément -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17l-5-5" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Compléter le paiement</h2>
+                <button class="modal-close" onclick="closeCompleteModal()">&times;</button>
+            </div>
+            <form id="completeForm">
+                <div class="form-group">
+                    <label>Montant restant à payer</label>
+                    <input type="text" id="completeRemainingAmount" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label for="completeAmount">Montant à compléter (<span class="js-currency-label">FCFA</span>)</label>
+                    <input type="number" id="completeAmount" step="0.01" min="0" required>
+                    <span class="error-message" id="completeAmountError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="completeDate">Date (optionnel - date actuelle par défaut)</label>
+                    <input type="datetime-local" id="completeDate">
+                    <span class="error-message" id="completeDateError"></span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeCompleteModal()">Annuler</button>
+                    <button type="submit" class="btn btn-save">Compléter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal d'édition -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier la transaction</h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editAmount">Montant payé à ce jour (<span class="js-currency-label">FCFA</span>)</label>
+                    <input type="number" id="editAmount" step="0.01" min="0" required>
+                    <span class="error-message" id="editAmountError"></span>
+                </div>
+                <div class="form-group" id="editRemainingGroup" style="display: none;">
+                    <label for="editRemainingAmount">Restant à payer (<span class="js-currency-label">FCFA</span>)</label>
+                    <input type="number" id="editRemainingAmount" step="0.01" min="0" placeholder="0 = paiement complet">
+                    <span class="error-message" id="editRemainingError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="editInvoiceClient" id="editInvoiceClientLabel">Client (optionnel, sur la facture)</label>
+                    <select id="editInvoiceClient" class="kp-select-native">
+                        <option value="">— Aucun —</option>
+                        <option value="__new__">+ Ajouter</option>
+                    </select>
+                    <input type="text" id="editInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client" hidden>
+                </div>
+                <div class="form-group" id="editCategoryGroup">
+                    <label for="editCategory">Catégorie</label>
+                    <select id="editCategory" class="kp-select-native">
+                        <option value="">— Non catégorisé —</option>
+                        <option value="__new__">+ Ajouter</option>
+                    </select>
+                    <input type="text" id="editCategoryOther" class="client-other-input" maxlength="120" placeholder="Nom de la catégorie" hidden>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription" required maxlength="200" rows="4" placeholder="Ex: Paiement client - Impression flyers"></textarea>
+                    <div class="char-counter">
+                        <span id="editDescriptionCounter">0</span>/200 caractères
+                    </div>
+                    <span class="error-message" id="editDescriptionError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="editDate">Date</label>
+                    <input type="datetime-local" id="editDate" required>
+                    <span class="error-message" id="editDateError"></span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Annuler</button>
+                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal facture / note de paiement -->
+    <div id="invoiceModal" class="modal">
+        <div class="modal-content modal-content-invoice">
+            <div class="modal-header">
+                <h2 id="invoiceModalTitle">Facture</h2>
+                <button class="modal-close" onclick="closeInvoiceModal()">&times;</button>
+            </div>
+            <div id="invoiceContent" class="invoice-content"></div>
+            <div class="modal-actions modal-actions-invoice">
+                <button type="button" class="btn-invoice-icon-btn" onclick="closeInvoiceModal()" title="Fermer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <button type="button" class="btn-invoice-icon-btn" onclick="downloadInvoice()" title="Télécharger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                </button>
+                <button type="button" class="btn-invoice-icon-btn" onclick="shareInvoice()" title="Partager">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.82 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                </button>
+                <button type="button" class="btn-invoice-icon-btn" onclick="printInvoice()" title="Imprimer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal liste des clients -->
+    <div id="clientsListModal" class="modal">
+        <div class="modal-content modal-content-clients">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span id="clientsListModalTitle">Clients et prestataires</span></h2>
+                <button type="button" class="modal-close" onclick="closeClientsListModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="clients-modal-toolbar" id="clientsModalToolbar" hidden>
+                <div class="clients-modal-toolbar-top">
+                    <span class="clients-modal-count" id="clientsModalCount"></span>
+                    <button type="button" class="export-btn clients-export-btn" id="clientsExportExcelBtn" title="Exporter en Excel" aria-label="Exporter la liste en Excel">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="clients-modal-filters-row">
+                    <div class="clients-modal-search-wrap">
+                        <svg class="clients-modal-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="search" id="clientsModalSearch" class="clients-modal-search" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+                    <select id="clientsModalProvenanceFilter" class="kp-select-native clients-modal-provenance-filter" aria-label="Filtrer par provenance">
+                        <option value="">Toutes les provenances</option>
+                    </select>
+                </div>
+            </div>
+            <p class="list-empty-state clients-modal-empty" id="clientsModalEmpty" hidden>Aucun contact enregistré.</p>
+            <p class="list-empty-state clients-modal-no-results" id="clientsModalNoResults" hidden>Aucun contact ne correspond à votre recherche.</p>
+            <p class="clients-modal-incomplete-hint" id="clientsModalIncompleteHint" hidden>Cliquez sur un contact pour le compléter.</p>
+            <div class="clients-list-wrap" id="clientsTableWrap">
+                <div class="clients-list" id="clientsList" aria-label="Liste des clients et prestataires"></div>
+            </div>
+            <div class="pagination clients-pagination" id="clientsPagination" hidden>
+                <button type="button" class="pagination-btn" id="clientsPrevBtn">Précédent</button>
+                <span class="pagination-info" id="clientsPageInfo">Page 1 sur 1</span>
+                <button type="button" class="pagination-btn" id="clientsNextBtn">Suivant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal liste des notes -->
+    <div id="notesListModal" class="modal">
+        <div class="modal-content modal-content-clients">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Liste des notes</h2>
+                <button type="button" class="modal-close" onclick="closeNotesListModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="clients-modal-toolbar" id="notesModalToolbar" hidden>
+                <div class="clients-modal-toolbar-top">
+                    <span class="clients-modal-count" id="notesModalCount"></span>
+                </div>
+                <div class="clients-modal-filters-row">
+                    <div class="clients-modal-search-wrap">
+                        <svg class="clients-modal-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="search" id="notesModalSearch" class="clients-modal-search" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <p class="list-empty-state clients-modal-empty" id="notesModalEmpty" hidden>Aucune note enregistrée.</p>
+            <p class="list-empty-state clients-modal-no-results" id="notesModalNoResults" hidden>Aucune note ne correspond à votre recherche.</p>
+            <div class="clients-list-wrap" id="notesTableWrap">
+                <div class="clients-list notes-modal-list" id="notesModalList" aria-label="Liste des notes"></div>
+            </div>
+            <div class="pagination clients-pagination" id="notesPagination" hidden>
+                <button type="button" class="pagination-btn" id="notesPrevBtn">Précédent</button>
+                <span class="pagination-info" id="notesPageInfo">Page 1 sur 1</span>
+                <button type="button" class="pagination-btn" id="notesNextBtn">Suivant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal notifications -->
+    <div id="notificationsModal" class="modal">
+        <div class="modal-content modal-content-notifications">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Notifications</h2>
+                <button type="button" class="modal-close" onclick="closeNotificationsModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="notifications-modal-toolbar">
+                <span class="notifications-modal-count" id="notificationsModalCount">0 notification</span>
+                <button type="button" class="clients-btn clients-btn-clear notifications-clear-btn" id="notificationsClearBtn">Vider</button>
+            </div>
+            <p class="list-empty-state notifications-empty" id="notificationsEmpty">Aucune notification pour le moment.</p>
+            <div class="notifications-list" id="notificationsList" aria-label="Liste des notifications"></div>
+        </div>
+    </div>
+
+    <!-- Modal liste des catégories -->
+    <div id="categoriesListModal" class="modal">
+        <div class="modal-content modal-content-clients">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Catégories de produits</h2>
+                <button type="button" class="modal-close" onclick="closeCategoriesListModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="clients-modal-toolbar" id="categoriesModalToolbar" hidden>
+                <div class="clients-modal-toolbar-top">
+                    <span class="clients-modal-count" id="categoriesModalCount"></span>
+                    <button type="button" class="export-btn clients-export-btn" id="categoriesExportExcelBtn" title="Exporter en Excel" aria-label="Exporter la liste en Excel">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="clients-modal-filters-row">
+                    <div class="clients-modal-search-wrap">
+                        <svg class="clients-modal-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="search" id="categoriesModalSearch" class="clients-modal-search" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <p class="list-empty-state clients-modal-empty" id="categoriesModalEmpty" hidden>Aucune catégorie enregistrée.</p>
+            <p class="list-empty-state clients-modal-no-results" id="categoriesModalNoResults" hidden>Aucune catégorie ne correspond à votre recherche.</p>
+            <div class="clients-list-wrap" id="categoriesTableWrap">
+                <div class="clients-list categories-list" id="categoriesList" aria-label="Liste des catégories de produits"></div>
+            </div>
+            <div class="pagination clients-pagination" id="categoriesPagination" hidden>
+                <button type="button" class="pagination-btn" id="categoriesPrevBtn">Précédent</button>
+                <span class="pagination-info" id="categoriesPageInfo">Page 1 sur 1</span>
+                <button type="button" class="pagination-btn" id="categoriesNextBtn">Suivant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal modification catégorie -->
+    <div id="categoryEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier la catégorie</h2>
+                <button type="button" class="modal-close" onclick="closeCategoryEditModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="categoryEditForm" novalidate>
+                <input type="hidden" id="categoryEditOriginalName">
+                <div class="form-group">
+                    <label for="categoryEditName">Nom de la catégorie <span class="required-mark">*</span></label>
+                    <input type="text" id="categoryEditName" maxlength="120" required>
+                    <span class="error-message" id="categoryEditNameError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="categoryEditDescription">Description</label>
+                    <textarea id="categoryEditDescription" rows="3" maxlength="500"></textarea>
+                    <p class="clients-settings-hint">Gardez ici une description générale. Les prix variables seront mieux gérés comme tarifs/variantes.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeCategoryEditModal()">Annuler</button>
+                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal modification client -->
+    <div id="clientEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier le contact</h2>
+                <button type="button" class="modal-close" onclick="closeClientEditModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="clientEditForm" novalidate>
+                <input type="hidden" id="clientEditId">
+                <div class="form-group">
+                    <label for="clientEditName">Nom <span class="required-mark">*</span></label>
+                    <input type="text" id="clientEditName" maxlength="200" required>
+                    <span class="error-message" id="clientEditNameError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="clientEditProvenance">Provenance <span class="required-mark">*</span></label>
+                    <select id="clientEditProvenance" class="kp-select-native" required>
+                        <option value="">— Choisir —</option>
+                    </select>
+                    <span class="error-message" id="clientEditProvenanceError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="clientEditPhone">Numéro</label>
+                    <input type="text" id="clientEditPhone" maxlength="40" placeholder="+221 77 …">
+                </div>
+                <div class="form-group">
+                    <label for="clientEditNote">Notes</label>
+                    <textarea id="clientEditNote" rows="3" maxlength="500"></textarea>
+                    <p class="clients-settings-hint">Pour vous uniquement : rappel de commande, préférences, adresse… Ces notes ne s'affichent pas sur la facture.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeClientEditModal()">Annuler</button>
+                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal confirmation suppression -->
+    <div id="deleteConfirmModal" class="modal modal-delete-confirm" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" hidden>
+        <div class="modal-content modal-content-delete">
+            <h2 class="delete-confirm-title">
+                <svg id="deleteConfirmTitleIcon" class="delete-confirm-title-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span id="deleteConfirmTitle">Confirmer la suppression</span>
+            </h2>
+            <p id="deleteConfirmMessage" class="delete-confirm-message"></p>
+            <p id="deleteConfirmDetail" class="delete-confirm-detail" hidden></p>
+            <div class="delete-confirm-actions">
+                <button type="button" class="btn delete-confirm-btn-cancel" id="deleteConfirmCancel">Annuler</button>
+                <button type="button" class="btn delete-confirm-btn-ok" id="deleteConfirmOk">
+                    <span id="deleteConfirmOkLabel">Supprimer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/xaliss-offline.js' %}"></script>
+    <script src="{% static 'js/xaliss-flash.js' %}"></script>
+    <script src="{% static 'js/geo-selects.js' %}"></script>
+    <script src="{% static 'js/script.js' %}"></script>
+    <script src="{% static 'js/django-bridge.js' %}"></script>
+    <script src="{% static 'js/pwa.js' %}"></script>
+</body>
+</html>
+
