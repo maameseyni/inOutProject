@@ -2167,13 +2167,6 @@ function getFilteredNotes() {
     return filterNotesByQuery(getNotesSearchQuery('noteSearch'), notesQuickFilter);
 }
 
-function truncateNotePreview(text, maxLen) {
-    const raw = String(text || '').trim().replace(/\s+/g, ' ');
-    if (!raw) return '';
-    if (raw.length <= maxLen) return raw;
-    return raw.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
-}
-
 function getNotesEmptyStateHtml(isSearchOrFilter) {
     if (isSearchOrFilter) {
         return '<div class="notes-empty-state" id="notesEmptyState">'
@@ -2200,7 +2193,7 @@ function buildNoteItemHtml(note, index) {
     const isoDate = note.updatedAt || note.createdAt;
     const dateLabel = formatNoteRelativeDate(isoDate);
     const dateFull = formatNoteDate(isoDate);
-    const preview = escapeHtml(truncateNotePreview(note.content, 220));
+    const preview = escapeHtml(String(note.content || '').trim());
     const linkBits = [];
     if (note.clientName) {
         linkBits.push('<span class="note-item-link">' + escapeHtml(note.clientName) + '</span>');

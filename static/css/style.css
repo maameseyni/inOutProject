@@ -1245,11 +1245,6 @@ body.app-tab-notes header {
     font-size: 1rem;
     line-height: 1.35;
     word-break: break-word;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
 }
 
 .note-card-text {
@@ -1259,11 +1254,7 @@ body.app-tab-notes header {
     font-weight: 400;
     line-height: 1.5;
     word-break: break-word;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 5;
-    line-clamp: 5;
-    overflow: hidden;
+    white-space: pre-wrap;
 }
 
 .note-item-links {
