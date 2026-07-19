@@ -1186,7 +1186,7 @@ body.app-tab-notes header {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 14px 14px 10px;
+    padding: 14px 104px 10px 14px;
     border-radius: 12px;
     background: #fff;
     border: 1px solid rgba(67, 39, 125, 0.12);
@@ -1312,6 +1312,10 @@ body.app-tab-notes header {
 }
 
 .note-card-actions {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1324,6 +1328,26 @@ body.app-tab-notes header {
 
     .notes-attach-row {
         grid-template-columns: 1fr;
+    }
+
+    .note-card {
+        padding-right: 96px;
+    }
+
+    .note-card-actions {
+        right: 12px;
+    }
+
+    .note-card-actions .edit-btn,
+    .note-card-actions .delete-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .note-card-actions .edit-btn svg,
+    .note-card-actions .delete-btn svg {
+        width: 16px;
+        height: 16px;
     }
 }
 
