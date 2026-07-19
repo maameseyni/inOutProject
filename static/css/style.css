@@ -1209,13 +1209,13 @@ body.app-tab-notes header {
     border-color: rgba(67, 39, 125, 0.28);
 }
 
-/* Palette pastel déterministe (selon l'id de la note) */
+/* Palette pastel déterministe (selon l'id de la note) — tons violets assortis à l'app */
 .note-card--c0 { background: #f8f6fc; border-color: #ded4f0; }
-.note-card--c1 { background: #f6fbff; border-color: #d3e7f5; }
-.note-card--c2 { background: #f7fdf8; border-color: #d3ecd9; }
-.note-card--c3 { background: #fdf8fd; border-color: #ecd8ec; }
-.note-card--c4 { background: #fffaf5; border-color: #f3e2cd; }
-.note-card--c5 { background: #f8f8ff; border-color: #dcdcf0; }
+.note-card--c1 { background: #f6f8fe; border-color: #d6def5; }
+.note-card--c2 { background: #fdf6fb; border-color: #f0d8ea; }
+.note-card--c3 { background: #f5f4fd; border-color: #dbd7f3; }
+.note-card--c4 { background: #f9f5fe; border-color: #e4d5f5; }
+.note-card--c5 { background: #f6f6fd; border-color: #dcdcf0; }
 
 .note-item--new {
     animation: noteItemPulse 0.75s ease both;
