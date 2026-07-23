@@ -24,12 +24,41 @@ def _env_list(key: str, default: str) -> list[str]:
     return [h.strip() for h in raw.split(',') if h.strip()]
 
 
-DEBUG = _env_bool('DJANGO_DEBUG', True)
+# DEBUG=False par défaut : le local doit fixer DJANGO_DEBUG=true dans .env
+DEBUG = _env_bool('DJANGO_DEBUG', False)
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-u35xh59hzklp#**409intcw$oo5vc5k^n$*snyk2he*tmrpbkf',
+_INSECURE_SECRET_MARKERS = (
+    'django-insecure-',
+    'changez-moi',
+    'changeme',
 )
+
+
+def _load_secret_key() -> str:
+    from django.core.exceptions import ImproperlyConfigured
+
+    key = (os.environ.get('DJANGO_SECRET_KEY') or '').strip()
+    if not key:
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY est obligatoire. '
+            'Ajoutez-la dans .env (voir .env.example). '
+            'Générer : python -c "import secrets; print(secrets.token_urlsafe(50))"'
+        )
+    key_lower = key.lower()
+    if any(marker in key_lower for marker in _INSECURE_SECRET_MARKERS):
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY est trop faible ou est un placeholder. '
+            'Générez une clé aléatoire : '
+            'python -c "import secrets; print(secrets.token_urlsafe(50))"'
+        )
+    if len(key) < 40:
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY doit faire au moins 40 caractères.'
+        )
+    return key
+
+
+SECRET_KEY = _load_secret_key()
 
 ALLOWED_HOSTS = _env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
@@ -60,6 +89,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'finances.middleware.ApiWriteRateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -176,6 +206,16 @@ else:
     )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cache local pour le rate limiting (1 process). En multi-workers, préférer Redis.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'xaliss-default',
+    },
+}
+RATELIMIT_USE_CACHE = 'default'
+RATELIMIT_ENABLE = _env_bool('DJANGO_RATELIMIT_ENABLE', True)
 
 # ——— Sécurité production (activée si DJANGO_DEBUG=false) ———
 if not DEBUG:

@@ -24,12 +24,14 @@ from .forms import (
     ReinitialiserMotDePasseForm,
     RenvoyerConfirmationEmailForm,
 )
-from .tokens import confirmation_email_token
+from .ratelimit_utils import flash_429, limited
+from .tokens import changement_email_token, confirmation_email_token
 from .utils import (
     assurer_espace_utilisateur,
     connecter_utilisateur,
     utilisateur_a_organisation,
 )
+from finances.services import utilisateur as user_service
 
 User = get_user_model()
 
@@ -96,6 +98,17 @@ def authentification(request):
         auth_mode = request.POST.get('auth_mode', 'connexion')
         if auth_mode == 'inscription':
             active_tab = 'inscription'
+            if limited(request, group='auth_signup', rate='5/m', key='ip'):
+                flash_429(request)
+                return render(
+                    request,
+                    'comptes/authentification.html',
+                    {
+                        'login_form': login_form,
+                        'signup_form': InscriptionForm(request.POST),
+                        'active_tab': active_tab,
+                    },
+                )
             signup_form = InscriptionForm(request.POST)
             if signup_form.is_valid():
                 utilisateur, _organisation = signup_form.save()
@@ -118,6 +131,17 @@ def authentification(request):
             messages.error(request, _message_inscription_invalide(signup_form))
         else:
             active_tab = 'connexion'
+            if limited(request, group='auth_login', rate='10/m', key='ip'):
+                flash_429(request)
+                return render(
+                    request,
+                    'comptes/authentification.html',
+                    {
+                        'login_form': ConnexionForm(request, data=request.POST),
+                        'signup_form': signup_form,
+                        'active_tab': active_tab,
+                    },
+                )
             login_form = ConnexionForm(request, data=request.POST)
             if login_form.is_valid():
                 utilisateur = login_form.get_user()
@@ -188,6 +212,55 @@ def confirmer_email(request, uidb64, token):
     return _redirect_apres_connexion(request)
 
 
+def confirmer_changement_email(request, uidb64, token):
+    utilisateur = None
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        utilisateur = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        utilisateur = None
+
+    if utilisateur is None or not changement_email_token.check_token(utilisateur, token):
+        messages.error(
+            request,
+            'Lien de confirmation invalide ou expiré. '
+            'Redemandez un changement d’e-mail depuis Paramètres.',
+        )
+        if request.user.is_authenticated:
+            return _redirect_vers_app('parametres')
+        return redirect('connexion')
+
+    if (
+        request.user.is_authenticated
+        and request.user.pk != utilisateur.pk
+    ):
+        messages.error(
+            request,
+            'Ce lien correspond à un autre compte. '
+            'Déconnectez-vous puis rouvrez le lien, ou utilisez le bon compte.',
+        )
+        return _redirect_vers_app()
+
+    try:
+        nouvel_email = user_service.appliquer_changement_email(utilisateur)
+    except user_service.UtilisateurServiceError as exc:
+        messages.error(request, exc.message)
+        if request.user.is_authenticated:
+            return _redirect_vers_app('parametres')
+        return redirect('connexion')
+
+    messages.success(
+        request,
+        f'E-mail mis à jour : {nouvel_email}. Utilisez-le pour vos prochaines connexions.',
+    )
+    if request.user.is_authenticated:
+        return _redirect_vers_app('parametres')
+
+    connecter_utilisateur(request, utilisateur)
+    request.session.set_expiry(1209600)
+    return _redirect_apres_connexion(request)
+
+
 def renvoyer_confirmation_email(request):
     if request.user.is_authenticated:
         return _redirect_vers_app()
@@ -196,6 +269,13 @@ def renvoyer_confirmation_email(request):
     form = RenvoyerConfirmationEmailForm(initial={'email': initial_email})
 
     if request.method == 'POST':
+        if limited(request, group='auth_resend_confirm', rate='3/m', key='ip'):
+            flash_429(request)
+            return render(
+                request,
+                'comptes/renvoyer_confirmation_email.html',
+                {'form': RenvoyerConfirmationEmailForm(request.POST)},
+            )
         form = RenvoyerConfirmationEmailForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -273,6 +353,12 @@ class MotDePasseOublieView(PasswordResetView):
     success_url = reverse_lazy('mot_de_passe_oublie_envoye')
     extra_email_context = {'app_name': 'Xaliss'}
 
+    def post(self, request, *args, **kwargs):
+        if limited(request, group='auth_password_reset', rate='5/m', key='ip'):
+            flash_429(request)
+            return redirect('mot_de_passe_oublie')
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         email = form.cleaned_data['email']
         utilisateurs = list(form.get_users(email))
@@ -308,6 +394,12 @@ class ReinitialiserMotDePasseView(PasswordResetConfirmView):
     template_name = 'comptes/reinitialiser_mot_de_passe.html'
     form_class = ReinitialiserMotDePasseForm
     success_url = reverse_lazy('mot_de_passe_reinitialise')
+
+    def post(self, request, *args, **kwargs):
+        if limited(request, group='auth_password_confirm', rate='10/m', key='ip'):
+            flash_429(request)
+            return redirect(request.path)
+        return super().post(request, *args, **kwargs)
 
     def form_invalid(self, form):
         if 'new_password2' in form.errors:

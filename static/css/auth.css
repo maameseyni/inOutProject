@@ -605,6 +605,22 @@
     text-decoration: underline;
 }
 
+.auth-footer-link {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 0.88rem;
+}
+
+.auth-footer-link a {
+    color: var(--auth-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-footer-link a:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 720px) {
     .auth-card {
         padding: 26px 20px 22px;

@@ -22,8 +22,8 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--password',
-            default='inout2#',
-            help='Mot de passe (défaut : inout2#, sera hashé)',
+            required=True,
+            help='Mot de passe du propriétaire (obligatoire, sera hashé)',
         )
         parser.add_argument(
             '--prenom',
@@ -43,8 +43,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         email = options['email'].strip().lower()
-        password = options['password']
+        password = (options['password'] or '').strip()
         slug = options['slug']
+
+        if len(password) < 8:
+            raise CommandError('Le mot de passe doit faire au moins 8 caractères.')
+        if password.lower() in {'inout2#', 'password', 'motdepasse', 'admin', '12345678'}:
+            raise CommandError(
+                'Ce mot de passe est trop faible ou est un ancien défaut documenté. '
+                'Choisissez un mot de passe unique.'
+            )
 
         try:
             organisation = Organisation.objects.get(slug=slug)

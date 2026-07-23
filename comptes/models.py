@@ -35,6 +35,7 @@ class ProfilUtilisateur(models.Model):
     )
     pays = models.CharField(max_length=100, blank=True, default='')
     ville = models.CharField(max_length=100, blank=True, default='')
+    email_en_attente = models.EmailField(max_length=254, blank=True, default='')
     modifie_le = models.DateTimeField(auto_now=True)
 
     class Meta:

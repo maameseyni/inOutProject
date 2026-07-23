@@ -175,11 +175,13 @@ def client_from_js(data: dict) -> dict:
 
 
 def note_to_js(note: Note) -> dict:
+    from finances.services.html_sanitize import sanitize_note_html, sanitize_plain_text
+
     client_nom = note.client.nom if note.client_id else ''
     return {
         'id': note.id,
-        'title': note.titre,
-        'content': note.contenu,
+        'title': sanitize_plain_text(note.titre, max_len=200),
+        'content': sanitize_note_html(note.contenu),
         'clientId': note.client_id,
         'clientName': client_nom or None,
         'category': note.categorie_produit or '',
@@ -193,10 +195,12 @@ def note_to_js(note: Note) -> dict:
 
 
 def note_from_js(data: dict) -> dict:
+    from finances.services.html_sanitize import sanitize_note_html, sanitize_plain_text
+
     client_id = data.get('clientId') or data.get('invoiceClientId')
     if client_id is not None:
         client_id = str(client_id).strip() or None
-    category = str(data.get('category') or '').strip()[:120]
+    category = sanitize_plain_text(str(data.get('category') or ''), max_len=120)
     reminder_raw = data.get('reminderAt')
     if reminder_raw is None and 'reminderAt' not in data:
         rappel_le = None
@@ -206,8 +210,8 @@ def note_from_js(data: dict) -> dict:
         rappel_le = parse_iso_date(reminder_raw) if reminder_raw else None
     reminder_email = bool(data.get('reminderEmail')) and bool(rappel_le)
     return {
-        'titre': str(data.get('title') or '').strip()[:200],
-        'contenu': str(data.get('content') or '').strip(),
+        'titre': sanitize_plain_text(data.get('title'), max_len=200),
+        'contenu': sanitize_note_html(data.get('content')),
         'client_id': client_id,
         'categorie_produit': category,
         'epinglee': bool(data.get('pinned')),
@@ -254,14 +258,18 @@ def organisation_profile_from_js(data: dict) -> dict:
     }
 
 
-def utilisateur_profil_to_js(utilisateur, organisation, membre) -> dict:
-    # Reverse one-to-one : getattr renvoie None si le profil n'existe pas encore
-    # (RelatedObjectDoesNotExist hérite d'AttributeError).
-    profil = getattr(utilisateur, 'profil', None)
+def utilisateur_profil_to_js(utilisateur, organisation, membre, profil=None) -> dict:
+    # Toujours recharger le profil (évite un reverse one-to-one stale en cache
+    # après écriture de email_en_attente dans la même requête).
+    if profil is None:
+        from comptes.models import ProfilUtilisateur
+
+        profil = ProfilUtilisateur.objects.filter(utilisateur_id=utilisateur.pk).first()
     return {
         'firstName': utilisateur.first_name or '',
         'lastName': utilisateur.last_name or '',
         'email': utilisateur.email or '',
+        'pendingEmail': (profil.email_en_attente if profil else '') or '',
         'country': profil.pays if profil else '',
         'city': profil.ville if profil else '',
         'currencyLabel': organisation.libelle_devise or 'FCFA',

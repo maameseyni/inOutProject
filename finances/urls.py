@@ -38,6 +38,5 @@ urlpatterns = [
     path('api/utilisateur/profil/', api_views.utilisateur_profil, name='api_utilisateur_profil'),
     path('api/utilisateur/mot-de-passe/', api_views.utilisateur_mot_de_passe, name='api_utilisateur_mot_de_passe'),
     path('api/sync/', api_views.sync_status, name='api_sync'),
-    path('api/evenements/', api_views.evenements_sync, name='api_evenements'),
     path('api/verrous/', api_views.verrous_edition, name='api_verrous'),
 ]

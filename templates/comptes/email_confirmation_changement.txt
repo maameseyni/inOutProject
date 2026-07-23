@@ -1,0 +1,10 @@
+Bonjour{% if utilisateur.first_name %} {{ utilisateur.first_name }}{% endif %},
+
+Vous avez demandé à changer l'e-mail de votre compte {{ app_name }}
+vers : {{ nouvel_email }}
+
+Confirmez ce changement en ouvrant ce lien :
+{{ confirmation_url }}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.
+Votre adresse actuelle ({{ ancien_email }}) reste active tant que vous n'avez pas confirmé.

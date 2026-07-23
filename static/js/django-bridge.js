@@ -51,6 +51,9 @@
         if (status === 404) {
             return 'Élément introuvable sur le serveur.';
         }
+        if (status === 429) {
+            return 'Trop de tentatives. Réessayez dans quelques minutes.';
+        }
         if (status >= 500) {
             return 'Le serveur est temporairement indisponible. Réessayez dans un instant.';
         }
@@ -101,13 +104,83 @@
 
     let sessionRedirectPending = false;
 
-    async function apiFetchNetwork(path, options) {
+    function readCookieValue(cookieHeader, name) {
+        const source = String(cookieHeader || '');
+        if (!source || !name) return '';
+        const parts = source.split(';');
+        const prefix = name + '=';
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i].trim();
+            if (part.indexOf(prefix) === 0) {
+                try {
+                    return decodeURIComponent(part.slice(prefix.length));
+                } catch (e) {
+                    return part.slice(prefix.length);
+                }
+            }
+        }
+        return '';
+    }
+
+    function readCsrfTokenFromDom() {
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        return (input && input.value) ? String(input.value) : '';
+    }
+
+    function syncCsrfDomToken(token) {
+        if (!token) return;
+        const inputs = document.querySelectorAll('input[name="csrfmiddlewaretoken"]');
+        for (let i = 0; i < inputs.length; i++) {
+            inputs[i].value = token;
+        }
+    }
+
+    function readCsrfToken() {
+        // Cookie = source de vérité (peut tourner sans rechargement de page).
+        const fromCookie = readCookieValue(
+            typeof document !== 'undefined' ? document.cookie : '',
+            'csrftoken'
+        );
+        if (fromCookie) {
+            cfg.csrfToken = fromCookie;
+            syncCsrfDomToken(fromCookie);
+            return fromCookie;
+        }
+        const fromDom = readCsrfTokenFromDom();
+        if (fromDom) {
+            cfg.csrfToken = fromDom;
+            return fromDom;
+        }
+        return cfg.csrfToken || '';
+    }
+
+    function isUnsafeHttpMethod(method) {
+        const m = String(method || 'GET').toUpperCase();
+        return m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' && m !== 'TRACE';
+    }
+
+    function looksLikeCsrfFailure(response, contentType) {
+        if (!response || response.status !== 403) return false;
+        const ct = String(contentType || '').toLowerCase();
+        // Django CSRF failure → souvent HTML ; parfois corps vide / texte.
+        return ct.indexOf('application/json') === -1;
+    }
+
+    async function apiFetchNetwork(path, options, retried) {
         const opts = options || {};
+        const method = String(opts.method || 'GET').toUpperCase();
+        const csrfToken = readCsrfToken();
         const headers = Object.assign(
-            { 'X-CSRFToken': cfg.csrfToken },
+            {},
+            isUnsafeHttpMethod(method) ? { 'X-CSRFToken': csrfToken } : {},
             opts.body ? { 'Content-Type': 'application/json' } : {},
             opts.headers || {}
         );
+        // Toujours envoyer le token si on en a un (comportement historique + APIs mixtes).
+        if (csrfToken && !headers['X-CSRFToken']) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch(apiUrl(path), Object.assign({
             credentials: 'same-origin',
             headers: headers
@@ -120,12 +193,33 @@
             throw createSessionExpiredError();
         }
 
+        if (looksLikeCsrfFailure(response, contentType) && isUnsafeHttpMethod(method) && !retried) {
+            const latest = readCsrfToken();
+            if (latest && latest !== csrfToken) {
+                return apiFetchNetwork(path, options, true);
+            }
+            // Cookie pas encore à jour : ping léger pour récupérer un Set-Cookie éventuel.
+            try {
+                await fetch('/app/', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { Accept: 'text/html' },
+                    cache: 'no-store',
+                });
+            } catch (e) { /* ignore */ }
+            const afterPing = readCsrfToken();
+            if (afterPing && afterPing !== csrfToken) {
+                return apiFetchNetwork(path, options, true);
+            }
+        }
+
         if (contentType.includes('text/html')) {
             if (response.status === 403) {
                 throw new ApiError(
                     'La page a expiré. Rechargez la page (F5) puis réessayez.',
                     403,
-                    null
+                    null,
+                    { csrfFailure: true }
                 );
             }
             throw createSessionExpiredError();
@@ -263,10 +357,202 @@
 
     let syncFlushInProgress = false;
 
+    function escapeConflictHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function describeOutboxItem(item) {
+        if (!item) return 'Modification locale';
+        if (item.label) return String(item.label);
+        return String(item.method || '?') + ' ' + String(item.path || '');
+    }
+
+    async function refreshSyncConflictBanner() {
+        const banner = document.getElementById('syncConflictBanner');
+        if (!banner || !offline) return;
+        let count = 0;
+        try {
+            count = await offline.countOutbox({ status: 'conflict' });
+        } catch (e) {
+            count = 0;
+        }
+        if (count > 0) {
+            banner.hidden = false;
+            const label = document.getElementById('syncConflictBannerText');
+            if (label) {
+                label.textContent = count === 1
+                    ? '1 modification en conflit de synchronisation — à résoudre.'
+                    : count + ' modifications en conflit de synchronisation — à résoudre.';
+            }
+        } else {
+            banner.hidden = true;
+        }
+    }
+
+    async function renderSyncConflictsModal() {
+        const listEl = document.getElementById('syncConflictsList');
+        const emptyEl = document.getElementById('syncConflictsEmpty');
+        if (!listEl || !offline) return;
+        const items = await offline.listOutbox({ status: 'conflict' });
+        if (!items.length) {
+            listEl.innerHTML = '';
+            if (emptyEl) emptyEl.hidden = false;
+            return;
+        }
+        if (emptyEl) emptyEl.hidden = true;
+        listEl.innerHTML = items.map(function (item) {
+            const title = escapeConflictHtml(describeOutboxItem(item));
+            const detail = escapeConflictHtml(
+                item.conflictMessage
+                || 'La donnée a changé sur le serveur depuis votre modification hors ligne.'
+            );
+            const when = item.conflictAt
+                ? escapeConflictHtml(String(item.conflictAt).replace('T', ' ').slice(0, 19))
+                : '';
+            return (
+                '<article class="sync-conflict-item" data-conflict-id="' + escapeConflictHtml(item.id) + '">'
+                + '<div class="sync-conflict-item-main">'
+                + '<strong class="sync-conflict-item-title">' + title + '</strong>'
+                + (when ? '<span class="sync-conflict-item-when">' + when + '</span>' : '')
+                + '<p class="sync-conflict-item-detail">' + detail + '</p>'
+                + '</div>'
+                + '<div class="sync-conflict-item-actions">'
+                + '<button type="button" class="btn sync-conflict-btn-discard" data-conflict-action="discard" data-conflict-id="' + escapeConflictHtml(item.id) + '">Garder le serveur</button>'
+                + '<button type="button" class="btn sync-conflict-btn-force" data-conflict-action="force" data-conflict-id="' + escapeConflictHtml(item.id) + '">Forcer ma version</button>'
+                + '</div>'
+                + '</article>'
+            );
+        }).join('');
+    }
+
+    async function openSyncConflictsModal() {
+        const modal = document.getElementById('syncConflictsModal');
+        if (!modal) return;
+        await renderSyncConflictsModal();
+        modal.hidden = false;
+        modal.style.display = 'flex';
+    }
+
+    function closeSyncConflictsModal() {
+        const modal = document.getElementById('syncConflictsModal');
+        if (!modal) return;
+        modal.hidden = true;
+        modal.style.display = 'none';
+    }
+
+    async function resolveSyncConflict(id, action) {
+        if (!offline || id == null) return;
+        const item = await offline.getOutboxItem(id);
+        if (!item || offline.normalizeOutboxStatus(item.status) !== 'conflict') {
+            await renderSyncConflictsModal();
+            await refreshSyncConflictBanner();
+            return;
+        }
+
+        if (action === 'discard') {
+            await offline.removeOutboxItem(id);
+            showNotification('Modification locale abandonnée — version serveur conservée.', 'info', {
+                transient: true,
+                duration: 3200,
+            });
+            if (typeof xalissReloadFromServer === 'function') {
+                await xalissReloadFromServer(false);
+            }
+        } else if (action === 'force') {
+            const forcedBody = offline.prepareForceSyncBody(item.body);
+            await offline.requeueOutboxItem(id, forcedBody);
+            try {
+                await apiFetchNetwork(item.path, {
+                    method: item.method,
+                    body: forcedBody,
+                });
+                await offline.removeOutboxItem(id);
+                if (typeof xalissReloadAfterWrite === 'function') {
+                    await xalissReloadAfterWrite();
+                }
+                showNotification('Votre version locale a été synchronisée.', 'success', {
+                    transient: true,
+                    duration: 3200,
+                });
+            } catch (error) {
+                if (isSessionExpiredError(error)) {
+                    notifyApiError(error);
+                    return;
+                }
+                if (isConflictError(error)) {
+                    await offline.markOutboxConflict(id, {
+                        message: (error && error.message) || '',
+                        data: (error && error.data) || null,
+                    });
+                    showNotification(
+                        'Le conflit persiste. Rechargez ou réessayez plus tard.',
+                        'warning',
+                        { duration: 4500 }
+                    );
+                } else {
+                    // Remet en conflit pour ne pas perdre le payload.
+                    await offline.markOutboxConflict(id, {
+                        message: (error && error.message) || 'Échec du renvoi forcé.',
+                        data: (error && error.data) || null,
+                    });
+                    notifyApiError(error, 'Impossible de forcer la synchronisation.');
+                }
+            }
+        }
+
+        await renderSyncConflictsModal();
+        await refreshSyncConflictBanner();
+        await refreshOfflineConnectionStatus();
+
+        const remaining = await offline.countOutbox({ status: 'conflict' });
+        if (remaining === 0) {
+            closeSyncConflictsModal();
+        }
+    }
+
+    function bindSyncConflictsUi() {
+        if (window._xalissConflictsUiBound) return;
+        window._xalissConflictsUiBound = true;
+
+        const openBtn = document.getElementById('syncConflictBannerOpen');
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                openSyncConflictsModal();
+            });
+        }
+        const closeBtn = document.getElementById('syncConflictsClose');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeSyncConflictsModal);
+        }
+        const modal = document.getElementById('syncConflictsModal');
+        if (modal) {
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) closeSyncConflictsModal();
+            });
+            modal.addEventListener('click', function (event) {
+                const btn = event.target.closest('[data-conflict-action]');
+                if (!btn) return;
+                const action = btn.getAttribute('data-conflict-action');
+                const idRaw = btn.getAttribute('data-conflict-id');
+                const id = /^\d+$/.test(String(idRaw || '')) ? Number(idRaw) : idRaw;
+                resolveSyncConflict(id, action);
+            });
+        }
+        window.openSyncConflictsModal = openSyncConflictsModal;
+        window.closeSyncConflictsModal = closeSyncConflictsModal;
+    }
+
     async function flushOfflineOutbox() {
         if (!offline || syncFlushInProgress || !offline.isOnline()) return;
-        const items = await offline.listOutbox();
-        if (!items.length) return;
+        const items = await offline.listOutbox({ status: 'pending' });
+        if (!items.length) {
+            await refreshSyncConflictBanner();
+            return;
+        }
 
         syncFlushInProgress = true;
         let syncedCount = 0;
@@ -288,7 +574,11 @@
                         throw error;
                     }
                     if (isConflictError(error)) {
-                        await offline.removeOutboxItem(item.id);
+                        // Conservé en outbox avec statut conflict (pas de perte silencieuse).
+                        await offline.markOutboxConflict(item.id, {
+                            message: (error && error.message) || '',
+                            data: (error && error.data) || null,
+                        });
                         conflictCount++;
                         continue;
                     }
@@ -302,13 +592,15 @@
 
             if (conflictCount > 0) {
                 await xalissReloadAfterWrite();
+                await refreshSyncConflictBanner();
                 showNotification(
                     conflictCount === 1
-                        ? 'Synchronisation : une modification locale n\'a pas été envoyée, la donnée a changé sur le serveur.'
-                        : 'Synchronisation : ' + conflictCount + ' modifications locales n\'ont pas été envoyées (données modifiées sur le serveur).',
+                        ? 'Conflit de sync : une modification locale est conservée — choisissez la version à garder.'
+                        : 'Conflits de sync : ' + conflictCount + ' modifications locales sont conservées — à résoudre.',
                     'warning',
-                    { duration: 5500 }
+                    { duration: 6500 }
                 );
+                openSyncConflictsModal();
             }
         } catch (error) {
             if (isSessionExpiredError(error)) {
@@ -326,12 +618,16 @@
         } finally {
             syncFlushInProgress = false;
             await refreshOfflineConnectionStatus();
+            await refreshSyncConflictBanner();
         }
     }
 
     function bindOfflineLifecycle() {
         if (!offline || window._xalissOfflineBound) return;
         window._xalissOfflineBound = true;
+
+        bindSyncConflictsUi();
+        refreshSyncConflictBanner();
 
         window.addEventListener('offline', function () {
             refreshOfflineConnectionStatus();
@@ -374,7 +670,9 @@
     }
 
     let lastSyncSeq = null;
-    let sseSource = null;
+    let syncPollTimer = null;
+    let syncPollInFlight = false;
+    const SYNC_POLL_MS = 30000;
     let activeEditLock = null;
     let lockHeartbeatTimer = null;
     let reloadInProgress = false;
@@ -445,7 +743,7 @@
     let reloadAfterWritePromise = null;
 
     async function xalissReloadAfterWrite() {
-        // Coalescer les rechargements concurrents (écriture + événement SSE de sa
+        // Coalescer les rechargements concurrents (écriture + poll sync de sa
         // propre modification) en un seul, pour éviter les re-rendus en rafale.
         if (reloadAfterWritePromise) return reloadAfterWritePromise;
         reloadAfterWritePromise = doReloadAfterWrite().finally(function () {
@@ -456,7 +754,7 @@
 
     async function doReloadAfterWrite() {
         try {
-            // Mettre à jour lastSyncSeq AVANT les rechargements : l'événement SSE
+            // Mettre à jour lastSyncSeq AVANT les rechargements : le poll sync
             // déclenché par notre propre écriture ne provoquera pas un 2e rechargement.
             const syncData = await apiFetch('/sync/');
             if (syncData && syncData.syncSeq !== undefined) {
@@ -503,36 +801,40 @@
         }
     }
 
-    function connectSyncEvents() {
-        if (sseSource) return;
-        sseSource = new EventSource(apiUrl('/evenements/'));
-        sseSource.onmessage = function (ev) {
-            let data;
-            try {
-                data = JSON.parse(ev.data);
-            } catch (e) {
+    async function pollSyncSeq() {
+        if (syncPollInFlight) return;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+        syncPollInFlight = true;
+        try {
+            const syncData = await apiFetch('/sync/');
+            if (!syncData || syncData.syncSeq === undefined) return;
+            if (lastSyncSeq === null) {
+                lastSyncSeq = syncData.syncSeq;
                 return;
             }
-            if (!data || data.syncSeq === undefined) return;
-            if (data.type === 'init') {
-                lastSyncSeq = data.syncSeq;
-                return;
-            }
-            if (data.type === 'sync' && lastSyncSeq !== null && data.syncSeq !== lastSyncSeq) {
-                lastSyncSeq = data.syncSeq;
+            if (syncData.syncSeq !== lastSyncSeq) {
+                lastSyncSeq = syncData.syncSeq;
                 const showToast = Date.now() > suppressSyncToastUntil;
                 xalissReloadFromServer(showToast);
-            } else {
-                lastSyncSeq = data.syncSeq;
             }
-        };
-        sseSource.onerror = function () {
-            if (sseSource) {
-                sseSource.close();
-                sseSource = null;
-            }
-            setTimeout(connectSyncEvents, 5000);
-        };
+        } catch (e) {
+            // Hors ligne / session : géré ailleurs
+        } finally {
+            syncPollInFlight = false;
+        }
+    }
+
+    function connectSyncEvents() {
+        if (syncPollTimer) return;
+        syncPollTimer = setInterval(pollSyncSeq, SYNC_POLL_MS);
+        if (typeof document !== 'undefined' && !window._xalissSyncVisibilityBound) {
+            window._xalissSyncVisibilityBound = true;
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    pollSyncSeq();
+                }
+            });
+        }
     }
 
     async function acquireEditLock(ressourceType, ressourceId) {
@@ -915,7 +1217,9 @@
             }
         }
 
-        const tempId = 'offline_' + Date.now();
+        const tempId = (typeof generateTransactionId === 'function')
+            ? generateTransactionId()
+            : ('tx_' + Date.now().toString(16) + '_' + Math.random().toString(16).slice(2, 10));
         payload.id = tempId;
 
         apiWriteOrQueue('/transactions/', {
@@ -1547,7 +1851,16 @@
                 if (window.XALISS_DJANGO && profil.email) {
                     window.XALISS_DJANGO.userEmail = profil.email;
                 }
-                showNotification('Profil enregistré.', 'success');
+                if (profil.pendingEmail) {
+                    showNotification(
+                        'Confirmation envoyée à ' + profil.pendingEmail
+                        + '. Votre e-mail actuel reste actif jusqu’à confirmation.',
+                        'info',
+                        { duration: 7000 }
+                    );
+                } else {
+                    showNotification('Profil enregistré.', 'success');
+                }
             }).catch(function (error) {
                 notifyApiError(error, 'Impossible d\'enregistrer le profil.');
             });

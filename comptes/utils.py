@@ -1,11 +1,77 @@
 from django.conf import settings
 from django.contrib import auth
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils.text import slugify
 
-from .models import MembreOrganisation, Organisation
+from .models import MembreOrganisation, Organisation, ProfilUtilisateur
 
 User = get_user_model()
+
+
+def normaliser_email(email: str) -> str:
+    return str(email or '').strip().lower()
+
+
+def email_deja_utilise(email: str, *, exclude_user=None) -> bool:
+    """True si l'e-mail (ou username) est déjà pris par un autre compte."""
+    email = normaliser_email(email)
+    if not email:
+        return False
+
+    qs = User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email))
+    if exclude_user is not None:
+        qs = qs.exclude(pk=exclude_user.pk)
+    if qs.exists():
+        return True
+
+    pending = ProfilUtilisateur.objects.filter(email_en_attente__iexact=email)
+    if exclude_user is not None:
+        pending = pending.exclude(utilisateur_id=exclude_user.pk)
+    if pending.exists():
+        return True
+
+    try:
+        from allauth.account.models import EmailAddress
+
+        addr = EmailAddress.objects.filter(email__iexact=email)
+        if exclude_user is not None:
+            addr = addr.exclude(user_id=exclude_user.pk)
+        if addr.exists():
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+def synchroniser_email_allauth(utilisateur, email: str, *, verified: bool = True) -> None:
+    """Met à jour EmailAddress allauth après confirmation / changement."""
+    email = normaliser_email(email)
+    if not email:
+        return
+    try:
+        from allauth.account.models import EmailAddress
+    except Exception:
+        return
+
+    EmailAddress.objects.filter(user=utilisateur, primary=True).exclude(
+        email__iexact=email
+    ).update(primary=False)
+
+    existing = EmailAddress.objects.filter(user=utilisateur, email__iexact=email).first()
+    if existing:
+        existing.email = email
+        existing.verified = verified or existing.verified
+        existing.primary = True
+        existing.save(update_fields=['email', 'verified', 'primary'])
+    else:
+        EmailAddress.objects.create(
+            user=utilisateur,
+            email=email,
+            verified=verified,
+            primary=True,
+        )
 
 
 def connecter_utilisateur(request, user):

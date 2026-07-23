@@ -248,15 +248,10 @@ Organisation historique issue de la migration Firebase → PostgreSQL :
 
 **Compte de connexion :**
 
-```
-E-mail    : contact@kaayprint.com
-Mot de passe : inout2#
-```
-
-Pour rattacher le compte à **votre** e-mail :
+Après import, initialisez le propriétaire (mot de passe **obligatoire**, aucun défaut) :
 
 ```powershell
-python manage.py initialiser_kaayprint --email VOTRE@gmail.com --password "inout2#"
+python manage.py initialiser_kaayprint --email VOTRE@gmail.com --password "VotreMotDePasseFort"
 ```
 
 Cette commande crée ou met à jour le propriétaire, lie l'organisation `inout`, et attribue toutes les transactions importées au propriétaire.
@@ -405,7 +400,7 @@ python manage.py migrate
 python manage.py createsuperuser
 
 # Initialiser / réinitialiser le propriétaire KaayPrint
-python manage.py initialiser_kaayprint --email contact@kaayprint.com --password "inout2#"
+python manage.py initialiser_kaayprint --email VOTRE@email.com --password "VotreMotDePasseFort"
 
 # Réimporter un export JSON historique
 python scripts/migrate_export_to_postgres.py scripts/backups/kaayprint-export-2026-07-09.json --data-only

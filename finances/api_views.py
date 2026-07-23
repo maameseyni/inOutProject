@@ -1,9 +1,8 @@
 import json
-import time
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 
@@ -198,8 +197,8 @@ def notes_list_create(request):
     if request.method == 'GET':
         page = request.GET.get('page', 1)
         page_size = request.GET.get('page_size', 50)
-        from finances.services.note_reminders import process_due_note_reminder_emails
-        process_due_note_reminder_emails(org)
+        # Les rappels e-mail sont envoyés via cron (envoyer_rappels_notes)
+        # ou POST /api/notes/rappels-email/ — pas ici (GET doit rester idempotent).
         payload = note_service.list_notes(org, page=page, page_size=page_size)
         return JsonResponse(payload)
 
@@ -387,7 +386,7 @@ def utilisateur_profil(request):
         return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
 
     try:
-        profil = user_service.update_profil(user, org, membre, data)
+        profil = user_service.update_profil(user, org, membre, data, request=request)
     except user_service.UtilisateurServiceError as exc:
         return _service_error_response(exc)
 
@@ -418,29 +417,6 @@ def utilisateur_mot_de_passe(request):
 def sync_status(request):
     org = request.organisation
     return JsonResponse({'syncSeq': sync_service.get_sync_seq(org)})
-
-
-@login_required
-@organisation_required
-@require_http_methods(['GET'])
-def evenements_sync(request):
-    org = request.organisation
-
-    def event_stream():
-        last_seq = sync_service.get_sync_seq(org)
-        yield f'data: {json.dumps({"type": "init", "syncSeq": last_seq})}\n\n'
-        while True:
-            time.sleep(2)
-            current = sync_service.get_sync_seq(org)
-            if current != last_seq:
-                payload = json.dumps({'type': 'sync', 'syncSeq': current})
-                yield f'data: {payload}\n\n'
-                last_seq = current
-
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    return response
 
 
 @login_required

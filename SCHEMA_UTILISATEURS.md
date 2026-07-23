@@ -48,7 +48,7 @@ membres_organisation (table de liaison)
 auth_user
   id: 1
   email: contact@kaayprint.com
-  password: pbkdf2_sha256$…   (hash de inout2#)
+  password: pbkdf2_sha256$…   (hash du mot de passe fourni à initialiser_kaayprint)
   first_name: (vide ou prénom)
   last_name: (vide ou nom)
 

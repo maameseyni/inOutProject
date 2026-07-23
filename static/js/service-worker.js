@@ -1,7 +1,5 @@
-/* KaayPrint PWA v7 — shell rapide, stale-while-revalidate, cache API lecture */
-const STATIC_CACHE = 'kaayprint-static-v7';
-const SHELL_CACHE = 'kaayprint-shell-v7';
-const API_CACHE = 'kaayprint-api-v7';
+/* KaayPrint PWA v16 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
+const STATIC_CACHE = 'kaayprint-static-v16';
 
 const PRECACHE_URLS = [
     '/static/css/style.css',
@@ -18,32 +16,31 @@ const PRECACHE_URLS = [
     'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js',
 ];
 
-const API_GET_PREFIXES = [
-    '/app/api/transactions/',
-    '/app/api/clients/',
-    '/app/api/organisation/profil/',
-    '/app/api/sync/',
-    '/app/api/notifications/',
-];
+/** Anciens caches sensibles (api / shell) détectés via isSensitiveCacheName. */
+function isSensitiveCacheName(name) {
+    const key = String(name || '');
+    if (key.indexOf('kaayprint-api-') === 0 || key.indexOf('kaayprint-shell-') === 0) {
+        return true;
+    }
+    if (key.indexOf('xaliss-api-') === 0 || key.indexOf('xaliss-shell-') === 0) {
+        return true;
+    }
+    return false;
+}
 
-function isAuthOrWriteApi(url) {
+function isAuthOrPrivatePath(url) {
     return url.pathname.startsWith('/auth/')
         || url.pathname.startsWith('/admin/')
         || url.pathname === '/connexion/'
         || url.pathname === '/deconnexion/'
         || url.pathname === '/inscription/'
         || url.pathname === '/completer-inscription/'
-        || url.pathname.indexOf('/app/api/evenements') !== -1
-        || url.pathname.indexOf('/app/api/verrous') !== -1;
-}
-
-function isApiGetCacheable(url) {
-    if (!url.pathname.startsWith('/app/api/')) return false;
-    return API_GET_PREFIXES.some(function (prefix) {
-        return url.pathname === prefix || url.pathname.startsWith(prefix);
-    });
+        || url.pathname.indexOf('/app/api/') === 0
+        || url.pathname === '/app'
+        || url.pathname.indexOf('/app/') === 0;
 }
 
 function isStaticAsset(url) {
@@ -64,6 +61,30 @@ function staleWhileRevalidate(request, cacheName) {
     });
 }
 
+function clearSensitiveCaches() {
+    return caches.keys().then(function (keys) {
+        return Promise.all(
+            keys.filter(isSensitiveCacheName).map(function (key) {
+                return caches.delete(key);
+            })
+        );
+    });
+}
+
+function deleteObsoleteCaches() {
+    return caches.keys().then(function (keys) {
+        return Promise.all(
+            keys.filter(function (key) {
+                if (key === STATIC_CACHE) return false;
+                // Tout sauf le cache static courant : inclut anciens static + api + shell.
+                return true;
+            }).map(function (key) {
+                return caches.delete(key);
+            })
+        );
+    });
+}
+
 self.addEventListener('install', function (event) {
     event.waitUntil(
         caches.open(STATIC_CACHE).then(function (cache) {
@@ -76,16 +97,18 @@ self.addEventListener('install', function (event) {
 
 self.addEventListener('activate', function (event) {
     event.waitUntil(
-        caches.keys().then(function (keys) {
-            return Promise.all(
-                keys.filter(function (key) {
-                    return key !== STATIC_CACHE && key !== SHELL_CACHE && key !== API_CACHE;
-                }).map(function (key) { return caches.delete(key); })
-            );
-        }).then(function () {
-            return self.clients.claim();
-        })
+        deleteObsoleteCaches()
+            .then(function () { return clearSensitiveCaches(); })
+            .then(function () { return self.clients.claim(); })
     );
+});
+
+self.addEventListener('message', function (event) {
+    const data = event.data;
+    const type = data && typeof data === 'object' ? data.type : data;
+    if (type === 'CLEAR_SENSITIVE_CACHES' || type === 'PURGE_CACHES') {
+        event.waitUntil(clearSensitiveCaches().then(deleteObsoleteCaches));
+    }
 });
 
 self.addEventListener('fetch', function (event) {
@@ -101,41 +124,27 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    if (isAuthOrWriteApi(url)) {
+    // Jamais intercepter / cacher : API, shell /app/, auth.
+    // Hors ligne : le bridge utilise IndexedDB ; navigation → offline.html uniquement.
+    if (sameOrigin && isAuthOrPrivatePath(url)) {
+        const isNavigate = event.request.mode === 'navigate'
+            || (event.request.headers.get('accept') || '').indexOf('text/html') !== -1;
+        if (isNavigate && (url.pathname === '/app' || url.pathname.indexOf('/app/') === 0)) {
+            event.respondWith(
+                fetch(event.request).catch(function () {
+                    return caches.match('/static/offline.html');
+                })
+            );
+        }
+        // API et autres chemins privés : réseau navigateur natif (pas de cache SW).
         return;
     }
 
-    if (isApiGetCacheable(url)) {
+    if (event.request.mode === 'navigate'
+        || (event.request.headers.get('accept') || '').includes('text/html')) {
         event.respondWith(
-            fetch(event.request).then(function (response) {
-                if (response && response.status === 200) {
-                    const copy = response.clone();
-                    caches.open(API_CACHE).then(function (cache) {
-                        cache.put(event.request, copy);
-                    });
-                }
-                return response;
-            }).catch(function () {
-                return caches.match(event.request);
-            })
-        );
-        return;
-    }
-
-    if (event.request.mode === 'navigate' || (event.request.headers.get('accept') || '').includes('text/html')) {
-        event.respondWith(
-            fetch(event.request).then(function (response) {
-                if (response && response.status === 200 && url.pathname.indexOf('/app') === 0) {
-                    const copy = response.clone();
-                    caches.open(SHELL_CACHE).then(function (cache) {
-                        cache.put(event.request, copy);
-                    });
-                }
-                return response;
-            }).catch(function () {
-                return caches.match(event.request).then(function (cached) {
-                    return cached || caches.match('/app/') || caches.match('/static/offline.html');
-                });
+            fetch(event.request).catch(function () {
+                return caches.match('/static/offline.html');
             })
         );
         return;

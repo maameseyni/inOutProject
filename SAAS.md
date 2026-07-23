@@ -105,7 +105,7 @@ Démarrage : **`DJANGO.md`** · Production : **`PRODUCTION.md`**
 | Élément | Valeur |
 |---------|--------|
 | Organisation test | KaayPrint (`slug: inout`) |
-| Compte test | `contact@kaayprint.com` / `inout2#` |
+| Compte test | Créer via `initialiser_kaayprint --email … --password …` (mdp obligatoire) |
 | Transactions importées | ~134 |
 | Clients importés | ~43 |
 

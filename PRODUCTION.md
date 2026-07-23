@@ -162,7 +162,7 @@ Les refus sont appliqués **côté serveur** (API 403) et **côté interface** (
 python manage.py runserver
 ```
 
-Ou `start-local-server.bat` — `DJANGO_DEBUG=true` dans `.env` ou par défaut.
+Ou `start-local-server.bat` — exige `DJANGO_DEBUG=true` et `DJANGO_SECRET_KEY` dans `.env` (voir `.env.example`).
 
 ---
 

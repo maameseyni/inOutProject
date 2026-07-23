@@ -1,4 +1,5 @@
-import time
+import re
+import secrets
 
 from django.db import transaction as db_transaction
 from django.utils import timezone
@@ -16,8 +17,28 @@ class TransactionServiceError(Exception):
         super().__init__(message)
 
 
+# IDs client acceptés uniquement s'ils sont namespacés (pas un timestamp nu).
+_CLIENT_TX_ID_RE = re.compile(r'^tx_[A-Za-z0-9_-]{10,80}$')
+
+
+def generate_transaction_id() -> str:
+    """Identifiant non prévisible (évite collisions timestamp ms)."""
+    return f'tx_{secrets.token_hex(8)}_{secrets.token_hex(4)}'
+
+
 def _generate_transaction_id() -> str:
-    return str(int(time.time() * 1000))
+    return generate_transaction_id()
+
+
+def resolve_new_transaction_id(raw_id) -> str:
+    """
+    Accepte un id client seulement s'il est namespacé `tx_…`.
+    Sinon en génère un côté serveur (ignore Date.now() / ids arbitraires).
+    """
+    candidate = str(raw_id or '').strip()
+    if candidate and _CLIENT_TX_ID_RE.fullmatch(candidate):
+        return candidate[:128]
+    return generate_transaction_id()
 
 
 def _resolve_client(org, client_id, nom_client):
@@ -57,9 +78,14 @@ def create_transaction(org, user, membre, data: dict) -> dict:
     if parsed['montant'] <= 0 and parsed['montant_restant'] is None:
         raise TransactionServiceError('Le montant doit être supérieur à 0.')
 
-    tx_id = str(data.get('id') or '').strip() or _generate_transaction_id()
+    tx_id = resolve_new_transaction_id(data.get('id'))
     if Transaction.objects.filter(pk=tx_id).exists():
-        raise TransactionServiceError('Une transaction avec cet identifiant existe déjà.', status=409)
+        # Collision rare sur id client namespacé : en générer un autre.
+        if str(data.get('id') or '').strip() == tx_id:
+            raise TransactionServiceError('Une transaction avec cet identifiant existe déjà.', status=409)
+        tx_id = generate_transaction_id()
+        while Transaction.objects.filter(pk=tx_id).exists():
+            tx_id = generate_transaction_id()
 
     client, nom_client = _resolve_client(org, parsed['client_id'], parsed['nom_client_facture'])
 
@@ -149,43 +175,43 @@ def delete_transaction(org, transaction_id: str) -> None:
 
 
 def complete_transaction(org, user, membre, transaction_id: str, amount, date, data: dict | None = None) -> dict:
-    from decimal import Decimal
-
-    tx = (
-        Transaction.objects
-        .filter(pk=transaction_id, organisation=org)
-        .prefetch_related('paiements')
-        .first()
-    )
-    if not tx:
-        raise TransactionServiceError('Transaction introuvable.', status=404)
-
-    try:
-        verifier_verrou_optimiste(tx, data or {})
-    except OptimisticLockError as exc:
-        raise TransactionServiceError(exc.message, status=exc.status) from exc
-
-    if not tx.montant_restant or tx.montant_restant <= 0:
-        raise TransactionServiceError('Transaction déjà complète ou sans montant restant.')
-
     from finances.serializers import decimal_or_none, parse_iso_date
 
     amount_to_complete = decimal_or_none(amount)
     if not amount_to_complete or amount_to_complete <= 0:
         raise TransactionServiceError('Le montant à compléter doit être supérieur à 0.')
 
-    if amount_to_complete > tx.montant_restant:
-        raise TransactionServiceError(
-            f'Le montant ne peut pas dépasser le reste à payer ({tx.montant_restant}).',
-        )
-
     complete_date = parse_iso_date(date) or timezone.now()
-    new_amount = tx.montant + amount_to_complete
-    new_remaining = tx.montant_restant - amount_to_complete
-    if new_remaining <= 0:
-        new_remaining = None
 
     with db_transaction.atomic():
+        # Verrou ligne : empêche un double complément concurrent.
+        tx = (
+            Transaction.objects
+            .select_for_update()
+            .filter(pk=transaction_id, organisation=org)
+            .first()
+        )
+        if not tx:
+            raise TransactionServiceError('Transaction introuvable.', status=404)
+
+        try:
+            verifier_verrou_optimiste(tx, data or {})
+        except OptimisticLockError as exc:
+            raise TransactionServiceError(exc.message, status=exc.status) from exc
+
+        if not tx.montant_restant or tx.montant_restant <= 0:
+            raise TransactionServiceError('Transaction déjà complète ou sans montant restant.')
+
+        if amount_to_complete > tx.montant_restant:
+            raise TransactionServiceError(
+                f'Le montant ne peut pas dépasser le reste à payer ({tx.montant_restant}).',
+            )
+
+        new_amount = tx.montant + amount_to_complete
+        new_remaining = tx.montant_restant - amount_to_complete
+        if new_remaining <= 0:
+            new_remaining = None
+
         tx.montant = new_amount
         tx.montant_restant = new_remaining
         tx.save()
@@ -195,6 +221,7 @@ def complete_transaction(org, user, membre, transaction_id: str, amount, date, d
             montant=amount_to_complete,
             paye_le=complete_date,
         )
+        tx_id = tx.id
 
     notifier_changement_organisation(org)
 
@@ -202,6 +229,6 @@ def complete_transaction(org, user, membre, transaction_id: str, amount, date, d
         Transaction.objects
         .select_related('client', 'cree_par')
         .prefetch_related('paiements')
-        .get(pk=tx.id)
+        .get(pk=tx_id)
     )
     return transaction_to_js(tx)

@@ -42,12 +42,13 @@ InOut KaayPrint/
 
 ## Compte de test (données importées)
 
-- E-mail : `contact@kaayprint.com`
-- Mot de passe : `inout2#`
+Après import, créez le propriétaire avec **votre** e-mail et un mot de passe fort :
 
 ```powershell
-python manage.py initialiser_kaayprint --email contact@kaayprint.com --password "inout2#"
+python manage.py initialiser_kaayprint --email VOTRE@email.com --password "VotreMotDePasseFort"
 ```
+
+`--password` est obligatoire (aucun défaut).
 
 ## Fonctionnalités
 

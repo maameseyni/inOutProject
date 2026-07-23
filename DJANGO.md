@@ -50,7 +50,7 @@ python manage.py runserver
 **Étape obligatoire** — remplacez l'e-mail par le vôtre :
 
 ```powershell
-python manage.py initialiser_kaayprint --email VOTRE@gmail.com --password "inout2#"
+python manage.py initialiser_kaayprint --email VOTRE@gmail.com --password "VotreMotDePasseFort"
 ```
 
 Cette commande :
@@ -59,7 +59,7 @@ Cette commande :
 3. Enregistre `login_legacy = inout`
 4. Attribue **toutes les 134 transactions** au propriétaire
 
-Connexion ensuite : **votre e-mail** + `inout2#` (ou Google si configuré).
+`--password` est **obligatoire**. Connexion ensuite : **votre e-mail** + ce mot de passe (ou Google si configuré).
 
 ---
 

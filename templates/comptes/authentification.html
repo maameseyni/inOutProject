@@ -57,6 +57,10 @@
         <button type="submit" class="auth-btn">Se connecter</button>
     </form>
 
+    <p class="auth-footer-link">
+        <a href="{% url 'renvoyer_confirmation_email' %}">Compte non activé ? Renvoyer le lien</a>
+    </p>
+
     <div class="auth-divider">ou continuer avec</div>
     <div class="auth-google-wrap">
         <form action="{% provider_login_url 'google' %}" method="post" class="auth-google-form">

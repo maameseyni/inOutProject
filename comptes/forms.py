@@ -151,12 +151,14 @@ class InscriptionForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
-        existant = (
-            User.objects.filter(username=email).first()
-            or User.objects.filter(email=email).first()
-        )
-        if existant:
-            if not existant.is_active:
+        from .utils import email_deja_utilise
+
+        if email_deja_utilise(email):
+            existant = (
+                User.objects.filter(username__iexact=email).first()
+                or User.objects.filter(email__iexact=email).first()
+            )
+            if existant is not None and not existant.is_active:
                 raise ValidationError(
                     'Un compte non activé existe déjà avec cet e-mail. '
                     'Vérifiez votre boîte de réception ou renvoyez le lien de confirmation.'

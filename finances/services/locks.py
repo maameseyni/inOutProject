@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from finances.models import VerrouEdition
@@ -63,33 +64,53 @@ def acquerir_verrou(org, user, ressource_type: str, ressource_id: str) -> dict:
     _nettoyer_verrous_expires()
     now = timezone.now()
     expire = now + LOCK_DURATION
+    nom = _nom_utilisateur(user)
 
-    existing = VerrouEdition.objects.filter(
-        organisation=org,
-        ressource_type=ressource_type,
-        ressource_id=ressource_id,
-    ).first()
-
-    if existing:
-        if existing.utilisateur_id == user.id:
-            existing.expire_le = expire
-            existing.save(update_fields=['expire_le'])
-            return {'ok': True, 'expireLe': expire.isoformat()}
-        if existing.expire_le > now:
-            raise LockServiceError(
-                message_verrou(ressource_type, existing.utilisateur_nom),
-                status=423,
+    with transaction.atomic():
+        existing = (
+            VerrouEdition.objects
+            .select_for_update()
+            .filter(
+                organisation=org,
+                ressource_type=ressource_type,
+                ressource_id=ressource_id,
             )
-        existing.delete()
+            .first()
+        )
 
-    VerrouEdition.objects.create(
-        organisation=org,
-        ressource_type=ressource_type,
-        ressource_id=ressource_id,
-        utilisateur=user,
-        utilisateur_nom=_nom_utilisateur(user),
-        expire_le=expire,
-    )
+        if existing:
+            if existing.utilisateur_id == user.id:
+                existing.expire_le = expire
+                existing.utilisateur_nom = nom
+                existing.save(update_fields=['expire_le', 'utilisateur_nom'])
+                return {'ok': True, 'expireLe': expire.isoformat()}
+            if existing.expire_le > now:
+                raise LockServiceError(
+                    message_verrou(ressource_type, existing.utilisateur_nom),
+                    status=423,
+                )
+            existing.utilisateur = user
+            existing.utilisateur_nom = nom
+            existing.expire_le = expire
+            existing.save(update_fields=['utilisateur', 'utilisateur_nom', 'expire_le'])
+            return {'ok': True, 'expireLe': expire.isoformat()}
+
+        try:
+            VerrouEdition.objects.create(
+                organisation=org,
+                ressource_type=ressource_type,
+                ressource_id=ressource_id,
+                utilisateur=user,
+                utilisateur_nom=nom,
+                expire_le=expire,
+            )
+        except IntegrityError as exc:
+            # Course : un autre process a créé le verrou entre le SELECT et le INSERT.
+            raise LockServiceError(
+                'Cette ressource est en cours de modification. Réessayez.',
+                status=423,
+            ) from exc
+
     return {'ok': True, 'expireLe': expire.isoformat()}
 
 

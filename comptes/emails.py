@@ -8,7 +8,7 @@ from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_encode
 
 from .models import EnvoiEmailJournalier
-from .tokens import confirmation_email_token
+from .tokens import changement_email_token, confirmation_email_token
 
 APP_NAME = 'Xaliss'
 
@@ -122,6 +122,45 @@ def envoyer_confirmation_email(request, utilisateur) -> None:
 
     envoyer_mail(subject, message, [utilisateur.email], html_message=html_message)
     _marquer_email_envoye(utilisateur.email, EnvoiEmailJournalier.TYPE_CONFIRMATION)
+
+
+def envoyer_confirmation_changement_email(request, utilisateur, nouvel_email: str) -> None:
+    nouvel_email = _email_normalise(nouvel_email)
+    uidb64 = urlsafe_base64_encode(force_bytes(utilisateur.pk))
+    token = changement_email_token.make_token(utilisateur)
+    path = reverse('confirmer_changement_email', args=[uidb64, token])
+    confirmation_url = request.build_absolute_uri(path)
+    context = {
+        'user': utilisateur,
+        'utilisateur': utilisateur,
+        'nouvel_email': nouvel_email,
+        'ancien_email': utilisateur.email or '',
+        'confirmation_url': confirmation_url,
+        'app_name': APP_NAME,
+    }
+
+    subject = _rendre_template_ou_defaut(
+        'comptes/email_confirmation_changement_sujet.txt',
+        context,
+        f'Confirmez votre nouvel e-mail — {APP_NAME}',
+    )
+    message = _rendre_template_ou_defaut(
+        'comptes/email_confirmation_changement.txt',
+        context,
+        (
+            f'Bonjour,\n\n'
+            f'Vous avez demandé à utiliser {nouvel_email} sur {APP_NAME}.\n'
+            f'Confirmez en ouvrant ce lien :\n{confirmation_url}\n'
+        ),
+    )
+    html_message = _rendre_template_ou_defaut(
+        'comptes/email_confirmation_changement.html',
+        context,
+        '',
+    ) or None
+
+    envoyer_mail(subject, message, [nouvel_email], html_message=html_message)
+    _marquer_email_envoye(nouvel_email, EnvoiEmailJournalier.TYPE_CONFIRMATION)
 
 
 def envoyer_rappel_note_email(note, utilisateur) -> None:

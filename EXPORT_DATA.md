@@ -44,7 +44,7 @@ python scripts/migrate_export_to_postgres.py mon-export.json \
 ### Initialiser le compte propriétaire
 
 ```bash
-python manage.py initialiser_kaayprint --email contact@kaayprint.com --password "inout2#"
+python manage.py initialiser_kaayprint --email VOTRE@email.com --password "VotreMotDePasseFort"
 ```
 
 ---

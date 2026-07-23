@@ -227,10 +227,24 @@ function applyUserProfileToForm(profil) {
         firstName: String(profil.firstName || '').trim(),
         lastName: String(profil.lastName || '').trim(),
         email: String(profil.email || '').trim(),
+        pendingEmail: String(profil.pendingEmail || '').trim(),
         country: String(profil.country || '').trim(),
         city: String(profil.city || '').trim(),
         currencyLabel: normalizeCurrencyCode(profil.currencyLabel || ''),
     };
+
+    const pendingHint = document.getElementById('userEmailPendingHint');
+    if (pendingHint) {
+        if (profil.pendingEmail) {
+            pendingHint.hidden = false;
+            pendingHint.textContent = 'Confirmation en attente pour '
+                + profil.pendingEmail
+                + ' — consultez votre boîte mail.';
+        } else {
+            pendingHint.hidden = true;
+            pendingHint.textContent = '';
+        }
+    }
 
     let geoReady = Promise.resolve();
     if (window.xalissGeoSelects && typeof window.xalissGeoSelects.applyValues === 'function') {
@@ -2134,9 +2148,13 @@ function notePlainText(value) {
     if (!noteContentLooksLikeHtml(raw)) {
         return raw.replace(/\s+/g, ' ').trim();
     }
-    const tmp = document.createElement('div');
-    tmp.innerHTML = raw;
-    return String(tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+    // DOMParser : pas d'exécution de scripts (contrairement à innerHTML sur un div live).
+    try {
+        const doc = new DOMParser().parseFromString(raw, 'text/html');
+        return String((doc.body && doc.body.textContent) || '').replace(/\s+/g, ' ').trim();
+    } catch (e) {
+        return raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
 }
 
 function sanitizeNoteHref(href) {
@@ -2163,7 +2181,15 @@ function sanitizeNoteHref(href) {
     return '';
 }
 
-function sanitizeNoteHtml(html) {
+var NOTE_HTML_ALLOWED_TAGS = [
+    'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+    'p', 'br', 'div', 'span',
+    'ul', 'ol', 'li',
+    'h3', 'blockquote',
+    'a'
+];
+
+function sanitizeNoteHtmlFallback(html) {
     const raw = String(html || '').trim();
     if (!raw) return '';
     const allowed = {
@@ -2173,8 +2199,14 @@ function sanitizeNoteHtml(html) {
         H3: true, BLOCKQUOTE: true,
         A: true
     };
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = raw;
+    let doc;
+    try {
+        doc = new DOMParser().parseFromString('<div id="kp-root">' + raw + '</div>', 'text/html');
+    } catch (e) {
+        return '';
+    }
+    const wrapper = doc.getElementById('kp-root');
+    if (!wrapper) return '';
 
     function clean(node) {
         const children = Array.prototype.slice.call(node.childNodes);
@@ -2219,6 +2251,42 @@ function sanitizeNoteHtml(html) {
 
     clean(wrapper);
     return wrapper.innerHTML.trim().slice(0, 8000);
+}
+
+function sanitizeNoteHtml(html) {
+    const raw = String(html || '').trim();
+    if (!raw) return '';
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+        const cleaned = window.DOMPurify.sanitize(raw, {
+            ALLOWED_TAGS: NOTE_HTML_ALLOWED_TAGS,
+            ALLOWED_ATTR: ['href', 'title', 'target', 'rel'],
+            ALLOW_DATA_ATTR: false,
+            ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+        });
+        // Renforce target/rel sur les ancres conservées.
+        try {
+            const doc = new DOMParser().parseFromString(
+                '<div id="kp-root">' + cleaned + '</div>',
+                'text/html'
+            );
+            const root = doc.getElementById('kp-root');
+            if (root) {
+                Array.prototype.forEach.call(root.querySelectorAll('a[href]'), function (a) {
+                    const href = sanitizeNoteHref(a.getAttribute('href'));
+                    if (!href) {
+                        a.removeAttribute('href');
+                        return;
+                    }
+                    a.setAttribute('href', href);
+                    a.setAttribute('target', '_blank');
+                    a.setAttribute('rel', 'noopener noreferrer');
+                });
+                return root.innerHTML.trim().slice(0, 8000);
+            }
+        } catch (e) { /* fallback cleaned */ }
+        return String(cleaned || '').trim().slice(0, 8000);
+    }
+    return sanitizeNoteHtmlFallback(raw);
 }
 
 function normalizeNoteContent(value) {
@@ -7400,26 +7468,26 @@ function displayTransactions(filter = currentFilter) {
                 </div>
                 <div class="transaction-actions">
                     ${hasRemaining ? `
-                    <button class="complete-btn" onclick="openCompleteModal('${transaction.id}')" title="Compléter le paiement">
+                    <button type="button" class="complete-btn" data-tx-complete="${escapeHtml(transaction.id)}" title="Compléter le paiement" aria-label="Compléter le paiement">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M20 6L9 17l-5-5" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
                     ` : ''}
-                    <button class="invoice-btn" onclick="openInvoiceModal('${transaction.id}')" title="${invoiceBtnTitle}">
+                    <button type="button" class="invoice-btn" data-tx-invoice="${escapeHtml(transaction.id)}" title="${escapeHtml(invoiceBtnTitle)}" aria-label="${escapeHtml(invoiceBtnTitle)}">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <circle cx="8.5" cy="8.5" r="1.5" stroke="#43277d" stroke-width="2"/>
                             <path d="M21 15l-5-5L5 21" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    <button class="edit-btn" onclick="openEditModal('${transaction.id}')" title="${escapeHtml(editLockTitle)}" ${txLocked ? 'disabled aria-disabled="true"' : ''}>
+                    <button type="button" class="edit-btn" data-tx-edit="${escapeHtml(transaction.id)}" title="${escapeHtml(editLockTitle)}" aria-label="${escapeHtml(editLockTitle)}" ${txLocked ? 'disabled aria-disabled="true"' : ''}>
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    <button class="delete-btn" onclick="deleteTransaction('${transaction.id}')">
+                    <button type="button" class="delete-btn" data-tx-delete="${escapeHtml(transaction.id)}" title="Supprimer" aria-label="Supprimer la transaction">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -7454,6 +7522,42 @@ function displayTransactions(filter = currentFilter) {
     if (typeof applyRolePermissionsUI === 'function') {
         applyRolePermissionsUI();
     }
+}
+
+let transactionActionsBound = false;
+
+function bindTransactionActionListeners() {
+    if (transactionActionsBound) return;
+    const listEl = document.getElementById('transactionsList');
+    if (!listEl) return;
+    transactionActionsBound = true;
+
+    listEl.addEventListener('click', function (e) {
+        const completeBtn = e.target.closest('[data-tx-complete]');
+        if (completeBtn) {
+            e.preventDefault();
+            openCompleteModal(completeBtn.getAttribute('data-tx-complete'));
+            return;
+        }
+        const invoiceBtn = e.target.closest('[data-tx-invoice]');
+        if (invoiceBtn) {
+            e.preventDefault();
+            openInvoiceModal(invoiceBtn.getAttribute('data-tx-invoice'));
+            return;
+        }
+        const editBtn = e.target.closest('[data-tx-edit]');
+        if (editBtn) {
+            if (editBtn.disabled || editBtn.getAttribute('aria-disabled') === 'true') return;
+            e.preventDefault();
+            openEditModal(editBtn.getAttribute('data-tx-edit'));
+            return;
+        }
+        const deleteBtn = e.target.closest('[data-tx-delete]');
+        if (deleteBtn) {
+            e.preventDefault();
+            deleteTransaction(deleteBtn.getAttribute('data-tx-delete'));
+        }
+    });
 }
 
 // Mettre à jour les informations de pagination
@@ -7799,12 +7903,24 @@ function getPaymentEntries(t) {
     return [{ amount: parseFloat(t.amount), date: toIsoDate(t.date) }];
 }
 
+// Identifiant transaction namespacé (offline + serveur).
+function generateTransactionId() {
+    let rnd = '';
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        rnd = crypto.randomUUID().replace(/-/g, '');
+    } else {
+        rnd = Date.now().toString(16) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+    }
+    return ('tx_' + rnd.slice(0, 16) + '_' + Math.random().toString(16).slice(2, 10)).slice(0, 64);
+}
+
 // Ajouter une transaction
 function addTransaction(type, amount, description, date, remainingAmount = null, invoiceClient = null, invoiceClientId = null, category = '') {
     const amt = parseFloat(amount);
     const unusualExpenseBenchmark = type === 'expense' ? getUnusualExpenseBenchmark(amt) : null;
     const dateIso = new Date(date).toISOString();
     const transaction = {
+        id: generateTransactionId(),
         type,
         amount: amt,
         description: description.trim(),
@@ -7838,14 +7954,13 @@ function addTransaction(type, amount, description, date, remainingAmount = null,
                 switchToLocalMode(error);
                 showNotification('Synchronisation indisponible. Donnees sauvegardees en local.', 'error');
                 // Fallback : ajouter localement
-                transaction.id = Date.now();
+                if (!transaction.id) transaction.id = generateTransactionId();
                 transactions.push(transaction);
                 saveTransactions();
                 notifyUnusualExpenseIfNeeded(amt, description, unusualExpenseBenchmark);
             });
     } else {
         // Ajouter localement
-        transaction.id = Date.now();
         transactions.push(transaction);
         saveTransactions();
         notifyUnusualExpenseIfNeeded(amt, description, unusualExpenseBenchmark);
@@ -9798,6 +9913,7 @@ function initApp() {
 
     // Attacher tous les event listeners
     attachEventListeners();
+    bindTransactionActionListeners();
 
     initCompanyProfileUI();
     initUserProfileUI();
@@ -9870,18 +9986,43 @@ function initApp() {
                         unsubscribeClientList = null;
                     }
                     if (window.XALISS_DJANGO) {
-                        sessionStorage.setItem('xaliss_flash_message', JSON.stringify({
+                        const form = document.getElementById('djangoLogoutForm');
+                        const flashPayload = {
                             type: 'success',
                             text: 'Vous êtes déconnecté.',
                             duration: 4500,
-                        }));
-                        const form = document.getElementById('djangoLogoutForm');
-                        if (form) form.submit();
+                        };
+                        const finishLogout = function () {
+                            try {
+                                sessionStorage.setItem(
+                                    'xaliss_flash_message',
+                                    JSON.stringify(flashPayload)
+                                );
+                            } catch (e) { /* ignore */ }
+                            if (form) form.submit();
+                        };
+                        const offlineApi = window.XalissOffline;
+                        if (offlineApi && typeof offlineApi.purgeSensitiveClientData === 'function') {
+                            offlineApi.purgeSensitiveClientData()
+                                .catch(function () { /* best effort */ })
+                                .then(finishLogout);
+                        } else {
+                            finishLogout();
+                        }
                         return;
                     }
                     sessionStorage.removeItem('kaayprint_authenticated');
                     sessionStorage.removeItem('kaayprint_username');
-                    window.location.href = 'index.html';
+                    const goLegacy = function () {
+                        window.location.href = 'index.html';
+                    };
+                    if (window.XalissOffline && typeof window.XalissOffline.purgeSensitiveClientData === 'function') {
+                        window.XalissOffline.purgeSensitiveClientData()
+                            .catch(function () { /* best effort */ })
+                            .then(goLegacy);
+                    } else {
+                        goLegacy();
+                    }
                 }
             });
         });
