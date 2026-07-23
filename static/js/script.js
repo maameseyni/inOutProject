@@ -6273,18 +6273,296 @@ function saveTransactions() {
 }
 
 // Calculer les totaux
+/** Totaux créances (hors filtre période) — restes encore dus. */
+function calculateRemainingStats() {
+    let totalRemaining = 0;
+    let openOrders = 0;
+    transactions.forEach(function (t) {
+        if (t.type !== 'income') return;
+        const remaining = parseFloat(t.remainingAmount) || 0;
+        totalRemaining += remaining;
+        if (remaining > 0) openOrders += 1;
+    });
+    return { totalRemaining: totalRemaining, openOrders: openOrders };
+}
+
+/**
+ * Source unique des stats cashflow : somme des paiements datés
+ * (respecte le filtre Jour/Période de la page Statistiques).
+ */
+function getPeriodCashflowTotals() {
+    const bounds = getChartsPeriodBounds();
+    let income = 0;
+    let expense = 0;
+    let paymentIncomeCount = 0;
+    let paymentExpenseCount = 0;
+    const incomeTxIds = {};
+    const expenseTxIds = {};
+
+    transactions.forEach(function (t) {
+        let paidInPeriod = 0;
+        getPaymentEntries(t).forEach(function (entry) {
+            if (!isDateInChartsPeriod(entry.date, bounds)) return;
+            const amount = parseFloat(entry.amount) || 0;
+            if (!amount) return;
+            paidInPeriod += amount;
+            if (t.type === 'income') {
+                income += amount;
+                paymentIncomeCount += 1;
+            } else if (t.type === 'expense') {
+                expense += amount;
+                paymentExpenseCount += 1;
+            }
+        });
+        if (paidInPeriod <= 0) return;
+        const key = t.id != null ? String(t.id) : (t.date + '|' + t.amount + '|' + (t.description || ''));
+        if (t.type === 'income') incomeTxIds[key] = true;
+        else if (t.type === 'expense') expenseTxIds[key] = true;
+    });
+
+    const incomeTxCount = Object.keys(incomeTxIds).length;
+    const expenseTxCount = Object.keys(expenseTxIds).length;
+    const net = income - expense;
+    const marginRate = income > 0 ? (net / income) * 100 : null;
+
+    return {
+        income: income,
+        expense: expense,
+        net: net,
+        totalIncome: income,
+        totalExpense: expense,
+        balance: net,
+        marginRate: marginRate,
+        incomeCount: paymentIncomeCount,
+        expenseCount: paymentExpenseCount,
+        incomeTxCount: incomeTxCount,
+        expenseTxCount: expenseTxCount
+    };
+}
+
+/** Compat : totaux = cashflow paiements (+ créances). */
 function calculateTotals() {
-    const totalIncome = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-    
-    const totalExpense = transactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-    
-    const balance = totalIncome - totalExpense;
-    
-    return { totalIncome, totalExpense, balance };
+    const cash = getPeriodCashflowTotals();
+    const remaining = calculateRemainingStats();
+    return {
+        totalIncome: cash.income,
+        totalExpense: cash.expense,
+        balance: cash.net,
+        marginRate: cash.marginRate,
+        incomeTxCount: cash.incomeTxCount,
+        expenseTxCount: cash.expenseTxCount,
+        totalRemaining: remaining.totalRemaining,
+        openOrders: remaining.openOrders
+    };
+}
+
+function getChartsPeriodBounds() {
+    const periodFrom = (document.getElementById('benefitPeriodFrom') || {}).value || '';
+    const periodTo = (document.getElementById('benefitPeriodTo') || {}).value || '';
+    const from = periodFrom ? new Date(periodFrom) : null;
+    if (from) from.setHours(0, 0, 0, 0);
+    const to = periodTo ? new Date(periodTo) : null;
+    if (to) to.setHours(23, 59, 59, 999);
+    return { from: from, to: to, periodFrom: periodFrom, periodTo: periodTo };
+}
+
+function isDateInChartsPeriod(dateValue, bounds) {
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return false;
+    if (bounds.from && d < bounds.from) return false;
+    if (bounds.to && d > bounds.to) return false;
+    return true;
+}
+
+function sumPaymentsInChartsPeriod(transaction, bounds) {
+    let sum = 0;
+    getPaymentEntries(transaction).forEach(function (entry) {
+        if (!isDateInChartsPeriod(entry.date, bounds)) return;
+        sum += parseFloat(entry.amount) || 0;
+    });
+    return sum;
+}
+
+function hasStatsPeriodFilter() {
+    const bounds = getChartsPeriodBounds();
+    return !!(bounds.periodFrom || bounds.periodTo);
+}
+
+function formatCountLabel(count, singular, plural) {
+    const n = Number(count) || 0;
+    return n + ' ' + (n === 1 ? singular : plural);
+}
+
+function toIsoDateInputValue(dateObj) {
+    return dateObj.getFullYear() + '-' +
+        String(dateObj.getMonth() + 1).padStart(2, '0') + '-' +
+        String(dateObj.getDate()).padStart(2, '0');
+}
+
+function getStatsFilterMode() {
+    const card = document.getElementById('statsFilterCard');
+    return (card && card.getAttribute('data-filter-mode') === 'range') ? 'range' : 'day';
+}
+
+function syncStatsFilterDayFromRange() {
+    const dayEl = document.getElementById('statsFilterDay');
+    const from = (document.getElementById('benefitPeriodFrom') || {}).value || '';
+    const to = (document.getElementById('benefitPeriodTo') || {}).value || '';
+    if (!dayEl) return;
+    if (from && to && from === to) {
+        dayEl.value = from;
+    } else if (from && !to) {
+        dayEl.value = from;
+    } else if (!from && !to) {
+        dayEl.value = '';
+    } else if (to) {
+        dayEl.value = to;
+    }
+}
+
+function applyStatsDayToRange() {
+    const dayEl = document.getElementById('statsFilterDay');
+    const fromEl = document.getElementById('benefitPeriodFrom');
+    const toEl = document.getElementById('benefitPeriodTo');
+    if (!dayEl || !fromEl || !toEl) return;
+    const day = dayEl.value || '';
+    fromEl.value = day;
+    toEl.value = day;
+}
+
+function setStatsFilterMode(mode, options) {
+    const opts = options || {};
+    const next = mode === 'range' ? 'range' : 'day';
+    const card = document.getElementById('statsFilterCard');
+    const dayBlock = document.getElementById('statsFilterDayBlock');
+    const rangeBlock = document.getElementById('statsFilterRangeBlock');
+    const dayBtn = document.getElementById('statsFilterModeDay');
+    const rangeBtn = document.getElementById('statsFilterModeRange');
+    if (!card || !dayBlock || !rangeBlock) return;
+
+    card.setAttribute('data-filter-mode', next);
+    try { localStorage.setItem('kaayprint_stats_filter_mode', next); } catch (e) { /* ignore */ }
+
+    const isDay = next === 'day';
+    dayBlock.classList.toggle('is-active', isDay);
+    rangeBlock.classList.toggle('is-active', !isDay);
+    if (isDay) {
+        rangeBlock.setAttribute('hidden', '');
+        dayBlock.removeAttribute('hidden');
+    } else {
+        dayBlock.setAttribute('hidden', '');
+        rangeBlock.removeAttribute('hidden');
+    }
+
+    if (dayBtn) {
+        dayBtn.classList.toggle('is-active', isDay);
+        dayBtn.setAttribute('aria-selected', isDay ? 'true' : 'false');
+    }
+    if (rangeBtn) {
+        rangeBtn.classList.toggle('is-active', !isDay);
+        rangeBtn.setAttribute('aria-selected', !isDay ? 'true' : 'false');
+    }
+
+    if (isDay) {
+        syncStatsFilterDayFromRange();
+        applyStatsDayToRange();
+    }
+
+    if (!opts.silent) {
+        updateChartsFilterPeriodLabel();
+        updateBenefitDisplays();
+        updateStatsExtraCards();
+        refreshAllCharts();
+    }
+}
+
+let lastStatsPeriodPreset = 'all';
+
+function applyStatsPeriodPreset(preset) {
+    const fromEl = document.getElementById('benefitPeriodFrom');
+    const toEl = document.getElementById('benefitPeriodTo');
+    const dayEl = document.getElementById('statsFilterDay');
+    if (!fromEl || !toEl) return;
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    let from = null;
+    let to = today;
+    lastStatsPeriodPreset = preset;
+
+    if (preset === 'today') {
+        const todayStr = toIsoDateInputValue(today);
+        fromEl.value = todayStr;
+        toEl.value = todayStr;
+        if (dayEl) dayEl.value = todayStr;
+        setStatsFilterMode('day', { silent: true });
+    } else if (preset === 'month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        fromEl.value = toIsoDateInputValue(from);
+        toEl.value = toIsoDateInputValue(to);
+        setStatsFilterMode('range', { silent: true });
+    } else if (preset === 'quarter') {
+        const q = Math.floor(today.getMonth() / 3) * 3;
+        from = new Date(today.getFullYear(), q, 1);
+        fromEl.value = toIsoDateInputValue(from);
+        toEl.value = toIsoDateInputValue(to);
+        setStatsFilterMode('range', { silent: true });
+    } else if (preset === 'year') {
+        from = new Date(today.getFullYear(), 0, 1);
+        fromEl.value = toIsoDateInputValue(from);
+        toEl.value = toIsoDateInputValue(to);
+        setStatsFilterMode('range', { silent: true });
+    } else {
+        fromEl.value = '';
+        toEl.value = '';
+        if (dayEl) dayEl.value = '';
+        lastStatsPeriodPreset = 'all';
+    }
+
+    syncStatsPeriodPresetButtons();
+    updateChartsFilterPeriodLabel();
+    updateBenefitDisplays();
+    updateStatsExtraCards();
+    refreshAllCharts();
+}
+
+function syncStatsPeriodPresetButtons() {
+    const from = (document.getElementById('benefitPeriodFrom') || {}).value || '';
+    const to = (document.getElementById('benefitPeriodTo') || {}).value || '';
+    const today = toIsoDateInputValue(new Date());
+    let active = '';
+    if (!from && !to) {
+        active = 'all';
+        lastStatsPeriodPreset = 'all';
+    } else if (from && to && from === to && from === today) {
+        active = 'today';
+        lastStatsPeriodPreset = 'today';
+    } else if (to === today) {
+        const now = new Date();
+        const monthStart = toIsoDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1));
+        const quarterStart = toIsoDateInputValue(new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1));
+        const yearStart = toIsoDateInputValue(new Date(now.getFullYear(), 0, 1));
+        // En début de trimestre (janv./avr./juil./oct.), mois et trimestre
+        // ont la même date de début : on respecte le dernier raccourci choisi.
+        if (from === monthStart && from === quarterStart) {
+            active = (lastStatsPeriodPreset === 'quarter') ? 'quarter' : 'month';
+        } else if (from === monthStart) {
+            active = 'month';
+        } else if (from === quarterStart) {
+            active = 'quarter';
+        } else if (from === yearStart) {
+            active = 'year';
+        } else {
+            active = '';
+            lastStatsPeriodPreset = '';
+        }
+        if (active) lastStatsPeriodPreset = active;
+    } else {
+        // Plage manuelle : aucun raccourci actif
+        lastStatsPeriodPreset = '';
+    }
+    document.querySelectorAll('.period-preset-btn').forEach(function (btn) {
+        btn.classList.toggle('is-active', !!active && btn.getAttribute('data-period-preset') === active);
+    });
 }
 
 // Formater le montant selon la devise ISO de l'organisation (affichage seul).
@@ -6315,131 +6593,184 @@ function formatDate(dateString) {
     }).format(date);
 }
 
-// Mettre à jour l'affichage
-function updateDisplay() {
-    const { totalIncome, totalExpense, balance } = calculateTotals();
-    
-    // Animation des valeurs qui changent
+// Mettre à jour les cartes KPI + hints (source = paiements filtrés)
+function updateStatsDashboard() {
+    const cash = getPeriodCashflowTotals();
+    const remaining = calculateRemainingStats();
+    const filtered = hasStatsPeriodFilter();
+
     const balanceEl = document.getElementById('balance');
     const incomeEl = document.getElementById('totalIncome');
     const expenseEl = document.getElementById('totalExpense');
-    
-    balanceEl.textContent = formatAmount(balance);
-    incomeEl.textContent = formatAmount(totalIncome);
-    expenseEl.textContent = formatAmount(totalExpense);
-    
-    // Ajouter l'animation pulse
-    [balanceEl, incomeEl, expenseEl].forEach(el => {
+    const remainingEl = document.getElementById('totalRemaining');
+    const balanceTitle = document.getElementById('balanceCardTitle');
+    const incomeTitle = document.getElementById('incomeCardTitle');
+    const expenseTitle = document.getElementById('expenseCardTitle');
+
+    if (balanceEl) {
+        balanceEl.textContent = formatAmount(cash.net);
+        balanceEl.classList.toggle('negative', cash.net < 0);
+    }
+    if (incomeEl) incomeEl.textContent = formatAmount(cash.income);
+    if (expenseEl) expenseEl.textContent = formatAmount(cash.expense);
+    if (remainingEl) remainingEl.textContent = formatAmount(remaining.totalRemaining);
+
+    if (balanceTitle) balanceTitle.textContent = filtered ? 'Recette filtrée' : 'Recette actuelle';
+    if (incomeTitle) incomeTitle.textContent = filtered ? 'Entrants filtrés' : 'Total entrants';
+    if (expenseTitle) expenseTitle.textContent = filtered ? 'Sortants filtrés' : 'Total sortants';
+
+    const marginHint = document.getElementById('marginRateHint');
+    if (marginHint) {
+        marginHint.textContent = cash.marginRate == null
+            ? 'Soit — des entrants'
+            : 'Soit ' + (Math.round(cash.marginRate * 10) / 10).toLocaleString('fr-FR') + '\u00A0% des entrants';
+    }
+    const incomeCountHint = document.getElementById('incomeCountHint');
+    if (incomeCountHint) {
+        incomeCountHint.textContent = formatCountLabel(cash.incomeTxCount, 'commande', 'commandes')
+            + (filtered ? ' · période' : '');
+    }
+    const expenseCountHint = document.getElementById('expenseCountHint');
+    if (expenseCountHint) {
+        expenseCountHint.textContent = formatCountLabel(cash.expenseTxCount, 'dépense', 'dépenses')
+            + (filtered ? ' · période' : '');
+    }
+    const openOrdersHint = document.getElementById('openOrdersHint');
+    if (openOrdersHint) {
+        openOrdersHint.textContent = formatCountLabel(remaining.openOrders, 'commande ouverte', 'commandes ouvertes');
+    }
+}
+
+// Mettre à jour les indicateurs additionnels (restes, hints)
+function updateStatsExtraCards() {
+    updateStatsDashboard();
+}
+
+// Mettre à jour l'affichage
+function updateDisplay() {
+    updateStatsDashboard();
+
+    const balanceEl = document.getElementById('balance');
+    const incomeEl = document.getElementById('totalIncome');
+    const expenseEl = document.getElementById('totalExpense');
+    [balanceEl, incomeEl, expenseEl, document.getElementById('totalRemaining')].forEach(function (el) {
+        if (!el) return;
         el.classList.add('updated');
-        setTimeout(() => el.classList.remove('updated'), 500);
+        setTimeout(function () { el.classList.remove('updated'); }, 500);
     });
-    
+
     displayTransactions();
     updateBenefitDisplays();
     refreshAllCharts();
 }
 
-// Bénéfice pour un jour donné = encaissements réels ce jour-là (chaque paiement à sa date)
-function getBenefitForDay(dateStr) {
-    if (!dateStr) return 0;
-    const d = new Date(dateStr);
-    const startOfDay = new Date(d);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(d);
-    endOfDay.setHours(23, 59, 59, 999);
-    let income = 0, expense = 0;
-    transactions.forEach(t => {
-        getPaymentEntries(t).forEach(entry => {
-            const ed = new Date(entry.date);
-            if (ed >= startOfDay && ed <= endOfDay) {
-                if (t.type === 'income') income += entry.amount;
-                else expense += entry.amount;
-            }
-        });
-    });
-    return income - expense;
-}
-
-// Bénéfice sur une période = encaissements réels entre from et to (chaque paiement à sa date)
-function getBenefitForPeriod(fromStr, toStr) {
-    if (!fromStr || !toStr) return 0;
-    const from = new Date(fromStr);
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(toStr);
-    to.setHours(23, 59, 59, 999);
-    let income = 0, expense = 0;
-    transactions.forEach(t => {
-        getPaymentEntries(t).forEach(entry => {
-            const ed = new Date(entry.date);
-            if (ed >= from && ed <= to) {
-                if (t.type === 'income') income += entry.amount;
-                else expense += entry.amount;
-            }
-        });
-    });
-    return income - expense;
-}
-
-// Mettre à jour l'affichage des bénéfices (carte Bénéfice + carte Filtrer les graphiques)
+// Bénéfice = entrants − sortants selon le filtre de période global
 function updateBenefitDisplays() {
     const dayEl = document.getElementById('benefitDayValue');
-    const dayDateInput = document.getElementById('benefitDayDate');
-    const benefitModeDay = document.getElementById('benefitModeDay');
-    const benefitCardPeriodFrom = document.getElementById('benefitCardPeriodFrom');
-    const benefitCardPeriodTo = document.getElementById('benefitCardPeriodTo');
-    if (dayEl) {
-        let benefit = 0;
-        if (benefitModeDay && benefitModeDay.checked && dayDateInput) {
-            benefit = getBenefitForDay(dayDateInput.value);
-        } else if (benefitCardPeriodFrom && benefitCardPeriodTo) {
-            benefit = getBenefitForPeriod(benefitCardPeriodFrom.value, benefitCardPeriodTo.value);
+    if (!dayEl) return;
+    const period = getPeriodCashflowTotals();
+    dayEl.textContent = formatAmount(period.net);
+    dayEl.classList.toggle('negative', period.net < 0);
+
+    const scopeHint = document.getElementById('benefitScopeHint');
+    if (scopeHint) {
+        const from = (document.getElementById('benefitPeriodFrom') || {}).value || '';
+        const to = (document.getElementById('benefitPeriodTo') || {}).value || '';
+        if (!from && !to) {
+            scopeHint.textContent = 'Entrants − sortants sur toutes les données';
+        } else if (from && to && from === to) {
+            scopeHint.textContent = 'Entrants − sortants sur ce jour';
+        } else {
+            scopeHint.textContent = 'Entrants − sortants sur la période filtrée';
         }
-        dayEl.textContent = formatAmount(benefit);
-        dayEl.classList.toggle('negative', benefit < 0);
+    }
+
+    const incomeEl = document.getElementById('benefitIncomeValue');
+    const expenseEl = document.getElementById('benefitExpenseValue');
+    if (incomeEl) incomeEl.textContent = formatAmount(period.income);
+    if (expenseEl) expenseEl.textContent = formatAmount(period.expense);
+
+    const marginPill = document.getElementById('benefitMarginPill');
+    if (marginPill) {
+        if (period.income > 0) {
+            const rate = Math.round((period.net / period.income) * 1000) / 10;
+            marginPill.textContent = rate.toLocaleString('fr-FR') + '\u00A0% des entrants';
+            marginPill.classList.toggle('is-negative', rate < 0);
+        } else {
+            marginPill.textContent = '—';
+            marginPill.classList.remove('is-negative');
+        }
+    }
+
+    const totalFlow = period.income + period.expense;
+    const incomeBar = document.getElementById('benefitFlowBarIncome');
+    const expenseBar = document.getElementById('benefitFlowBarExpense');
+    if (incomeBar && expenseBar) {
+        if (totalFlow > 0) {
+            incomeBar.style.width = ((period.income / totalFlow) * 100) + '%';
+            expenseBar.style.width = ((period.expense / totalFlow) * 100) + '%';
+        } else {
+            incomeBar.style.width = '0%';
+            expenseBar.style.width = '0%';
+        }
+    }
+
+    const breakdown = document.getElementById('benefitBreakdownHint');
+    if (breakdown) {
+        const txLabel = formatCountLabel(
+            (period.incomeTxCount || 0) + (period.expenseTxCount || 0),
+            'mouvement',
+            'mouvements'
+        );
+        breakdown.textContent = txLabel + ' sur la sélection';
     }
 }
 
-// Effacer le filtre de la carte Bénéfice (jour → aujourd'hui, période → vider Du/Au)
+// Alias conservé pour d’éventuels anciens appels
 function clearBenefitCardFilter() {
-    const benefitModeDay = document.getElementById('benefitModeDay');
-    const benefitDayDate = document.getElementById('benefitDayDate');
-    const benefitCardPeriodFrom = document.getElementById('benefitCardPeriodFrom');
-    const benefitCardPeriodTo = document.getElementById('benefitCardPeriodTo');
-    if (benefitModeDay && benefitModeDay.checked) {
-        if (benefitDayDate) {
-            const today = new Date();
-            benefitDayDate.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-        }
-    } else {
-        if (benefitCardPeriodFrom) benefitCardPeriodFrom.value = '';
-        if (benefitCardPeriodTo) benefitCardPeriodTo.value = '';
-    }
-    updateBenefitDisplays();
+    clearStatsFiltersPeriod();
 }
 
-// Mettre à jour le libellé de période sous "Filtrer les graphiques"
+// Mettre à jour le libellé de période sous "Filtrer"
 function updateChartsFilterPeriodLabel() {
     const el = document.getElementById('chartsFilterPeriodLabel');
     if (!el) return;
     const from = (document.getElementById('benefitPeriodFrom') || {}).value || '';
     const to = (document.getElementById('benefitPeriodTo') || {}).value || '';
+    syncStatsPeriodPresetButtons();
     if (!from && !to) {
         el.textContent = 'Toutes les données';
         return;
     }
-    const fromDate = from ? new Date(from).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    const toDate = to ? new Date(to).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    el.textContent = 'Du ' + fromDate + ' au ' + toDate;
+    if (from && to && from === to) {
+        el.textContent = new Date(from).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        return;
+    }
+    const fromDate = from ? new Date(from).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '…';
+    const toDate = to ? new Date(to).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '…';
+    let prefix = '';
+    if (lastStatsPeriodPreset === 'month') prefix = 'Ce mois · ';
+    else if (lastStatsPeriodPreset === 'quarter') prefix = 'Ce trimestre · ';
+    else if (lastStatsPeriodPreset === 'year') prefix = 'Cette année · ';
+    el.textContent = prefix + 'Du ' + fromDate + ' au ' + toDate;
 }
 
-// Effacer les filtres "Du" et "Au" de la carte "Filtrer les graphiques" et rafraîchir les graphiques
+// Effacer les filtres Du/Au / jour et rafraîchir
 function clearStatsFiltersPeriod() {
     const benefitPeriodFrom = document.getElementById('benefitPeriodFrom');
     const benefitPeriodTo = document.getElementById('benefitPeriodTo');
+    const dayEl = document.getElementById('statsFilterDay');
     if (benefitPeriodFrom) benefitPeriodFrom.value = '';
     if (benefitPeriodTo) benefitPeriodTo.value = '';
+    if (dayEl) dayEl.value = '';
     updateChartsFilterPeriodLabel();
     updateBenefitDisplays();
+    updateStatsExtraCards();
     refreshAllCharts();
 }
 
@@ -6491,26 +6822,22 @@ function initAppSidebar() {
 
 // --- Graphiques (Chart.js) ---
 const MONTH_NAMES = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-// Même rouge que "Total Sortants" (stat-card expense) — #ef4444
-const CHART_COLOR_SORTANTS = '#ef4444';
-const CHART_COLOR_SORTANTS_RGBA = 'rgba(239, 68, 68, 0.7)';
+// Couleurs graphiques — verts/rouges bien saturés (lisibles sur fond clair)
+const CHART_COLOR_ENTRANTS = '#059669';
+const CHART_COLOR_ENTRANTS_FILL = 'rgba(5, 150, 105, 0.92)';
+const CHART_COLOR_SORTANTS = '#dc2626';
+const CHART_COLOR_SORTANTS_FILL = 'rgba(220, 38, 38, 0.92)';
+// Alias conservés
+const CHART_COLOR_SORTANTS_RGBA = CHART_COLOR_SORTANTS_FILL;
 let chartIncomeVsExpense = null;
 
 // Filtre des graphiques = Du/Au de la carte "Filtrer les graphiques" (benefitPeriodFrom, benefitPeriodTo)
 function getTransactionsForCharts() {
-    const periodFrom = (document.getElementById('benefitPeriodFrom') || {}).value || '';
-    const periodTo = (document.getElementById('benefitPeriodTo') || {}).value || '';
-    if (!periodFrom && !periodTo) return transactions;
-    const from = periodFrom ? new Date(periodFrom) : null;
-    if (from) from.setHours(0, 0, 0, 0);
-    const to = periodTo ? new Date(periodTo) : null;
-    if (to) to.setHours(23, 59, 59, 999);
-    return transactions.filter(t => {
-        return getPaymentEntries(t).some(entry => {
-            const d = new Date(entry.date);
-            if (from && d < from) return false;
-            if (to && d > to) return false;
-            return true;
+    const bounds = getChartsPeriodBounds();
+    if (!bounds.from && !bounds.to) return transactions;
+    return transactions.filter(function (t) {
+        return getPaymentEntries(t).some(function (entry) {
+            return isDateInChartsPeriod(entry.date, bounds);
         });
     });
 }
@@ -6518,18 +6845,12 @@ function getTransactionsForCharts() {
 // Données mensuelles : Entrants et Sortants par mois (chaque encaissement à sa date)
 function getMonthlyIncomeExpenseData() {
     const list = getTransactionsForCharts();
-    const periodFrom = (document.getElementById('benefitPeriodFrom') || {}).value || '';
-    const periodTo = (document.getElementById('benefitPeriodTo') || {}).value || '';
-    const from = periodFrom ? new Date(periodFrom) : null;
-    if (from) from.setHours(0, 0, 0, 0);
-    const to = periodTo ? new Date(periodTo) : null;
-    if (to) to.setHours(23, 59, 59, 999);
+    const bounds = getChartsPeriodBounds();
     const byMonth = {};
-    list.forEach(t => {
-        getPaymentEntries(t).forEach(entry => {
+    list.forEach(function (t) {
+        getPaymentEntries(t).forEach(function (entry) {
+            if (!isDateInChartsPeriod(entry.date, bounds)) return;
             const d = new Date(entry.date);
-            if (from && d < from) return;
-            if (to && d > to) return;
             const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
             if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, countIncome: 0, countExpense: 0 };
             if (t.type === 'income') {
@@ -6542,15 +6863,15 @@ function getMonthlyIncomeExpenseData() {
         });
     });
     const keys = Object.keys(byMonth).sort();
-    const labels = keys.map(k => {
-        const [y, m] = k.split('-');
-        return MONTH_NAMES[parseInt(m, 10) - 1] + ' ' + y;
+    const labels = keys.map(function (k) {
+        const parts = k.split('-');
+        return MONTH_NAMES[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
     });
-    const income = keys.map(k => byMonth[k].income);
-    const expense = keys.map(k => byMonth[k].expense);
-    const countIncome = keys.map(k => byMonth[k].countIncome);
-    const countExpense = keys.map(k => byMonth[k].countExpense);
-    return { labels, income, expense, countIncome, countExpense };
+    const income = keys.map(function (k) { return byMonth[k].income; });
+    const expense = keys.map(function (k) { return byMonth[k].expense; });
+    const countIncome = keys.map(function (k) { return byMonth[k].countIncome; });
+    const countExpense = keys.map(function (k) { return byMonth[k].countExpense; });
+    return { labels: labels, income: income, expense: expense, countIncome: countIncome, countExpense: countExpense };
 }
 
 // Mise à jour du graphique "Entrants vs Sortants par mois"
@@ -6576,8 +6897,8 @@ function updateChartIncomeVsExpense() {
         data: {
             labels: labels,
             datasets: [
-                { label: 'Entrants', data: income, countByMonth: countIncome, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: '#10b981', borderWidth: 1 },
-                { label: 'Sortants', data: expense, countByMonth: countExpense, backgroundColor: CHART_COLOR_SORTANTS_RGBA, borderColor: CHART_COLOR_SORTANTS, borderWidth: 1 }
+                { label: 'Entrants', data: income, countByMonth: countIncome, backgroundColor: CHART_COLOR_ENTRANTS_FILL, borderColor: CHART_COLOR_ENTRANTS, borderWidth: 1 },
+                { label: 'Sortants', data: expense, countByMonth: countExpense, backgroundColor: CHART_COLOR_SORTANTS_FILL, borderColor: CHART_COLOR_SORTANTS, borderWidth: 1 }
             ]
         },
         options: {
@@ -6625,18 +6946,12 @@ function updateChartIncomeVsExpense() {
 // Données pour l'évolution du solde : solde cumulé par jour (chaque encaissement à sa date)
 function getBalanceEvolutionData() {
     const list = getTransactionsForCharts();
-    const periodFrom = (document.getElementById('benefitPeriodFrom') || {}).value || '';
-    const periodTo = (document.getElementById('benefitPeriodTo') || {}).value || '';
-    const from = periodFrom ? new Date(periodFrom) : null;
-    if (from) from.setHours(0, 0, 0, 0);
-    const to = periodTo ? new Date(periodTo) : null;
-    if (to) to.setHours(23, 59, 59, 999);
+    const bounds = getChartsPeriodBounds();
     const byDay = {};
-    list.forEach(t => {
-        getPaymentEntries(t).forEach(entry => {
+    list.forEach(function (t) {
+        getPaymentEntries(t).forEach(function (entry) {
+            if (!isDateInChartsPeriod(entry.date, bounds)) return;
             const d = new Date(entry.date);
-            if (from && d < from) return;
-            if (to && d > to) return;
             const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             if (!byDay[key]) byDay[key] = { income: 0, expense: 0 };
             if (t.type === 'income') byDay[key].income += entry.amount;
@@ -6644,17 +6959,17 @@ function getBalanceEvolutionData() {
         });
     });
     const keys = Object.keys(byDay).sort();
-    const labels = keys.map(k => {
-        const [y, m, day] = k.split('-');
-        return day + ' ' + MONTH_NAMES[parseInt(m, 10) - 1] + ' ' + y;
+    const labels = keys.map(function (k) {
+        const parts = k.split('-');
+        return parts[2] + ' ' + MONTH_NAMES[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
     });
     let cumul = 0;
-    const balance = keys.map(k => {
+    const balance = keys.map(function (k) {
         const net = byDay[k].income - byDay[k].expense;
         cumul += net;
         return cumul;
     });
-    return { labels, balance };
+    return { labels: labels, balance: balance };
 }
 
 let chartBalanceEvolution = null;
@@ -6769,18 +7084,12 @@ function updateChartBalanceEvolution() {
 // Données bénéfice par mois (chaque encaissement à sa date)
 function getBenefitByMonthData() {
     const list = getTransactionsForCharts();
-    const periodFrom = (document.getElementById('benefitPeriodFrom') || {}).value || '';
-    const periodTo = (document.getElementById('benefitPeriodTo') || {}).value || '';
-    const from = periodFrom ? new Date(periodFrom) : null;
-    if (from) from.setHours(0, 0, 0, 0);
-    const to = periodTo ? new Date(periodTo) : null;
-    if (to) to.setHours(23, 59, 59, 999);
+    const bounds = getChartsPeriodBounds();
     const byMonth = {};
-    list.forEach(t => {
-        getPaymentEntries(t).forEach(entry => {
+    list.forEach(function (t) {
+        getPaymentEntries(t).forEach(function (entry) {
+            if (!isDateInChartsPeriod(entry.date, bounds)) return;
             const d = new Date(entry.date);
-            if (from && d < from) return;
-            if (to && d > to) return;
             const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
             if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0 };
             if (t.type === 'income') byMonth[key].income += entry.amount;
@@ -6788,12 +7097,12 @@ function getBenefitByMonthData() {
         });
     });
     const keys = Object.keys(byMonth).sort();
-    const labels = keys.map(k => {
-        const [y, m] = k.split('-');
-        return MONTH_NAMES[parseInt(m, 10) - 1] + ' ' + y;
+    const labels = keys.map(function (k) {
+        const parts = k.split('-');
+        return MONTH_NAMES[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
     });
-    const benefits = keys.map(k => byMonth[k].income - byMonth[k].expense);
-    return { labels, benefits };
+    const benefits = keys.map(function (k) { return byMonth[k].income - byMonth[k].expense; });
+    return { labels: labels, benefits: benefits };
 }
 
 let chartBenefitByMonth = null;
@@ -6815,8 +7124,8 @@ function updateChartBenefitByMonth() {
     }
     if (emptyEl) emptyEl.classList.remove('visible');
     if (containerEl) containerEl.style.display = '';
-    const colors = benefits.map(b => b >= 0 ? 'rgba(16, 185, 129, 0.7)' : CHART_COLOR_SORTANTS_RGBA);
-    const borderColors = benefits.map(b => b >= 0 ? '#10b981' : CHART_COLOR_SORTANTS);
+    const colors = benefits.map(b => b >= 0 ? CHART_COLOR_ENTRANTS_FILL : CHART_COLOR_SORTANTS_FILL);
+    const borderColors = benefits.map(b => b >= 0 ? CHART_COLOR_ENTRANTS : CHART_COLOR_SORTANTS);
     const yBounds = getLineChartYBounds(benefits);
     applyChartScrollWidth(containerEl, labels.length, 56);
     chartBenefitByMonth = new Chart(canvas, {
@@ -6864,46 +7173,62 @@ function updateChartBenefitByMonth() {
     });
 }
 
-// Top 5 : les 5 plus grosses transactions (sortants ou entrants)
+// Top 5 : les 5 plus grosses transactions (sortants ou entrants) selon paiements de la période
 function truncateLabel(str, maxLen) {
     if (!str) return '';
     return str.length <= maxLen ? str : str.slice(0, maxLen) + '…';
 }
 
-function getTop5ExpensesData() {
+function getTop5ByTypeData(type) {
+    const bounds = getChartsPeriodBounds();
     const list = getTransactionsForCharts()
-        .filter(t => t.type === 'expense')
-        .sort((a, b) => b.amount - a.amount)
+        .filter(function (t) { return t.type === type; })
+        .map(function (t) {
+            return {
+                description: t.description || '',
+                amount: sumPaymentsInChartsPeriod(t, bounds)
+            };
+        })
+        .filter(function (row) { return row.amount > 0; })
+        .sort(function (a, b) { return b.amount - a.amount; })
         .slice(0, 5);
     return {
-        labels: list.map(t => truncateLabel(t.description, 35)),
-        values: list.map(t => t.amount),
-        fullDescriptions: list.map(t => t.description || '')
+        labels: list.map(function (t) { return truncateLabel(t.description, 35); }),
+        values: list.map(function (t) { return t.amount; }),
+        fullDescriptions: list.map(function (t) { return t.description || ''; })
     };
+}
+
+function getTop5ExpensesData() {
+    return getTop5ByTypeData('expense');
 }
 
 function getTop5IncomeData() {
-    const list = getTransactionsForCharts()
-        .filter(t => t.type === 'income')
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
-    return {
-        labels: list.map(t => truncateLabel(t.description, 35)),
-        values: list.map(t => t.amount),
-        fullDescriptions: list.map(t => t.description || '')
-    };
+    return getTop5ByTypeData('income');
+}
+
+const CHART_CATEGORY_PALETTE = [
+    '#43277d', '#059669', '#d97706', '#2563eb', '#dc2626',
+    '#7c3aed', '#0d9488', '#db2777', '#65a30d', '#0284c7'
+];
+
+function getChartPaletteColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        colors.push(CHART_CATEGORY_PALETTE[i % CHART_CATEGORY_PALETTE.length]);
+    }
+    return colors;
 }
 
 function getIncomeByCategoryData() {
+    const bounds = getChartsPeriodBounds();
     const byCategory = {};
     getTransactionsForCharts()
         .filter(function (t) { return t.type === 'income'; })
         .forEach(function (t) {
             const category = getTransactionCategory(t) || 'Non catégorisé';
             if (!byCategory[category]) byCategory[category] = 0;
-            getPaymentEntries(t).forEach(function (entry) {
-                byCategory[category] += Number(entry.amount) || 0;
-            });
+            byCategory[category] += sumPaymentsInChartsPeriod(t, bounds);
         });
     const rows = Object.keys(byCategory)
         .map(function (label) { return { label: label, value: byCategory[label] }; })
@@ -6915,9 +7240,85 @@ function getIncomeByCategoryData() {
     };
 }
 
+function getIncomeExpenseShareData() {
+    const period = getPeriodCashflowTotals();
+    return {
+        labels: ['Entrants', 'Sortants'],
+        values: [period.income, period.expense],
+        colors: [CHART_COLOR_ENTRANTS, CHART_COLOR_SORTANTS]
+    };
+}
+
+function getTopClientsData() {
+    const bounds = getChartsPeriodBounds();
+    const byClient = {};
+    getTransactionsForCharts()
+        .filter(function (t) { return t.type === 'income'; })
+        .forEach(function (t) {
+            const name = String(t.invoiceClient || '').trim() || 'Sans client';
+            if (!byClient[name]) byClient[name] = 0;
+            byClient[name] += sumPaymentsInChartsPeriod(t, bounds);
+        });
+    const rows = Object.keys(byClient)
+        .map(function (label) { return { label: label, value: byClient[label] }; })
+        .filter(function (row) { return row.value > 0; })
+        .sort(function (a, b) { return b.value - a.value; })
+        .slice(0, 8);
+    return {
+        labels: rows.map(function (row) { return truncateLabel(row.label, 28); }),
+        values: rows.map(function (row) { return row.value; }),
+        fullDescriptions: rows.map(function (row) { return row.label; })
+    };
+}
+
+function getReceivablesByClientData() {
+    const byClient = {};
+    transactions
+        .filter(function (t) { return t.type === 'income'; })
+        .forEach(function (t) {
+            const remaining = parseFloat(t.remainingAmount) || 0;
+            if (remaining <= 0) return;
+            const name = String(t.invoiceClient || '').trim() || 'Sans client';
+            if (!byClient[name]) byClient[name] = 0;
+            byClient[name] += remaining;
+        });
+    const rows = Object.keys(byClient)
+        .map(function (label) { return { label: label, value: byClient[label] }; })
+        .sort(function (a, b) { return b.value - a.value; })
+        .slice(0, 8);
+    return {
+        labels: rows.map(function (row) { return truncateLabel(row.label, 28); }),
+        values: rows.map(function (row) { return row.value; }),
+        fullDescriptions: rows.map(function (row) { return row.label; })
+    };
+}
+
+function getWeekdayActivityData() {
+    const bounds = getChartsPeriodBounds();
+    const dayNames = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
+    const income = [0, 0, 0, 0, 0, 0, 0];
+    const expense = [0, 0, 0, 0, 0, 0, 0];
+    getTransactionsForCharts().forEach(function (t) {
+        getPaymentEntries(t).forEach(function (entry) {
+            if (!isDateInChartsPeriod(entry.date, bounds)) return;
+            const d = new Date(entry.date);
+            const jsDay = d.getDay();
+            const idx = jsDay === 0 ? 6 : jsDay - 1;
+            const amount = parseFloat(entry.amount) || 0;
+            if (t.type === 'income') income[idx] += amount;
+            else expense[idx] += amount;
+        });
+    });
+    return { labels: dayNames, income: income, expense: expense };
+}
+
 let chartTop5Expenses = null;
 let chartTop5Income = null;
 let chartIncomeByCategory = null;
+let chartIncomeExpenseShare = null;
+let chartTopClients = null;
+let chartReceivables = null;
+let chartWeekdayActivity = null;
 
 function destroyChartInstance(chart) {
     if (chart) {
@@ -7149,13 +7550,21 @@ function invalidateAllCharts() {
     chartTop5Expenses = destroyChartInstance(chartTop5Expenses);
     chartTop5Income = destroyChartInstance(chartTop5Income);
     chartIncomeByCategory = destroyChartInstance(chartIncomeByCategory);
+    chartIncomeExpenseShare = destroyChartInstance(chartIncomeExpenseShare);
+    chartTopClients = destroyChartInstance(chartTopClients);
+    chartReceivables = destroyChartInstance(chartReceivables);
+    chartWeekdayActivity = destroyChartInstance(chartWeekdayActivity);
     [
         'chartIncomeVsExpense',
         'chartBalanceEvolution',
         'chartBenefitByMonth',
         'chartTop5Expenses',
         'chartTop5Income',
-        'chartIncomeByCategory'
+        'chartIncomeByCategory',
+        'chartIncomeExpenseShare',
+        'chartTopClients',
+        'chartReceivables',
+        'chartWeekdayActivity'
     ].forEach(rebuildChartCanvas);
 }
 
@@ -7166,11 +7575,15 @@ function refreshAllCharts() {
         return;
     }
     updateChartIncomeVsExpense();
+    updateChartIncomeExpenseShare();
+    updateChartIncomeByCategory();
     updateChartBalanceEvolution();
     updateChartTop5Expenses();
     updateChartTop5Income();
-    updateChartIncomeByCategory();
     updateChartBenefitByMonth();
+    updateChartTopClients();
+    updateChartReceivables();
+    updateChartWeekdayActivity();
 }
 
 function updateChartTop5Expenses() {
@@ -7198,7 +7611,7 @@ function updateChartTop5Expenses() {
                 label: 'Montant (' + getCurrencyLabel() + ')',
                 data: values.slice(),
                 fullDescriptions: fullDescriptions.slice(),
-                backgroundColor: CHART_COLOR_SORTANTS_RGBA,
+                backgroundColor: CHART_COLOR_SORTANTS_FILL,
                 borderColor: CHART_COLOR_SORTANTS,
                 borderWidth: 1
             }]
@@ -7232,8 +7645,8 @@ function updateChartTop5Income() {
                 label: 'Montant (' + getCurrencyLabel() + ')',
                 data: values.slice(),
                 fullDescriptions: fullDescriptions.slice(),
-                backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                borderColor: '#10b981',
+                backgroundColor: CHART_COLOR_ENTRANTS_FILL,
+                borderColor: CHART_COLOR_ENTRANTS,
                 borderWidth: 1
             }]
         },
@@ -7258,6 +7671,7 @@ function updateChartIncomeByCategory() {
     if (emptyEl) emptyEl.classList.remove('visible');
     if (containerEl) containerEl.style.display = '';
     applyTop5ChartScrollWidth(containerEl, data.labels);
+    const total = data.values.reduce(function (sum, v) { return sum + v; }, 0);
     chartIncomeByCategory = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -7265,8 +7679,8 @@ function updateChartIncomeByCategory() {
             datasets: [{
                 label: 'Entrants (' + getCurrencyLabel() + ')',
                 data: data.values.slice(),
-                backgroundColor: 'rgba(67, 39, 125, 0.72)',
-                borderColor: '#43277d',
+                backgroundColor: getChartPaletteColors(data.labels.length),
+                borderColor: getChartPaletteColors(data.labels.length),
                 borderWidth: 1
             }]
         },
@@ -7274,12 +7688,24 @@ function updateChartIncomeByCategory() {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: { left: 2, right: 8, top: 4, bottom: 4 }
+            },
+            datasets: {
+                bar: {
+                    categoryPercentage: 0.68,
+                    barPercentage: 0.82,
+                    maxBarThickness: 26
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
-                            return formatAmount(ctx.raw);
+                            const value = ctx.raw || 0;
+                            const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+                            return formatAmount(value) + ' (' + pct + ' %)';
                         }
                     }
                 }
@@ -7291,6 +7717,191 @@ function updateChartIncomeByCategory() {
                     ticks: {
                         callback: function (v) {
                             return formatChartAxisTick(v);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChartIncomeExpenseShare() {
+    const canvasId = 'chartIncomeExpenseShare';
+    const emptyEl = document.getElementById('chartIncomeExpenseShareEmpty');
+    const containerEl = document.getElementById('chartIncomeExpenseShareContainer');
+    chartIncomeExpenseShare = destroyChartInstance(chartIncomeExpenseShare);
+    rebuildChartCanvas(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const data = getIncomeExpenseShareData();
+    if (!data.values[0] && !data.values[1]) {
+        if (emptyEl) emptyEl.classList.add('visible');
+        if (containerEl) containerEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    if (containerEl) containerEl.style.display = '';
+    const total = data.values[0] + data.values[1];
+    chartIncomeExpenseShare = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: data.colors,
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '58%',
+            plugins: {
+                legend: getChartLegendOptions('bottom'),
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            const value = ctx.raw || 0;
+                            const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+                            return ctx.label + ' : ' + formatAmount(value) + ' (' + pct + ' %)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChartTopClients() {
+    const canvasId = 'chartTopClients';
+    const emptyEl = document.getElementById('chartTopClientsEmpty');
+    const containerEl = document.getElementById('chartTopClientsContainer');
+    chartTopClients = destroyChartInstance(chartTopClients);
+    rebuildChartCanvas(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const data = getTopClientsData();
+    if (data.labels.length === 0) {
+        if (emptyEl) emptyEl.classList.add('visible');
+        if (containerEl) containerEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    if (containerEl) containerEl.style.display = '';
+    applyTop5ChartScrollWidth(containerEl, data.labels);
+    chartTopClients = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: data.labels.slice(),
+            datasets: [{
+                label: 'Encaissé (' + getCurrencyLabel() + ')',
+                data: data.values.slice(),
+                fullDescriptions: data.fullDescriptions.slice(),
+                backgroundColor: CHART_COLOR_ENTRANTS_FILL,
+                borderColor: CHART_COLOR_ENTRANTS,
+                borderWidth: 1
+            }]
+        },
+        options: getTop5BarChartOptions(data.labels, data.fullDescriptions)
+    });
+}
+
+function updateChartReceivables() {
+    const canvasId = 'chartReceivables';
+    const emptyEl = document.getElementById('chartReceivablesEmpty');
+    const containerEl = document.getElementById('chartReceivablesContainer');
+    chartReceivables = destroyChartInstance(chartReceivables);
+    rebuildChartCanvas(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const data = getReceivablesByClientData();
+    if (data.labels.length === 0) {
+        if (emptyEl) emptyEl.classList.add('visible');
+        if (containerEl) containerEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    if (containerEl) containerEl.style.display = '';
+    applyTop5ChartScrollWidth(containerEl, data.labels);
+    chartReceivables = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: data.labels.slice(),
+            datasets: [{
+                label: 'Reste (' + getCurrencyLabel() + ')',
+                data: data.values.slice(),
+                fullDescriptions: data.fullDescriptions.slice(),
+                backgroundColor: 'rgba(217, 119, 6, 0.75)',
+                borderColor: '#d97706',
+                borderWidth: 1
+            }]
+        },
+        options: getTop5BarChartOptions(data.labels, data.fullDescriptions)
+    });
+}
+
+function updateChartWeekdayActivity() {
+    const canvasId = 'chartWeekdayActivity';
+    const emptyEl = document.getElementById('chartWeekdayActivityEmpty');
+    const containerEl = document.getElementById('chartWeekdayActivityContainer');
+    chartWeekdayActivity = destroyChartInstance(chartWeekdayActivity);
+    rebuildChartCanvas(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const data = getWeekdayActivityData();
+    const hasData = data.income.some(function (v) { return v > 0; }) || data.expense.some(function (v) { return v > 0; });
+    if (!hasData) {
+        if (emptyEl) emptyEl.classList.add('visible');
+        if (containerEl) containerEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    if (containerEl) containerEl.style.display = '';
+    applyChartScrollWidth(containerEl, data.labels.length, 72);
+    chartWeekdayActivity = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Entrants',
+                    data: data.income,
+                    backgroundColor: CHART_COLOR_ENTRANTS_FILL,
+                    borderColor: CHART_COLOR_ENTRANTS,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Sortants',
+                    data: data.expense,
+                    backgroundColor: CHART_COLOR_SORTANTS_FILL,
+                    borderColor: CHART_COLOR_SORTANTS,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: getChartLegendOptions('top'),
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ' : ' + formatAmount(ctx.raw);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { autoSkip: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return formatChartAxisTick(value);
                         }
                     }
                 }
@@ -8091,6 +8702,8 @@ function openEditModal(id) {
 window.openEditModal = openEditModal;
 window.clearBenefitCardFilter = clearBenefitCardFilter;
 window.clearStatsFiltersPeriod = clearStatsFiltersPeriod;
+window.setStatsFilterMode = setStatsFilterMode;
+window.applyStatsPeriodPreset = applyStatsPeriodPreset;
 
 // Logo facture en data URL pour affichage et export identiques
 var invoiceLogoDataUrlCache = null;
@@ -8720,18 +9333,30 @@ function attachEventListeners() {
 
     initAppSidebar();
 
-    // Bénéfices : mise à jour quand on change les dates
-    const benefitDayDate = document.getElementById('benefitDayDate');
+    // Filtre stats : mode Jour / Période + dates
     const benefitPeriodFrom = document.getElementById('benefitPeriodFrom');
     const benefitPeriodTo = document.getElementById('benefitPeriodTo');
-    if (benefitDayDate) {
-        benefitDayDate.addEventListener('change', updateBenefitDisplays);
-        benefitDayDate.addEventListener('input', updateBenefitDisplays);
-    }
+    const statsFilterDay = document.getElementById('statsFilterDay');
     function refreshChartsAndBenefit() {
+        if (getStatsFilterMode() === 'day') {
+            applyStatsDayToRange();
+        } else {
+            syncStatsFilterDayFromRange();
+        }
         updateChartsFilterPeriodLabel();
         updateBenefitDisplays();
+        updateStatsExtraCards();
         refreshAllCharts();
+    }
+    if (statsFilterDay) {
+        statsFilterDay.addEventListener('change', function () {
+            applyStatsDayToRange();
+            refreshChartsAndBenefit();
+        });
+        statsFilterDay.addEventListener('input', function () {
+            applyStatsDayToRange();
+            refreshChartsAndBenefit();
+        });
     }
     if (benefitPeriodFrom) {
         benefitPeriodFrom.addEventListener('change', refreshChartsAndBenefit);
@@ -8741,6 +9366,15 @@ function attachEventListeners() {
         benefitPeriodTo.addEventListener('change', refreshChartsAndBenefit);
         benefitPeriodTo.addEventListener('input', refreshChartsAndBenefit);
     }
+    var savedFilterMode = 'day';
+    try {
+        savedFilterMode = localStorage.getItem('kaayprint_stats_filter_mode') || 'day';
+    } catch (e) { /* ignore */ }
+    setStatsFilterMode(savedFilterMode, { silent: true });
+    syncStatsFilterDayFromRange();
+    if (getStatsFilterMode() === 'day') applyStatsDayToRange();
+    updateChartsFilterPeriodLabel();
+    updateBenefitDisplays();
 
     var chartResizeTimer = null;
     window.addEventListener('resize', function () {
@@ -8749,39 +9383,6 @@ function attachEventListeners() {
             refreshAllCharts();
         }, 150);
     });
-
-    // Carte Bénéfice : bascule Par jour / Par période
-    const benefitModeDay = document.getElementById('benefitModeDay');
-    const benefitModePeriod = document.getElementById('benefitModePeriod');
-    const benefitDayBlock = document.getElementById('benefitDayBlock');
-    const benefitPeriodBlock = document.getElementById('benefitPeriodBlock');
-    const benefitCardPeriodFrom = document.getElementById('benefitCardPeriodFrom');
-    const benefitCardPeriodTo = document.getElementById('benefitCardPeriodTo');
-    if (benefitModeDay && benefitModePeriod && benefitDayBlock && benefitPeriodBlock) {
-        benefitModeDay.addEventListener('change', function() {
-            benefitDayBlock.style.display = '';
-            benefitPeriodBlock.style.display = 'none';
-            updateBenefitDisplays();
-        });
-        benefitModePeriod.addEventListener('change', function() {
-            benefitDayBlock.style.display = 'none';
-            benefitPeriodBlock.style.display = '';
-            if (benefitCardPeriodFrom && benefitCardPeriodTo && !benefitCardPeriodFrom.value && !benefitCardPeriodTo.value) {
-                const today = new Date();
-                benefitCardPeriodFrom.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
-                benefitCardPeriodTo.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-            }
-            updateBenefitDisplays();
-        });
-    }
-    if (benefitCardPeriodFrom) {
-        benefitCardPeriodFrom.addEventListener('change', updateBenefitDisplays);
-        benefitCardPeriodFrom.addEventListener('input', updateBenefitDisplays);
-    }
-    if (benefitCardPeriodTo) {
-        benefitCardPeriodTo.addEventListener('change', updateBenefitDisplays);
-        benefitCardPeriodTo.addEventListener('input', updateBenefitDisplays);
-    }
     
     // Validation en temps réel pour le formulaire d'entrant
     incomeAmount.addEventListener('blur', () => {
@@ -9948,12 +10549,6 @@ function initApp() {
         }
     }
 
-    // Date par défaut pour "Bénéfice du jour" = aujourd'hui
-    const benefitDayDate = document.getElementById('benefitDayDate');
-    if (benefitDayDate && !benefitDayDate.value) {
-        const today = new Date();
-        benefitDayDate.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    }
     // Mettre à jour le statut initial
     if (window.XALISS_DJANGO) {
         if (typeof window.refreshOfflineConnectionStatus === 'function') {

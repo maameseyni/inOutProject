@@ -4509,15 +4509,15 @@ body.app-tab-notes header {
 
 .dashboard {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
     margin-bottom: 30px;
 }
 
 .stat-card {
     background: var(--kp-color-surface-solid);
     border-radius: var(--kp-radius-card);
-    padding: 30px;
+    padding: 26px 22px;
     border: 2px solid var(--kp-color-border-strong);
     box-shadow: var(--kp-shadow-card);
     transition: all 0.3s ease;
@@ -4525,17 +4525,12 @@ body.app-tab-notes header {
     animation: fadeInUp 0.6s ease backwards;
 }
 
-.stat-card:nth-child(1) {
-    animation-delay: 0.1s;
-}
-
-.stat-card:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.stat-card:nth-child(3) {
-    animation-delay: 0.3s;
-}
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-card:nth-child(5) { animation-delay: 0.25s; }
+.stat-card:nth-child(6) { animation-delay: 0.3s; }
 
 .stat-card:hover {
     transform: translateY(-6px);
@@ -4547,18 +4542,26 @@ body.app-tab-notes header {
 }
 
 .stat-info h3 {
-    font-size: 0.9em;
+    font-size: 0.88em;
     color: #666;
     margin-bottom: 10px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.6px;
 }
 
 .stat-value {
-    font-size: 1.8em;
+    font-size: 1.85em;
     font-weight: bold;
     color: #333;
     transition: all 0.3s ease;
+    line-height: 1.25;
+}
+
+.stat-hint {
+    margin: 10px 0 0;
+    font-size: 0.88em;
+    color: #6b7280;
+    line-height: 1.3;
 }
 
 .stat-value.updated {
@@ -4569,12 +4572,20 @@ body.app-tab-notes header {
     color: #43277d;
 }
 
+.balance .stat-value.negative {
+    color: #ef4444;
+}
+
 .income .stat-value {
     color: #10b981;
 }
 
 .expense .stat-value {
     color: #ef4444;
+}
+
+.remaining .stat-value {
+    color: #d97706;
 }
 
 /* Section Statistiques - Bénéfices */
@@ -4614,6 +4625,106 @@ body.app-tab-notes header {
     margin: -8px 0 12px 0;
 }
 
+.stats-filter-heading .benefit-period-hint {
+    margin: 2px 0 0;
+}
+
+.stats-filter-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.benefit-card.benefit-period .stats-filter-heading h3 {
+    margin-bottom: 0;
+}
+
+.benefit-card.benefit-period > .stats-filter-header {
+    margin-bottom: 18px;
+}
+
+.stats-filter-mode {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 4px;
+    border-radius: 999px;
+    background: #f3effa;
+    border: 1.5px solid #ddd3f0;
+    gap: 2px;
+}
+
+.stats-filter-mode-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #6b5b8c;
+    font-size: 0.82em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.stats-filter-mode-btn:hover {
+    color: #43277d;
+}
+
+.stats-filter-mode-btn.is-active {
+    background: #43277d;
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(67, 39, 125, 0.22);
+}
+
+.stats-filter-panel {
+    display: none;
+    animation: statsFilterPanelIn 0.22s ease;
+}
+
+.stats-filter-panel.is-active {
+    display: block;
+}
+
+.stats-filter-panel[hidden] {
+    display: none !important;
+}
+
+@keyframes statsFilterPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stats-filter-day-row .benefit-input-wrap {
+    flex: 1.2;
+    min-width: 180px;
+}
+
+@media (max-width: 640px) {
+    .stats-filter-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stats-filter-mode {
+        align-self: stretch;
+        justify-content: stretch;
+    }
+
+    .stats-filter-mode-btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
 .benefit-card.benefit-period {
     animation-delay: 0.2s;
 }
@@ -4632,6 +4743,36 @@ body.app-tab-notes header {
     margin-bottom: 16px;
     font-weight: 600;
 }
+
+.stats-period-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 12px;
+}
+
+.period-preset-btn {
+    padding: 7px 12px;
+    border: 1.5px solid #d4cce8;
+    background: #f7f5fb;
+    color: #43277d;
+    border-radius: 999px;
+    font-size: 0.82em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.period-preset-btn:hover {
+    background: #eee8f8;
+    border-color: #43277d;
+    transform: translateY(-1px);
+}
+
+.period-preset-btn.is-active {
+    background: #43277d;
+    border-color: #43277d;
+    color: #fff;
 }
 
 .benefit-controls {
@@ -4710,11 +4851,108 @@ body.app-tab-notes header {
 }
 
 .benefit-value {
-    font-size: 1.6em;
+    font-size: 1.75em;
     font-weight: bold;
     color: #333;
     margin: 0;
-    margin-top: auto;
+}
+
+.benefit-card.benefit-main .benefit-value {
+    margin-top: 0;
+}
+
+.benefit-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 4px 0 16px;
+}
+
+.benefit-margin-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #f3effa;
+    color: #43277d;
+    font-size: 0.82em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.benefit-margin-pill.is-negative {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.benefit-flow-bar {
+    display: flex;
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #eee8f6;
+    margin-bottom: 14px;
+}
+
+.benefit-flow-bar-income,
+.benefit-flow-bar-expense {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    transition: width 0.35s ease;
+}
+
+.benefit-flow-bar-income {
+    background: #059669;
+}
+
+.benefit-flow-bar-expense {
+    background: #dc2626;
+}
+
+.benefit-flow-rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.benefit-flow-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #faf9fc;
+    border: 1px solid #eee8f6;
+    min-width: 0;
+}
+
+.benefit-flow-label {
+    font-size: 0.78em;
+    font-weight: 600;
+    color: #5b5270;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.benefit-flow-value {
+    font-size: 0.95em;
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.benefit-flow-row--income .benefit-flow-value {
+    color: #059669;
+}
+
+.benefit-flow-row--expense .benefit-flow-value {
+    color: #dc2626;
 }
 
 .benefit-card.benefit-day .benefit-value,
@@ -4727,6 +4965,13 @@ body.app-tab-notes header {
     color: #ef4444;
 }
 
+.benefit-breakdown {
+    margin: 12px 0 0;
+    font-size: 0.8em;
+    color: #8b7aad;
+    line-height: 1.35;
+}
+
 .benefit-card.benefit-period .benefit-value {
     color: #10b981;
 }
@@ -4736,8 +4981,8 @@ body.app-tab-notes header {
 }
 
 .charts-filter-period-label {
-    font-size: 1.6em;
-    font-weight: bold;
+    font-size: 0.95em;
+    font-weight: 600;
     color: #43277d;
     margin: 0;
     margin-top: auto;
@@ -4751,6 +4996,12 @@ body.app-tab-notes header {
     gap: 24px;
 }
 
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
 .chart-card {
     background: var(--kp-color-surface-solid);
     border-radius: var(--kp-radius-card);
@@ -4758,10 +5009,21 @@ body.app-tab-notes header {
     border: 2px solid var(--kp-color-border-strong);
     box-shadow: var(--kp-shadow-card);
     transition: all 0.3s ease;
+    min-width: 0;
+}
+
+.chart-card--wide {
+    width: 100%;
 }
 
 .chart-card:hover {
     box-shadow: var(--kp-shadow-card-hover);
+}
+
+@media (max-width: 900px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .chart-title {
@@ -4799,6 +5061,12 @@ body.app-tab-notes header {
     position: relative;
     height: 280px;
     width: 100%;
+}
+
+.chart-container--donut {
+    height: 300px;
+    max-width: 360px;
+    margin: 0 auto;
 }
 
 .chart-scroll {

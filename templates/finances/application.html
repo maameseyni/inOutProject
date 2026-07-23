@@ -487,70 +487,105 @@
             <div class="dashboard">
                 <div class="stat-card balance">
                     <div class="stat-info">
-                        <h3>Recette Actuelle</h3>
+                        <h3 id="balanceCardTitle">Recette actuelle</h3>
                         <p class="stat-value" id="balance">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                        <p class="stat-hint" id="marginRateHint">Soit — des entrants</p>
                     </div>
                 </div>
                 <div class="stat-card income">
                     <div class="stat-info">
-                        <h3>Total Entrants</h3>
+                        <h3 id="incomeCardTitle">Total entrants</h3>
                         <p class="stat-value" id="totalIncome">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                        <p class="stat-hint" id="incomeCountHint">0 commande</p>
                     </div>
                 </div>
                 <div class="stat-card expense">
                     <div class="stat-info">
-                        <h3>Total Sortants</h3>
+                        <h3 id="expenseCardTitle">Total sortants</h3>
                         <p class="stat-value" id="totalExpense">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                        <p class="stat-hint" id="expenseCountHint">0 dépense</p>
+                    </div>
+                </div>
+                <div class="stat-card remaining">
+                    <div class="stat-info">
+                        <h3>Restes à encaisser</h3>
+                        <p class="stat-value" id="totalRemaining">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                        <p class="stat-hint" id="openOrdersHint">0 commande ouverte</p>
                     </div>
                 </div>
             </div>
             <div class="stats-benefits">
-                <div class="benefit-card benefit-main">
-                    <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Bénéfice</h3>
-                    <div class="benefit-mode-group">
-                        <label class="radio-label"><input type="radio" name="benefitMode" id="benefitModeDay" value="day" checked> Par jour</label>
-                        <label class="radio-label"><input type="radio" name="benefitMode" id="benefitModePeriod" value="period"> Par période</label>
+                <div class="benefit-card benefit-period" id="statsFilterCard" data-filter-mode="day">
+                    <div class="stats-filter-header">
+                        <div class="stats-filter-heading">
+                            <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 3H2v2.18l6.5 8.59V21h7v-7.23L22 5.18V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Filtrer</h3>
+                            <p class="benefit-period-hint">Appliqué aux totaux, au bénéfice et aux graphiques</p>
+                        </div>
+                        <div class="stats-filter-mode" role="tablist" aria-label="Mode de filtre">
+                            <button type="button" class="stats-filter-mode-btn is-active" role="tab" id="statsFilterModeDay" data-filter-mode="day" aria-selected="true" onclick="setStatsFilterMode('day')">Jour</button>
+                            <button type="button" class="stats-filter-mode-btn" role="tab" id="statsFilterModeRange" data-filter-mode="range" aria-selected="false" onclick="setStatsFilterMode('range')">Période</button>
+                        </div>
                     </div>
-                    <div id="benefitDayBlock" class="benefit-controls benefit-controls-row">
-                        <div class="benefit-input-wrap">
-                            <label for="benefitDayDate">Date</label>
-                            <input type="date" id="benefitDayDate" class="date-input">
+
+                    <div id="statsFilterDayBlock" class="stats-filter-panel is-active" role="tabpanel">
+                        <div class="benefit-controls benefit-controls-row stats-filter-day-row">
+                            <div class="benefit-input-wrap">
+                                <label for="statsFilterDay">Jour</label>
+                                <input type="date" id="statsFilterDay" class="date-input">
+                            </div>
+                            <button type="button" class="clear-benefit-btn" onclick="clearStatsFiltersPeriod()" title="Effacer le filtre">Effacer</button>
                         </div>
-                        <button type="button" class="clear-benefit-btn" onclick="clearBenefitCardFilter()" title="Effacer">Effacer</button>
                     </div>
-                    <div id="benefitPeriodBlock" class="benefit-controls period benefit-controls-row" style="display: none;">
-                        <div class="benefit-input-wrap">
-                            <label for="benefitCardPeriodFrom">Du</label>
-                            <input type="date" id="benefitCardPeriodFrom" class="date-input">
+
+                    <div id="statsFilterRangeBlock" class="stats-filter-panel" role="tabpanel" hidden>
+                        <div class="benefit-controls period benefit-controls-row">
+                            <div class="benefit-input-wrap">
+                                <label for="benefitPeriodFrom">Du</label>
+                                <input type="date" id="benefitPeriodFrom" class="date-input">
+                            </div>
+                            <div class="benefit-input-wrap">
+                                <label for="benefitPeriodTo">Au</label>
+                                <input type="date" id="benefitPeriodTo" class="date-input">
+                            </div>
+                            <button type="button" class="clear-benefit-btn" onclick="clearStatsFiltersPeriod()" title="Effacer les filtres">Effacer</button>
                         </div>
-                        <div class="benefit-input-wrap">
-                            <label for="benefitCardPeriodTo">Au</label>
-                            <input type="date" id="benefitCardPeriodTo" class="date-input">
-                        </div>
-                        <button type="button" class="clear-benefit-btn" onclick="clearBenefitCardFilter()" title="Effacer">Effacer</button>
                     </div>
-                    <p class="benefit-value" id="benefitDayValue">0&nbsp;<span class="js-currency-label">FCFA</span></p>
-                </div>
-                <div class="benefit-card benefit-period">
-                    <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 3H2v2.18l6.5 8.59V21h7v-7.23L22 5.18V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Filtrer les graphiques</h3>
-                    <p class="benefit-period-hint">Période utilisée pour les graphiques ci-dessous</p>
-                    <div class="benefit-controls period benefit-controls-row">
-                        <div class="benefit-input-wrap">
-                            <label for="benefitPeriodFrom">Du</label>
-                            <input type="date" id="benefitPeriodFrom" class="date-input">
-                        </div>
-                        <div class="benefit-input-wrap">
-                            <label for="benefitPeriodTo">Au</label>
-                            <input type="date" id="benefitPeriodTo" class="date-input">
-                        </div>
-                        <button type="button" class="clear-benefit-btn" onclick="clearStatsFiltersPeriod()" title="Effacer les filtres">Effacer</button>
+
+                    <div class="stats-period-presets" role="group" aria-label="Périodes rapides">
+                        <button type="button" class="period-preset-btn" data-period-preset="today" onclick="applyStatsPeriodPreset('today')">Aujourd’hui</button>
+                        <button type="button" class="period-preset-btn" data-period-preset="month" onclick="applyStatsPeriodPreset('month')">Ce mois</button>
+                        <button type="button" class="period-preset-btn" data-period-preset="quarter" onclick="applyStatsPeriodPreset('quarter')">Ce trimestre</button>
+                        <button type="button" class="period-preset-btn" data-period-preset="year" onclick="applyStatsPeriodPreset('year')">Cette année</button>
+                        <button type="button" class="period-preset-btn" data-period-preset="all" onclick="applyStatsPeriodPreset('all')">Tout</button>
                     </div>
                     <p class="charts-filter-period-label" id="chartsFilterPeriodLabel">Toutes les données</p>
                 </div>
+                <div class="benefit-card benefit-main">
+                    <h3><svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Bénéfice</h3>
+                    <p class="benefit-period-hint" id="benefitScopeHint">Entrants − sortants sur la période filtrée</p>
+                    <div class="benefit-result">
+                        <p class="benefit-value" id="benefitDayValue">0&nbsp;<span class="js-currency-label">FCFA</span></p>
+                        <span class="benefit-margin-pill" id="benefitMarginPill">—</span>
+                    </div>
+                    <div class="benefit-flow-bar" id="benefitFlowBar" aria-hidden="true">
+                        <span class="benefit-flow-bar-income" id="benefitFlowBarIncome"></span>
+                        <span class="benefit-flow-bar-expense" id="benefitFlowBarExpense"></span>
+                    </div>
+                    <div class="benefit-flow-rows">
+                        <div class="benefit-flow-row benefit-flow-row--income">
+                            <span class="benefit-flow-label">Entrants</span>
+                            <span class="benefit-flow-value" id="benefitIncomeValue">0</span>
+                        </div>
+                        <div class="benefit-flow-row benefit-flow-row--expense">
+                            <span class="benefit-flow-label">Sortants</span>
+                            <span class="benefit-flow-value" id="benefitExpenseValue">0</span>
+                        </div>
+                    </div>
+                    <p class="benefit-breakdown" id="benefitBreakdownHint"></p>
+                </div>
             </div>
-            <!-- Graphiques (étape par étape) -->
             <div class="charts-section">
-                <div class="chart-card">
+                <div class="chart-card chart-card--wide">
                     <h3 class="chart-title">Entrants vs Sortants par mois</h3>
                     <p class="chart-subtitle">Comparaison des revenus et dépenses par mois</p>
                     <p class="chart-empty" id="chartIncomeVsExpenseEmpty">Aucune donnée pour cette période</p>
@@ -560,27 +595,49 @@
                     </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">Top 5 sortants</h3>
-                    <p class="chart-subtitle">Les 5 plus grosses dépenses</p>
-                    <p class="chart-empty" id="chartTop5ExpensesEmpty">Aucune donnée</p>
-                    <div class="chart-scroll">
-                    <div class="chart-container" id="chartTop5ExpensesContainer">
-                        <canvas id="chartTop5Expenses"></canvas>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Répartition entrants / sortants</h3>
+                        <p class="chart-subtitle">Part de chaque flux sur la période</p>
+                        <p class="chart-empty" id="chartIncomeExpenseShareEmpty">Aucune donnée pour cette période</p>
+                        <div class="chart-container chart-container--donut" id="chartIncomeExpenseShareContainer">
+                            <canvas id="chartIncomeExpenseShare"></canvas>
+                        </div>
                     </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Entrants par catégorie</h3>
+                        <p class="chart-subtitle">Répartition des revenus par catégorie produit</p>
+                        <p class="chart-empty" id="chartIncomeByCategoryEmpty">Aucune donnée</p>
+                        <div class="chart-scroll">
+                        <div class="chart-container" id="chartIncomeByCategoryContainer">
+                            <canvas id="chartIncomeByCategory"></canvas>
+                        </div>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">Top 5 entrants</h3>
-                    <p class="chart-subtitle">Les 5 plus gros revenus</p>
-                    <p class="chart-empty" id="chartTop5IncomeEmpty">Aucune donnée</p>
-                    <div class="chart-scroll">
-                    <div class="chart-container" id="chartTop5IncomeContainer">
-                        <canvas id="chartTop5Income"></canvas>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Top 5 sortants</h3>
+                        <p class="chart-subtitle">Les 5 plus grosses dépenses (encaissements de la période)</p>
+                        <p class="chart-empty" id="chartTop5ExpensesEmpty">Aucune donnée</p>
+                        <div class="chart-scroll">
+                        <div class="chart-container" id="chartTop5ExpensesContainer">
+                            <canvas id="chartTop5Expenses"></canvas>
+                        </div>
+                        </div>
                     </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Top 5 entrants</h3>
+                        <p class="chart-subtitle">Les 5 plus gros revenus (encaissements de la période)</p>
+                        <p class="chart-empty" id="chartTop5IncomeEmpty">Aucune donnée</p>
+                        <div class="chart-scroll">
+                        <div class="chart-container" id="chartTop5IncomeContainer">
+                            <canvas id="chartTop5Income"></canvas>
+                        </div>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
+                <div class="chart-card chart-card--wide">
                     <h3 class="chart-title">Évolution de la recette</h3>
                     <p class="chart-subtitle">Solde cumulé au fil du temps</p>
                     <p class="chart-empty" id="chartBalanceEvolutionEmpty">Aucune donnée pour cette période</p>
@@ -590,7 +647,7 @@
                     </div>
                     </div>
                 </div>
-                <div class="chart-card">
+                <div class="chart-card chart-card--wide">
                     <h3 class="chart-title">Bénéfice par mois</h3>
                     <p class="chart-subtitle">Entrants − sortants par mois</p>
                     <p class="chart-empty" id="chartBenefitByMonthEmpty">Aucune donnée pour cette période</p>
@@ -600,9 +657,39 @@
                     </div>
                     </div>
                 </div>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Top clients</h3>
+                        <p class="chart-subtitle">Clients qui ont le plus rapporté sur la période</p>
+                        <p class="chart-empty" id="chartTopClientsEmpty">Aucune donnée</p>
+                        <div class="chart-scroll">
+                        <div class="chart-container" id="chartTopClientsContainer">
+                            <canvas id="chartTopClients"></canvas>
+                        </div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Créances clients</h3>
+                        <p class="chart-subtitle">Restes à encaisser par client</p>
+                        <p class="chart-empty" id="chartReceivablesEmpty">Aucune créance</p>
+                        <div class="chart-scroll">
+                        <div class="chart-container" id="chartReceivablesContainer">
+                            <canvas id="chartReceivables"></canvas>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Activité par jour de la semaine</h3>
+                    <p class="chart-subtitle">Volume des encaissements selon le jour</p>
+                    <p class="chart-empty" id="chartWeekdayActivityEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartWeekdayActivityContainer">
+                        <canvas id="chartWeekdayActivity"></canvas>
+                    </div>
+                    </div>
+                </div>
             </div>
-        </section>
-
         </section>
 
         <section id="section-notes" class="main-section{% if initial_tab == 'notes' %} active{% endif %}">
