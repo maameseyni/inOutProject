@@ -1,0 +1,8 @@
+Bonjour{% if utilisateur.first_name %} {{ utilisateur.first_name }}{% endif %},
+
+Bienvenue sur {{ app_name }}.
+
+Confirmez votre compte en ouvrant ce lien :
+{{ confirmation_url }}
+
+L'équipe {{ app_name }}

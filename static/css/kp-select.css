@@ -120,6 +120,17 @@
     box-sizing: border-box;
 }
 
+.kp-select-wrap.is-open {
+    z-index: 80;
+}
+
+.kp-select-wrap.is-dropup .kp-select-dropdown,
+.kp-select-wrap.is-dropup > .kp-select-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    box-shadow: 0 -12px 32px rgba(67, 39, 125, 0.14), 0 -4px 12px rgba(0, 0, 0, 0.05);
+}
+
 .kp-select-dropdown[hidden] {
     display: none;
 }

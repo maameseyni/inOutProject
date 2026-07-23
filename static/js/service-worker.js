@@ -1,7 +1,7 @@
-/* KaayPrint PWA v2 — shell rapide, stale-while-revalidate, cache API lecture */
-const STATIC_CACHE = 'kaayprint-static-v2';
-const SHELL_CACHE = 'kaayprint-shell-v2';
-const API_CACHE = 'kaayprint-api-v2';
+/* KaayPrint PWA v7 — shell rapide, stale-while-revalidate, cache API lecture */
+const STATIC_CACHE = 'kaayprint-static-v7';
+const SHELL_CACHE = 'kaayprint-shell-v7';
+const API_CACHE = 'kaayprint-api-v7';
 
 const PRECACHE_URLS = [
     '/static/css/style.css',
@@ -25,6 +25,7 @@ const API_GET_PREFIXES = [
     '/app/api/clients/',
     '/app/api/organisation/profil/',
     '/app/api/sync/',
+    '/app/api/notifications/',
 ];
 
 function isAuthOrWriteApi(url) {

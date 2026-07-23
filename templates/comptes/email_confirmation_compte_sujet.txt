@@ -1,0 +1,1 @@
+Confirmez votre compte {{ app_name }}

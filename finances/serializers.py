@@ -183,6 +183,10 @@ def note_to_js(note: Note) -> dict:
         'clientId': note.client_id,
         'clientName': client_nom or None,
         'category': note.categorie_produit or '',
+        'pinned': bool(note.epinglee),
+        'archived': bool(note.archivee),
+        'reminderAt': format_iso_date(note.rappel_le),
+        'reminderEmail': bool(note.rappel_par_email and note.rappel_le),
         'createdAt': format_iso_date(note.cree_le),
         'updatedAt': format_iso_date(note.modifie_le),
     }
@@ -193,11 +197,25 @@ def note_from_js(data: dict) -> dict:
     if client_id is not None:
         client_id = str(client_id).strip() or None
     category = str(data.get('category') or '').strip()[:120]
+    reminder_raw = data.get('reminderAt')
+    if reminder_raw is None and 'reminderAt' not in data:
+        rappel_le = None
+        has_reminder = False
+    else:
+        has_reminder = True
+        rappel_le = parse_iso_date(reminder_raw) if reminder_raw else None
+    reminder_email = bool(data.get('reminderEmail')) and bool(rappel_le)
     return {
         'titre': str(data.get('title') or '').strip()[:200],
         'contenu': str(data.get('content') or '').strip(),
         'client_id': client_id,
         'categorie_produit': category,
+        'epinglee': bool(data.get('pinned')),
+        'archivee': bool(data.get('archived')),
+        'rappel_le': rappel_le,
+        'has_reminder': has_reminder,
+        'rappel_par_email': reminder_email,
+        'has_reminder_email': 'reminderEmail' in data,
         'cree_le': parse_iso_date(data.get('createdAt')),
     }
 

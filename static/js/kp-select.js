@@ -160,7 +160,7 @@
         if (panel) panel.hidden = true;
         else if (menu) menu.hidden = true;
         if (trigger) trigger.setAttribute('aria-expanded', 'false');
-        wrap.classList.remove('is-open');
+        wrap.classList.remove('is-open', 'is-dropup');
         if (kpSelectTypeahead.wrap === wrap) resetEnhancedSelectTypeahead();
         clearEnhancedSelectSearch(wrap);
         var list = getEnhancedSelectList(wrap);
@@ -169,6 +169,23 @@
                 li.classList.remove('is-typeahead-active');
             });
         }
+    }
+
+    function positionEnhancedSelectMenu(wrap) {
+        if (!wrap) return;
+        wrap.classList.remove('is-dropup');
+        var trigger = wrap.querySelector('.kp-select-trigger');
+        var panel = getEnhancedSelectPanel(wrap) || wrap.querySelector('.kp-select-menu');
+        if (!trigger || !panel || panel.hidden) return;
+
+        var rect = trigger.getBoundingClientRect();
+        var spaceBelow = window.innerHeight - rect.bottom;
+        var spaceAbove = rect.top;
+        var estimatedHeight = Math.max(panel.offsetHeight || 0, 240);
+        var needs = estimatedHeight + 16;
+        var forceUp = !!wrap.closest('.notes-attach-row');
+        var preferUp = forceUp || (spaceBelow < needs && spaceAbove > spaceBelow);
+        if (preferUp) wrap.classList.add('is-dropup');
     }
 
     function openEnhancedSelectMenu(wrap, options) {
@@ -184,6 +201,10 @@
         else if (menu) menu.hidden = false;
         if (trigger) trigger.setAttribute('aria-expanded', 'true');
         wrap.classList.add('is-open');
+        positionEnhancedSelectMenu(wrap);
+        requestAnimationFrame(function () {
+            positionEnhancedSelectMenu(wrap);
+        });
         var searchInput = wrap.querySelector('.kp-select-search-input');
         var initialQuery = options.initialQuery != null ? String(options.initialQuery) : '';
         var matchMode = options.matchMode || (initialQuery ? 'prefix' : 'contains');

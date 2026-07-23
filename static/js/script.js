@@ -202,8 +202,17 @@ function applyCompanyProfileToForm(p) {
     updateCompanyWebsiteQrPreview();
 }
 
+let cachedUserProfile = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    country: '',
+    city: '',
+    currencyLabel: '',
+};
+
 function applyUserProfileToForm(profil) {
-    if (!profil || typeof profil !== 'object') return;
+    if (!profil || typeof profil !== 'object') return Promise.resolve();
     const firstEl = document.getElementById('userFirstName');
     const lastEl = document.getElementById('userLastName');
     const emailEl = document.getElementById('userEmail');
@@ -213,8 +222,21 @@ function applyUserProfileToForm(profil) {
     if (firstEl) firstEl.value = profil.firstName || '';
     if (lastEl) lastEl.value = profil.lastName || '';
     if (emailEl) emailEl.value = profil.email || '';
+
+    cachedUserProfile = {
+        firstName: String(profil.firstName || '').trim(),
+        lastName: String(profil.lastName || '').trim(),
+        email: String(profil.email || '').trim(),
+        country: String(profil.country || '').trim(),
+        city: String(profil.city || '').trim(),
+        currencyLabel: normalizeCurrencyCode(profil.currencyLabel || ''),
+    };
+
+    let geoReady = Promise.resolve();
     if (window.xalissGeoSelects && typeof window.xalissGeoSelects.applyValues === 'function') {
-        window.xalissGeoSelects.applyValues(profil.country || '', profil.city || '');
+        geoReady = Promise.resolve(
+            window.xalissGeoSelects.applyValues(profil.country || '', profil.city || '')
+        ).catch(function () { /* ignore geo errors */ });
     } else {
         if (countryEl) countryEl.value = profil.country || '';
         if (cityEl) cityEl.value = profil.city || '';
@@ -235,6 +257,12 @@ function applyUserProfileToForm(profil) {
         if (trigger) trigger.disabled = !canEdit;
     }
     updateSidebarProfileName(profil.firstName, profil.lastName);
+
+    return geoReady.then(function () {
+        if (typeof dismissIncompleteProfileNotificationsIfComplete === 'function') {
+            dismissIncompleteProfileNotificationsIfComplete();
+        }
+    });
 }
 
 function updateSidebarProfileName(firstName, lastName) {
@@ -375,7 +403,25 @@ function renderNotificationsModal() {
     }).join('');
 }
 
+function clearNotificationsAttention() {
+    const btn = document.getElementById('notificationsBtn');
+    if (!btn) return;
+    btn.classList.remove('has-new-notification');
+    btn.removeAttribute('data-attention');
+}
+
+function pulseNotificationsBell() {
+    const btn = document.getElementById('notificationsBtn');
+    if (!btn) return;
+    btn.classList.remove('has-new-notification');
+    // Force restart animation
+    void btn.offsetWidth;
+    btn.classList.add('has-new-notification');
+    btn.setAttribute('data-attention', '1');
+}
+
 function openNotificationsModal() {
+    clearNotificationsAttention();
     renderNotificationsModal();
     const modal = document.getElementById('notificationsModal');
     if (modal) modal.style.display = 'flex';
@@ -423,6 +469,10 @@ function initNotificationsUI() {
         if (modalEl && modalEl.style.display === 'flex') {
             renderNotificationsModal();
         }
+    });
+    window.addEventListener('xaliss:notification-alert', function () {
+        updateNotificationsBadge();
+        pulseNotificationsBell();
     });
     updateNotificationsBadge();
     renderNotificationsModal();
@@ -482,6 +532,10 @@ const UNPAID_REMINDER_DAYS = 10;
 
 function hasNotificationSystemId(systemId) {
     if (!systemId) return false;
+    if (typeof window.xalissIsNotificationSystemIdIgnored === 'function'
+        && window.xalissIsNotificationSystemIdIgnored(systemId)) {
+        return true;
+    }
     return getNotificationHistory().some(function (item) {
         return item && item.systemId === systemId;
     });
@@ -536,20 +590,29 @@ function ensureUnpaidReminders() {
     });
 }
 
+function readProfileFieldValue(domId, cachedValue) {
+    const el = document.getElementById(domId);
+    const fromDom = el ? String(el.value || '').trim() : '';
+    if (fromDom) return fromDom;
+    return String(cachedValue || '').trim();
+}
+
 function isUserProfileIncomplete() {
-    const firstEl = document.getElementById('userFirstName');
-    const lastEl = document.getElementById('userLastName');
-    const emailEl = document.getElementById('userEmail');
-    const currencyEl = document.getElementById('userCurrencyLabel');
-    const countryEl = document.getElementById('userCountry');
-    const cityEl = document.getElementById('userCity');
-    const firstName = firstEl ? String(firstEl.value || '').trim() : '';
-    const lastName = lastEl ? String(lastEl.value || '').trim() : '';
-    const email = emailEl ? String(emailEl.value || '').trim() : '';
-    const currency = currencyEl ? String(currencyEl.value || '').trim() : '';
-    const country = countryEl ? String(countryEl.value || '').trim() : '';
-    const city = cityEl ? String(cityEl.value || '').trim() : '';
+    const firstName = readProfileFieldValue('userFirstName', cachedUserProfile.firstName);
+    const lastName = readProfileFieldValue('userLastName', cachedUserProfile.lastName);
+    const email = readProfileFieldValue('userEmail', cachedUserProfile.email);
+    const currency = readProfileFieldValue('userCurrencyLabel', cachedUserProfile.currencyLabel)
+        || String(cachedAppSettings && cachedAppSettings.currencyLabel || '').trim();
+    const country = readProfileFieldValue('userCountry', cachedUserProfile.country);
+    const city = readProfileFieldValue('userCity', cachedUserProfile.city);
     return !firstName || !lastName || !email || !currency || !country || !city;
+}
+
+function dismissIncompleteProfileNotificationsIfComplete() {
+    if (isUserProfileIncomplete()) return;
+    if (typeof window.xalissRemoveNotificationsBySystemIdPrefix === 'function') {
+        window.xalissRemoveNotificationsBySystemIdPrefix('profile-incomplete-monday-');
+    }
 }
 
 function isCompanyProfileIncomplete() {
@@ -580,7 +643,10 @@ function getCurrentMondayDateKey(date) {
 
 function ensureMondayIncompleteProfileReminder() {
     const today = new Date();
-    if (today.getDay() !== 1) return;
+    if (today.getDay() !== 1) {
+        dismissIncompleteProfileNotificationsIfComplete();
+        return;
+    }
 
     const mondayKey = getCurrentMondayDateKey(today);
 
@@ -593,6 +659,8 @@ function ensureMondayIncompleteProfileReminder() {
                 { systemId: personalId }
             );
         }
+    } else {
+        dismissIncompleteProfileNotificationsIfComplete();
     }
 
     if (isCompanyProfileIncomplete()) {
@@ -607,9 +675,31 @@ function ensureMondayIncompleteProfileReminder() {
     }
 }
 
+function ensureNoteReminders() {
+    const now = Date.now();
+    (cachedNotes || []).forEach(function (note) {
+        if (!note || !note.id || !note.reminderAt || note.archived) return;
+        const when = new Date(note.reminderAt).getTime();
+        if (isNaN(when) || when > now) return;
+        const systemId = 'note-reminder-' + note.id + '-' + when;
+        if (hasNotificationSystemId(systemId)) return;
+        const title = String(note.title || 'Note').trim() || 'Note';
+        const shortTitle = title.length > 80 ? title.slice(0, 80) + '…' : title;
+        addAppNotification(
+            'Rappel : « ' + shortTitle + ' »',
+            'info',
+            { systemId: systemId }
+        );
+    });
+    if (typeof window.xalissProcessNoteReminderEmails === 'function') {
+        window.xalissProcessNoteReminderEmails();
+    }
+}
+
 function checkScheduledAppNotifications() {
     ensureUnpaidReminders();
     ensureMondayIncompleteProfileReminder();
+    ensureNoteReminders();
     updateNotificationsBadge();
     const modalEl = document.getElementById('notificationsModal');
     if (modalEl && modalEl.style.display === 'flex') {
@@ -1193,7 +1283,7 @@ function closeEnhancedSelectMenu(wrap) {
     if (panel) panel.hidden = true;
     else if (menu) menu.hidden = true;
     if (trigger) trigger.setAttribute('aria-expanded', 'false');
-    wrap.classList.remove('is-open');
+    wrap.classList.remove('is-open', 'is-dropup');
     if (kpSelectTypeahead.wrap === wrap) resetEnhancedSelectTypeahead();
     clearEnhancedSelectSearch(wrap);
     const list = getEnhancedSelectList(wrap);
@@ -1202,6 +1292,25 @@ function closeEnhancedSelectMenu(wrap) {
             li.classList.remove('is-typeahead-active');
         });
     }
+}
+
+function positionEnhancedSelectMenu(wrap) {
+    if (!wrap) return;
+    wrap.classList.remove('is-dropup');
+    const trigger = wrap.querySelector('.kp-select-trigger');
+    const panel = getEnhancedSelectPanel(wrap) || wrap.querySelector('.kp-select-menu');
+    if (!trigger || !panel || panel.hidden) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const estimatedHeight = Math.max(panel.offsetHeight || 0, 240);
+    const needs = estimatedHeight + 16;
+    // Ouvre vers le haut s'il n'y a pas assez de place en bas
+    // (ex. selects Client / Catégorie en bas du formulaire notes)
+    const forceUp = !!wrap.closest('.notes-attach-row');
+    const preferUp = forceUp || (spaceBelow < needs && spaceAbove > spaceBelow);
+    if (preferUp) wrap.classList.add('is-dropup');
 }
 
 function openEnhancedSelectMenu(wrap, options) {
@@ -1217,6 +1326,11 @@ function openEnhancedSelectMenu(wrap, options) {
     else if (menu) menu.hidden = false;
     if (trigger) trigger.setAttribute('aria-expanded', 'true');
     wrap.classList.add('is-open');
+    positionEnhancedSelectMenu(wrap);
+    // Recalcule après rendu (hauteur réelle du panneau)
+    requestAnimationFrame(function () {
+        positionEnhancedSelectMenu(wrap);
+    });
     const searchInput = wrap.querySelector('.kp-select-search-input');
     const initialQuery = options.initialQuery != null ? String(options.initialQuery) : '';
     const matchMode = options.matchMode || (initialQuery ? 'prefix' : 'contains');
@@ -2010,14 +2124,529 @@ function normalizeNoteTitle(value) {
     return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 200);
 }
 
+function noteContentLooksLikeHtml(value) {
+    return /<[a-z][\s\S]*>/i.test(String(value || ''));
+}
+
+function notePlainText(value) {
+    const raw = String(value || '');
+    if (!raw) return '';
+    if (!noteContentLooksLikeHtml(raw)) {
+        return raw.replace(/\s+/g, ' ').trim();
+    }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = raw;
+    return String(tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeNoteHref(href) {
+    const raw = String(href || '').trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    if (
+        lower.indexOf('javascript:') === 0
+        || lower.indexOf('data:') === 0
+        || lower.indexOf('vbscript:') === 0
+    ) {
+        return '';
+    }
+    if (
+        lower.indexOf('https://') === 0
+        || lower.indexOf('http://') === 0
+        || lower.indexOf('mailto:') === 0
+    ) {
+        return raw;
+    }
+    if (/^[\w.-]+\.[a-z]{2,}([\/?#][^\s]*)?$/i.test(raw)) {
+        return 'https://' + raw;
+    }
+    return '';
+}
+
+function sanitizeNoteHtml(html) {
+    const raw = String(html || '').trim();
+    if (!raw) return '';
+    const allowed = {
+        B: true, STRONG: true, I: true, EM: true, U: true, S: true, STRIKE: true,
+        P: true, BR: true, DIV: true, SPAN: true,
+        UL: true, OL: true, LI: true,
+        H3: true, BLOCKQUOTE: true,
+        A: true
+    };
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = raw;
+
+    function clean(node) {
+        const children = Array.prototype.slice.call(node.childNodes);
+        children.forEach(function (child) {
+            if (child.nodeType === 3) return;
+            if (child.nodeType !== 1) {
+                node.removeChild(child);
+                return;
+            }
+            const tag = child.tagName;
+            if (!allowed[tag]) {
+                while (child.firstChild) {
+                    node.insertBefore(child.firstChild, child);
+                }
+                node.removeChild(child);
+                return;
+            }
+            if (tag === 'A') {
+                const href = sanitizeNoteHref(child.getAttribute('href'));
+                Array.prototype.slice.call(child.attributes || []).forEach(function (attr) {
+                    child.removeAttribute(attr.name);
+                });
+                if (!href) {
+                    while (child.firstChild) {
+                        node.insertBefore(child.firstChild, child);
+                    }
+                    node.removeChild(child);
+                    return;
+                }
+                child.setAttribute('href', href);
+                child.setAttribute('target', '_blank');
+                child.setAttribute('rel', 'noopener noreferrer');
+                clean(child);
+                return;
+            }
+            Array.prototype.slice.call(child.attributes || []).forEach(function (attr) {
+                child.removeAttribute(attr.name);
+            });
+            clean(child);
+        });
+    }
+
+    clean(wrapper);
+    return wrapper.innerHTML.trim().slice(0, 8000);
+}
+
 function normalizeNoteContent(value) {
-    return String(value || '').trim().slice(0, 4000);
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (noteContentLooksLikeHtml(raw)) {
+        return sanitizeNoteHtml(raw);
+    }
+    return raw.slice(0, 8000);
+}
+
+function isNoteEditorEmpty(el) {
+    if (!el) return true;
+    const text = String(el.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (text) return false;
+    const html = String(el.innerHTML || '').replace(/\s+/g, '').toLowerCase();
+    return !html || html === '<br>' || html === '<div><br></div>' || html === '<p><br></p>' || html === '<p></p>';
+}
+
+function syncNoteEditorEmptyState() {
+    const el = document.getElementById('noteContent');
+    if (!el) return;
+    el.classList.toggle('is-empty', isNoteEditorEmpty(el));
+}
+
+function getNoteEditorHtml() {
+    const el = document.getElementById('noteContent');
+    if (!el || isNoteEditorEmpty(el)) return '';
+    return sanitizeNoteHtml(el.innerHTML);
+}
+
+function setNoteEditorContent(content) {
+    const el = document.getElementById('noteContent');
+    if (!el) return;
+    const raw = String(content || '');
+    if (!raw) {
+        el.innerHTML = '';
+    } else if (noteContentLooksLikeHtml(raw)) {
+        el.innerHTML = sanitizeNoteHtml(raw);
+    } else {
+        el.innerHTML = escapeHtml(raw).replace(/\n/g, '<br>');
+    }
+    syncNoteEditorEmptyState();
+}
+
+function clearNoteEditor() {
+    setNoteEditorContent('');
+}
+
+function formatNoteContentForDisplay(content) {
+    const raw = String(content || '').trim();
+    if (!raw) return '';
+    if (noteContentLooksLikeHtml(raw)) {
+        return sanitizeNoteHtml(raw);
+    }
+    return escapeHtml(raw).replace(/\n/g, '<br>');
+}
+
+function getNoteEditorSelectionBlock(tagNames) {
+    const editor = document.getElementById('noteContent');
+    const sel = window.getSelection();
+    if (!editor || !sel || !sel.rangeCount) return null;
+    let node = sel.anchorNode;
+    const wanted = tagNames.map(function (t) { return String(t).toUpperCase(); });
+    while (node && node !== editor) {
+        if (node.nodeType === 1 && wanted.indexOf(node.tagName) !== -1) {
+            return node;
+        }
+        node = node.parentNode;
+    }
+    return null;
+}
+
+function unwrapNoteEditorBlock(blockEl) {
+    if (!blockEl || !blockEl.parentNode) return;
+    const parent = blockEl.parentNode;
+    const p = document.createElement('p');
+    while (blockEl.firstChild) {
+        p.appendChild(blockEl.firstChild);
+    }
+    if (!p.childNodes.length) p.appendChild(document.createElement('br'));
+    parent.replaceChild(p, blockEl);
+    const range = document.createRange();
+    range.selectNodeContents(p);
+    range.collapse(false);
+    const sel = window.getSelection();
+    if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+}
+
+function toggleNoteFormatBlock(tag) {
+    const tagName = String(tag || '').toLowerCase().replace(/[<>]/g, '');
+    if (!tagName) return;
+    const existing = getNoteEditorSelectionBlock([tagName]);
+    if (existing) {
+        unwrapNoteEditorBlock(existing);
+        return;
+    }
+    // Chrome préfère souvent <tag>, Firefox le nom nu
+    let ok = false;
+    try {
+        ok = document.execCommand('formatBlock', false, '<' + tagName + '>');
+    } catch (e) {
+        ok = false;
+    }
+    if (!ok || !getNoteEditorSelectionBlock([tagName])) {
+        try {
+            document.execCommand('formatBlock', false, tagName);
+        } catch (e2) {
+            /* ignore */
+        }
+    }
+}
+
+function clearNoteBlockFormatting() {
+    const block = getNoteEditorSelectionBlock(['BLOCKQUOTE', 'H3', 'H2', 'H1', 'H4']);
+    if (block) unwrapNoteEditorBlock(block);
+    try {
+        document.execCommand('removeFormat', false, null);
+    } catch (e) {
+        /* ignore */
+    }
+    // Remettre un paragraphe normal si on est encore dans un bloc spécial
+    const still = getNoteEditorSelectionBlock(['BLOCKQUOTE', 'H3', 'H2', 'H1', 'H4']);
+    if (still) unwrapNoteEditorBlock(still);
+    try {
+        document.execCommand('formatBlock', false, '<p>');
+    } catch (e2) {
+        try { document.execCommand('formatBlock', false, 'p'); } catch (e3) { /* ignore */ }
+    }
+}
+
+let noteLinkSavedRange = null;
+
+function saveNoteEditorSelection() {
+    const el = document.getElementById('noteContent');
+    const sel = window.getSelection();
+    if (!el || !sel || !sel.rangeCount) {
+        noteLinkSavedRange = null;
+        return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) {
+        noteLinkSavedRange = null;
+        return;
+    }
+    noteLinkSavedRange = range.cloneRange();
+}
+
+function restoreNoteEditorSelection() {
+    const el = document.getElementById('noteContent');
+    if (!el || !noteLinkSavedRange) return false;
+    el.focus();
+    const sel = window.getSelection();
+    if (!sel) return false;
+    sel.removeAllRanges();
+    sel.addRange(noteLinkSavedRange);
+    return true;
+}
+
+function closeNoteLinkModal() {
+    const modal = document.getElementById('noteLinkModal');
+    const err = document.getElementById('noteLinkError');
+    const urlInput = document.getElementById('noteLinkUrl');
+    if (modal) modal.style.display = 'none';
+    if (err) {
+        err.textContent = '';
+        if (urlInput) urlInput.classList.remove('error');
+    }
+    noteLinkSavedRange = null;
+    unlockPageScroll();
+    const editor = document.getElementById('noteContent');
+    if (editor) editor.focus();
+}
+
+function openNoteLinkModal() {
+    const el = document.getElementById('noteContent');
+    const modal = document.getElementById('noteLinkModal');
+    const urlInput = document.getElementById('noteLinkUrl');
+    const textInput = document.getElementById('noteLinkText');
+    const err = document.getElementById('noteLinkError');
+    if (!el || !modal || !urlInput || !textInput) return;
+
+    el.focus();
+    saveNoteEditorSelection();
+    const sel = window.getSelection();
+    const selectedText = sel && !sel.isCollapsed ? String(sel.toString() || '').trim() : '';
+
+    textInput.value = selectedText;
+    urlInput.value = selectedText && /^(https?:\/\/|mailto:)/i.test(selectedText)
+        ? selectedText
+        : 'https://';
+    if (err) err.textContent = '';
+    urlInput.classList.remove('error');
+
+    modal.style.display = 'flex';
+    lockPageScroll();
+    setTimeout(function () {
+        urlInput.focus();
+        urlInput.select();
+    }, 30);
+}
+
+function applyNoteLinkFromModal() {
+    const el = document.getElementById('noteContent');
+    const urlInput = document.getElementById('noteLinkUrl');
+    const textInput = document.getElementById('noteLinkText');
+    const err = document.getElementById('noteLinkError');
+    if (!el || !urlInput) return false;
+
+    const href = sanitizeNoteHref(urlInput.value);
+    if (!href) {
+        if (err) err.textContent = 'Lien non autorisé. Utilisez http(s) ou mailto.';
+        urlInput.classList.add('error');
+        urlInput.focus();
+        return false;
+    }
+    if (err) err.textContent = '';
+    urlInput.classList.remove('error');
+
+    const label = String(textInput && textInput.value ? textInput.value : '').trim() || href;
+    restoreNoteEditorSelection();
+    try {
+        const sel = window.getSelection();
+        const hasSelection = sel && !sel.isCollapsed && String(sel.toString() || '').trim();
+        if (hasSelection && label === String(sel.toString() || '').trim()) {
+            document.execCommand('createLink', false, href);
+        } else {
+            document.execCommand(
+                'insertHTML',
+                false,
+                '<a href="' + href.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer">'
+                + escapeHtml(label) + '</a>'
+            );
+        }
+    } catch (e) {
+        /* ignore */
+    }
+    setNoteEditorContent(getNoteEditorHtml());
+    closeNoteLinkModal();
+    el.focus();
+    syncNoteEditorEmptyState();
+    updateNoteToolbarActiveState();
+    return true;
+}
+
+function insertNoteLink() {
+    openNoteLinkModal();
+}
+
+window.closeNoteLinkModal = closeNoteLinkModal;
+
+function runNoteEditorCommand(cmd, value) {
+    const el = document.getElementById('noteContent');
+    if (!el) return;
+    el.focus();
+    try {
+        if (cmd === 'createLink') {
+            insertNoteLink();
+            return;
+        }
+        if (cmd === 'formatBlock' && value) {
+            toggleNoteFormatBlock(value);
+        } else if (cmd === 'removeFormat') {
+            clearNoteBlockFormatting();
+        } else {
+            document.execCommand(cmd, false, value || null);
+        }
+    } catch (e) {
+        /* ignore */
+    }
+    syncNoteEditorEmptyState();
+    updateNoteToolbarActiveState();
+}
+
+function updateNoteToolbarActiveState() {
+    const toolbar = document.querySelector('#noteRichEditor .note-rich-toolbar');
+    if (!toolbar) return;
+    toolbar.querySelectorAll('[data-note-cmd]').forEach(function (btn) {
+        const cmd = btn.getAttribute('data-note-cmd');
+        const value = btn.getAttribute('data-note-value');
+        if (!cmd || cmd === 'undo' || cmd === 'redo' || cmd === 'removeFormat' || cmd === 'createLink') {
+            btn.classList.remove('is-active');
+            return;
+        }
+        let active = false;
+        try {
+            if (cmd === 'formatBlock' && value) {
+                active = !!getNoteEditorSelectionBlock([value]);
+            } else {
+                active = document.queryCommandState(cmd);
+            }
+        } catch (e) {
+            active = false;
+        }
+        btn.classList.toggle('is-active', !!active);
+    });
+}
+
+let noteRichEditorBound = false;
+
+function initNoteRichEditor() {
+    if (noteRichEditorBound) return;
+    const editor = document.getElementById('noteRichEditor');
+    const body = document.getElementById('noteContent');
+    if (!editor || !body) return;
+    noteRichEditorBound = true;
+
+    const toolbar = editor.querySelector('.note-rich-toolbar');
+    if (toolbar) {
+        toolbar.addEventListener('mousedown', function (e) {
+            const btn = e.target.closest('[data-note-cmd]');
+            if (!btn) return;
+            e.preventDefault();
+        });
+        toolbar.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-note-cmd]');
+            if (!btn) return;
+            e.preventDefault();
+            const cmd = btn.getAttribute('data-note-cmd');
+            const value = btn.getAttribute('data-note-value');
+            runNoteEditorCommand(cmd, value);
+        });
+    }
+
+    const linkModal = document.getElementById('noteLinkModal');
+    const linkForm = document.getElementById('noteLinkForm');
+    const linkCancel = document.getElementById('noteLinkCancel');
+    const linkUrl = document.getElementById('noteLinkUrl');
+    if (linkForm) {
+        linkForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            applyNoteLinkFromModal();
+        });
+    }
+    if (linkCancel) linkCancel.addEventListener('click', closeNoteLinkModal);
+    if (linkModal) {
+        linkModal.addEventListener('click', function (e) {
+            if (e.target === linkModal) closeNoteLinkModal();
+        });
+    }
+    if (linkUrl) {
+        linkUrl.addEventListener('input', function () {
+            const err = document.getElementById('noteLinkError');
+            if (err) err.textContent = '';
+            linkUrl.classList.remove('error');
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!linkModal || linkModal.style.display !== 'flex') return;
+        e.preventDefault();
+        closeNoteLinkModal();
+    });
+
+    body.addEventListener('input', syncNoteEditorEmptyState);
+    body.addEventListener('keyup', updateNoteToolbarActiveState);
+    body.addEventListener('mouseup', updateNoteToolbarActiveState);
+    body.addEventListener('focus', updateNoteToolbarActiveState);
+    body.addEventListener('click', function (e) {
+        const link = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (!link || !body.contains(link)) return;
+        // En édition : navigation seulement avec Ctrl/Cmd+clic
+        if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+        }
+    });
+    body.addEventListener('blur', function () {
+        syncNoteEditorEmptyState();
+        setTimeout(updateNoteToolbarActiveState, 0);
+    });
+
+    body.addEventListener('paste', function (e) {
+        e.preventDefault();
+        const clipboard = e.clipboardData || window.clipboardData;
+        const html = clipboard && clipboard.getData('text/html');
+        const text = clipboard && clipboard.getData('text/plain');
+        if (html && noteContentLooksLikeHtml(html)) {
+            document.execCommand('insertHTML', false, sanitizeNoteHtml(html));
+        } else {
+            document.execCommand('insertText', false, text || '');
+        }
+        syncNoteEditorEmptyState();
+    });
+
+    body.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const quote = getNoteEditorSelectionBlock(['BLOCKQUOTE']);
+            if (quote) {
+                const text = String(quote.textContent || '').replace(/\u00a0/g, ' ').trim();
+                // Ligne de citation vide + Entrée → sortir de la citation
+                if (!text) {
+                    e.preventDefault();
+                    unwrapNoteEditorBlock(quote);
+                    syncNoteEditorEmptyState();
+                    updateNoteToolbarActiveState();
+                    return;
+                }
+            }
+        }
+        if (!(e.ctrlKey || e.metaKey)) return;
+        const key = String(e.key || '').toLowerCase();
+        if (key === 'b') {
+            e.preventDefault();
+            runNoteEditorCommand('bold');
+        } else if (key === 'i') {
+            e.preventDefault();
+            runNoteEditorCommand('italic');
+        } else if (key === 'u') {
+            e.preventDefault();
+            runNoteEditorCommand('underline');
+        }
+    });
+
+    syncNoteEditorEmptyState();
 }
 
 function normalizeNoteRecord(item) {
     const o = item && typeof item === 'object' ? item : {};
     const clientId = o.clientId ? String(o.clientId).trim() : '';
     const clientName = String(o.clientName || o.invoiceClient || '').trim();
+    let reminderAt = o.reminderAt || null;
+    if (reminderAt) {
+        const d = new Date(reminderAt);
+        reminderAt = isNaN(d.getTime()) ? null : d.toISOString();
+    }
     return {
         id: String(o.id || '').trim(),
         title: normalizeNoteTitle(o.title),
@@ -2025,6 +2654,10 @@ function normalizeNoteRecord(item) {
         clientId: clientId || null,
         clientName: clientName || null,
         category: normalizeCategoryName(o.category),
+        pinned: !!o.pinned,
+        archived: !!o.archived,
+        reminderAt: reminderAt,
+        reminderEmail: !!(reminderAt && o.reminderEmail),
         createdAt: o.createdAt || null,
         updatedAt: o.updatedAt || null,
     };
@@ -2065,6 +2698,655 @@ function saveNotesList(accountId, data) {
     return Promise.resolve();
 }
 
+function toDateTimeLocalValue(isoOrLocal) {
+    if (!isoOrLocal) return '';
+    const raw = String(isoOrLocal).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
+        return raw.slice(0, 16);
+    }
+    const d = new Date(isoOrLocal);
+    if (isNaN(d.getTime())) return '';
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+        + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function noteReminderInputValue(iso) {
+    return toDateTimeLocalValue(iso);
+}
+
+function noteReminderIsoFromInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+}
+
+function formatDateTimeLocalDisplay(localValue) {
+    if (!localValue) return '';
+    const d = new Date(localValue);
+    if (isNaN(d.getTime())) return '';
+    try {
+        return d.toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch (e) {
+        return String(localValue).replace('T', ' ');
+    }
+}
+
+function formatNoteReminderDisplay(localValue) {
+    return formatDateTimeLocalDisplay(localValue);
+}
+
+const kpDateTimePickers = {};
+
+function toDateOnlyValue(isoOrLocal) {
+    if (!isoOrLocal) return '';
+    const raw = String(isoOrLocal).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+    const d = new Date(isoOrLocal);
+    if (isNaN(d.getTime())) return '';
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+function parsePickerDateValue(value) {
+    const raw = String(value || '').trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+        return new Date(
+            Number(m[1]),
+            Number(m[2]) - 1,
+            Number(m[3]),
+            m[4] != null ? Number(m[4]) : 0,
+            m[5] != null ? Number(m[5]) : 0,
+            m[6] != null ? Number(m[6]) : 0,
+            0
+        );
+    }
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateOnlyDisplay(value) {
+    const d = parsePickerDateValue(value);
+    if (!d) return '';
+    try {
+        return d.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    } catch (e) {
+        return toDateOnlyValue(value);
+    }
+}
+
+function setDateTimeLocalValue(inputId, isoOrLocal, options) {
+    const opts = options || {};
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const api = kpDateTimePickers[inputId];
+    const mode = opts.mode || (api && api.mode) || 'datetime';
+    const local = !isoOrLocal
+        ? ''
+        : (mode === 'date' ? toDateOnlyValue(isoOrLocal) : toDateTimeLocalValue(isoOrLocal));
+    input.value = local;
+    if (api && typeof api.syncTrigger === 'function') api.syncTrigger();
+    if (opts.dispatch !== false) {
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+}
+
+function setNoteReminderValue(isoOrLocal, options) {
+    setDateTimeLocalValue('noteReminder', isoOrLocal, options);
+    syncNoteReminderEmailOpt();
+}
+
+function getNoteReminderEmailChecked() {
+    const el = document.getElementById('noteReminderEmail');
+    return !!(el && el.checked);
+}
+
+function setNoteReminderEmailChecked(checked) {
+    const el = document.getElementById('noteReminderEmail');
+    if (el) el.checked = !!checked;
+    syncNoteReminderEmailOpt();
+}
+
+function syncNoteReminderEmailOpt() {
+    const reminderEl = document.getElementById('noteReminder');
+    const opt = document.getElementById('noteReminderEmailOpt');
+    const checkbox = document.getElementById('noteReminderEmail');
+    const label = document.getElementById('noteReminderEmailLabel');
+    const hasReminder = !!(reminderEl && String(reminderEl.value || '').trim());
+    if (opt) opt.hidden = !hasReminder;
+    if (!hasReminder && checkbox) checkbox.checked = false;
+    if (label) {
+        const userEmail = String((window.XALISS_DJANGO && window.XALISS_DJANGO.userEmail) || '').trim();
+        label.textContent = userEmail
+            ? ('Recevoir la notif par mail (' + userEmail + ')')
+            : 'Recevoir la notif par mail';
+    }
+}
+
+function closeNoteReminderPopover() {
+    const api = kpDateTimePickers.noteReminder;
+    if (api) api.close();
+}
+
+function initNoteReminderPicker() {
+    initKpDateTimePicker('noteReminder', {
+        placeholder: 'Choisir date et heure',
+        allowClear: true,
+    });
+    const reminderEl = document.getElementById('noteReminder');
+    if (reminderEl && !reminderEl.dataset.emailOptBound) {
+        reminderEl.dataset.emailOptBound = '1';
+        reminderEl.addEventListener('change', syncNoteReminderEmailOpt);
+        reminderEl.addEventListener('input', syncNoteReminderEmailOpt);
+    }
+    syncNoteReminderEmailOpt();
+}
+
+function initKpDateTimePicker(inputId, options) {
+    const opts = Object.assign({
+        placeholder: 'Choisir date et heure',
+        allowClear: true,
+        mode: 'datetime',
+    }, options || {});
+    const isDateOnly = opts.mode === 'date';
+
+    if (kpDateTimePickers[inputId]) {
+        kpDateTimePickers[inputId].syncTrigger();
+        return kpDateTimePickers[inputId];
+    }
+
+    const picker = document.getElementById(inputId + 'Picker');
+    const input = document.getElementById(inputId);
+    const trigger = document.getElementById(inputId + 'Trigger');
+    const triggerText = document.getElementById(inputId + 'TriggerText');
+    const clearBtn = document.getElementById(inputId + 'Clear');
+    const popover = document.getElementById(inputId + 'Popover');
+    const daysEl = document.getElementById(inputId + 'Days');
+    const monthLabel = document.getElementById(inputId + 'MonthLabel');
+    const hourEl = document.getElementById(inputId + 'Hour');
+    const minuteEl = document.getElementById(inputId + 'Minute');
+    const hourDisplay = document.getElementById(inputId + 'HourDisplay');
+    const minuteDisplay = document.getElementById(inputId + 'MinuteDisplay');
+    const prevBtn = document.getElementById(inputId + 'PrevMonth');
+    const nextBtn = document.getElementById(inputId + 'NextMonth');
+    const todayBtn = document.getElementById(inputId + 'TodayBtn');
+    const applyBtn = document.getElementById(inputId + 'ApplyBtn');
+    if (!picker || !input || !trigger || !popover) return null;
+
+    if (isDateOnly) {
+        popover.classList.add('note-reminder-popover--date');
+        picker.classList.add('note-reminder-picker--date');
+    }
+
+    const state = {
+        viewYear: null,
+        viewMonth: null,
+        selectedDate: null,
+    };
+
+    function syncTrigger() {
+        const value = String(input.value || '').trim();
+        const label = isDateOnly ? formatDateOnlyDisplay(value) : formatDateTimeLocalDisplay(value);
+        if (triggerText) {
+            triggerText.textContent = label || opts.placeholder;
+            triggerText.classList.toggle('is-placeholder', !label);
+        }
+        if (clearBtn) clearBtn.hidden = !opts.allowClear || !value;
+    }
+
+    function close() {
+        popover.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function setSpinDisplayValue(el, value, force) {
+        if (!el) return;
+        const text = value || '00';
+        if (el.tagName === 'INPUT') {
+            if (force || document.activeElement !== el) el.value = text;
+        } else {
+            el.textContent = text;
+        }
+    }
+
+    function syncTimeDisplays(force) {
+        if (hourDisplay && hourEl) setSpinDisplayValue(hourDisplay, hourEl.value || '00', force);
+        if (minuteDisplay && minuteEl) setSpinDisplayValue(minuteDisplay, minuteEl.value || '00', force);
+    }
+
+    function setTimeParts(hours, minutes, forceDisplay) {
+        if (isDateOnly) return;
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        let h = Number(hours);
+        let m = Number(minutes);
+        if (!Number.isFinite(h)) h = 9;
+        if (!Number.isFinite(m)) m = 0;
+        h = ((h % 24) + 24) % 24;
+        m = Math.round(m);
+        m = ((m % 60) + 60) % 60;
+        if (hourEl) hourEl.value = pad(h);
+        if (minuteEl) minuteEl.value = pad(m);
+        syncTimeDisplays(!!forceDisplay);
+    }
+
+    function stepTime(unit, dir) {
+        if (isDateOnly) return;
+        let h = Number(hourEl && hourEl.value);
+        let m = Number(minuteEl && minuteEl.value);
+        if (!Number.isFinite(h)) h = 0;
+        if (!Number.isFinite(m)) m = 0;
+        if (unit === 'hour') {
+            h += dir;
+        } else {
+            m += dir;
+            if (m >= 60) { m = 0; h += 1; }
+            if (m < 0) { m = 59; h -= 1; }
+        }
+        setTimeParts(h, m, true);
+    }
+
+    function readTypedTimePart(el, max) {
+        if (!el) return null;
+        const raw = String(el.value || '').replace(/\D/g, '');
+        if (!raw) return null;
+        let n = parseInt(raw, 10);
+        if (!Number.isFinite(n)) return null;
+        if (n < 0) n = 0;
+        if (n > max) n = max;
+        return n;
+    }
+
+    function commitTypedTime(preferUnit) {
+        if (isDateOnly) return;
+        const hTyped = readTypedTimePart(hourDisplay, 23);
+        const mTyped = readTypedTimePart(minuteDisplay, 59);
+        let h = Number(hourEl && hourEl.value);
+        let m = Number(minuteEl && minuteEl.value);
+        if (!Number.isFinite(h)) h = 9;
+        if (!Number.isFinite(m)) m = 0;
+        if (hTyped != null) h = hTyped;
+        else if (preferUnit === 'hour') h = 0;
+        if (mTyped != null) m = mTyped;
+        else if (preferUnit === 'minute') m = 0;
+        setTimeParts(h, m);
+        if (preferUnit === 'hour' && hourDisplay && hourDisplay.tagName === 'INPUT') {
+            hourDisplay.value = hourEl.value;
+        }
+        if (preferUnit === 'minute' && minuteDisplay && minuteDisplay.tagName === 'INPUT') {
+            minuteDisplay.value = minuteEl.value;
+        }
+    }
+
+    function bindTimeInput(el, unit) {
+        if (!el || el.tagName !== 'INPUT') return;
+        el.addEventListener('focus', function () {
+            el.select();
+        });
+        el.addEventListener('click', function (e) {
+            e.stopPropagation();
+            el.select();
+        });
+        el.addEventListener('mousedown', function (e) {
+            e.stopPropagation();
+        });
+        el.addEventListener('input', function () {
+            el.value = String(el.value || '').replace(/\D/g, '').slice(0, 2);
+        });
+        el.addEventListener('blur', function () {
+            commitTypedTime(unit);
+        });
+        el.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                commitTypedTime(unit);
+                stepTime(unit, 1);
+                el.select();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                commitTypedTime(unit);
+                stepTime(unit, -1);
+                el.select();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                commitTypedTime(unit);
+                el.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                syncTimeDisplays(true);
+                el.blur();
+            }
+        });
+    }
+
+    function renderCalendar() {
+        if (!daysEl || state.viewYear == null || state.viewMonth == null) return;
+        const monthDate = new Date(state.viewYear, state.viewMonth, 1);
+        if (monthLabel) {
+            try {
+                monthLabel.textContent = monthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            } catch (e) {
+                monthLabel.textContent = (state.viewMonth + 1) + '/' + state.viewYear;
+            }
+        }
+        const firstDow = (monthDate.getDay() + 6) % 7;
+        const daysInMonth = new Date(state.viewYear, state.viewMonth + 1, 0).getDate();
+        const prevDays = new Date(state.viewYear, state.viewMonth, 0).getDate();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const cells = [];
+        for (let i = 0; i < 42; i++) {
+            let y = state.viewYear;
+            let m = state.viewMonth;
+            let day;
+            let outside = false;
+            if (i < firstDow) {
+                day = prevDays - firstDow + i + 1;
+                m -= 1;
+                if (m < 0) { m = 11; y -= 1; }
+                outside = true;
+            } else if (i >= firstDow + daysInMonth) {
+                day = i - firstDow - daysInMonth + 1;
+                m += 1;
+                if (m > 11) { m = 0; y += 1; }
+                outside = true;
+            } else {
+                day = i - firstDow + 1;
+            }
+            const cellDate = new Date(y, m, day);
+            const isToday = cellDate.getTime() === today.getTime();
+            const isSelected = state.selectedDate
+                && cellDate.getTime() === new Date(
+                    state.selectedDate.getFullYear(),
+                    state.selectedDate.getMonth(),
+                    state.selectedDate.getDate()
+                ).getTime();
+            cells.push(
+                '<button type="button" class="note-reminder-day'
+                + (outside ? ' is-outside' : '')
+                + (isToday ? ' is-today' : '')
+                + (isSelected ? ' is-selected' : '')
+                + '" data-y="' + y + '" data-m="' + m + '" data-d="' + day + '">'
+                + day
+                + '</button>'
+            );
+        }
+        daysEl.innerHTML = cells.join('');
+    }
+
+    function open() {
+        const parsed = parsePickerDateValue(input.value);
+        const base = parsed || new Date();
+        state.selectedDate = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        state.viewYear = base.getFullYear();
+        state.viewMonth = base.getMonth();
+        if (!isDateOnly) setTimeParts(base.getHours(), base.getMinutes(), true);
+        renderCalendar();
+        popover.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    function apply() {
+        if (!state.selectedDate) return;
+        if (!isDateOnly) commitTypedTime();
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        const ymd = state.selectedDate.getFullYear()
+            + '-' + pad(state.selectedDate.getMonth() + 1)
+            + '-' + pad(state.selectedDate.getDate());
+        if (isDateOnly) {
+            setDateTimeLocalValue(inputId, ymd, { mode: 'date' });
+        } else {
+            const h = Number(hourEl && hourEl.value);
+            const min = Number(minuteEl && minuteEl.value);
+            const local = ymd
+                + 'T' + pad(Number.isFinite(h) ? h : 9)
+                + ':' + pad(Number.isFinite(min) ? min : 0);
+            setDateTimeLocalValue(inputId, local);
+        }
+        close();
+    }
+
+    if (!isDateOnly) {
+        if (hourEl && !hourEl.options.length) {
+            for (let h = 0; h < 24; h++) {
+                const v = String(h).padStart(2, '0');
+                hourEl.appendChild(new Option(v, v));
+            }
+        }
+        if (minuteEl && minuteEl.options.length !== 60) {
+            minuteEl.innerHTML = '';
+            for (let m = 0; m < 60; m++) {
+                const v = String(m).padStart(2, '0');
+                minuteEl.appendChild(new Option(v, v));
+            }
+        }
+    }
+
+    trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (popover.hidden) open();
+        else close();
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDateTimeLocalValue(inputId, '', { mode: isDateOnly ? 'date' : 'datetime' });
+            close();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            state.viewMonth -= 1;
+            if (state.viewMonth < 0) {
+                state.viewMonth = 11;
+                state.viewYear -= 1;
+            }
+            renderCalendar();
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            state.viewMonth += 1;
+            if (state.viewMonth > 11) {
+                state.viewMonth = 0;
+                state.viewYear += 1;
+            }
+            renderCalendar();
+        });
+    }
+    if (daysEl) {
+        daysEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.note-reminder-day');
+            if (!btn) return;
+            state.selectedDate = new Date(
+                Number(btn.getAttribute('data-y')),
+                Number(btn.getAttribute('data-m')),
+                Number(btn.getAttribute('data-d'))
+            );
+            state.viewYear = state.selectedDate.getFullYear();
+            state.viewMonth = state.selectedDate.getMonth();
+            renderCalendar();
+            if (isDateOnly) apply();
+        });
+    }
+    if (todayBtn) {
+        todayBtn.addEventListener('click', function () {
+            const now = new Date();
+            state.selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            state.viewYear = now.getFullYear();
+            state.viewMonth = now.getMonth();
+            if (!isDateOnly) setTimeParts(now.getHours(), now.getMinutes(), true);
+            renderCalendar();
+            if (isDateOnly) apply();
+        });
+    }
+    if (applyBtn && !isDateOnly) applyBtn.addEventListener('click', apply);
+
+    if (!isDateOnly) {
+        popover.querySelectorAll('[data-time-unit]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                stepTime(btn.getAttribute('data-time-unit'), Number(btn.getAttribute('data-dir')) || 0);
+            });
+        });
+        bindTimeInput(hourDisplay, 'hour');
+        bindTimeInput(minuteDisplay, 'minute');
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!popover.hidden && !picker.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || popover.hidden) return;
+        if (e.target === hourDisplay || e.target === minuteDisplay) return;
+        close();
+    });
+
+    const api = {
+        syncTrigger: syncTrigger,
+        close: close,
+        open: open,
+        mode: isDateOnly ? 'date' : 'datetime',
+    };
+    kpDateTimePickers[inputId] = api;
+    syncTrigger();
+    return api;
+}
+
+
+function noteDraftStorageKey(accountId) {
+    return 'kaayprint_note_draft_' + accountId;
+}
+
+let noteDraftTimer = null;
+let noteDraftHintTimer = null;
+
+function collectNoteFormDraft() {
+    const titleEl = document.getElementById('noteTitle');
+    const reminderEl = document.getElementById('noteReminder');
+    const contentEl = document.getElementById('noteContent');
+    const clientSel = getInvoiceClientSelectionFromControl('noteClient');
+    const category = getCategorySelectionFromControl('noteCategory');
+    const content = contentEl && contentEl.isContentEditable
+        ? getNoteEditorHtml()
+        : normalizeNoteContent(contentEl ? contentEl.value : '');
+    return {
+        editId: editingNoteId || '',
+        title: titleEl ? String(titleEl.value || '') : '',
+        content: content,
+        clientName: clientSel && clientSel.name ? clientSel.name : '',
+        clientId: clientSel && clientSel.id ? clientSel.id : '',
+        category: category || '',
+        reminderAt: noteReminderIsoFromInput(reminderEl ? reminderEl.value : ''),
+        reminderEmail: getNoteReminderEmailChecked(),
+        savedAt: new Date().toISOString(),
+    };
+}
+
+function noteDraftHasContent(draft) {
+    if (!draft) return false;
+    return !!(draft.editId
+        || normalizeNoteTitle(draft.title)
+        || notePlainText(draft.content || '')
+        || draft.reminderAt
+        || draft.reminderEmail);
+}
+
+function saveNoteDraftNow() {
+    try {
+        const accountId = getCurrentAccountId();
+        const draft = collectNoteFormDraft();
+        if (!noteDraftHasContent(draft) && !draft.editId) {
+            localStorage.removeItem(noteDraftStorageKey(accountId));
+            hideNoteDraftHint();
+            return;
+        }
+        localStorage.setItem(noteDraftStorageKey(accountId), JSON.stringify(draft));
+        showNoteDraftHint();
+    } catch (e) {
+        /* ignore */
+    }
+}
+
+function scheduleNoteDraftSave() {
+    if (noteDraftTimer) clearTimeout(noteDraftTimer);
+    noteDraftTimer = setTimeout(saveNoteDraftNow, 700);
+}
+
+function clearNoteDraft() {
+    try {
+        localStorage.removeItem(noteDraftStorageKey(getCurrentAccountId()));
+    } catch (e) {
+        /* ignore */
+    }
+    hideNoteDraftHint();
+}
+
+function showNoteDraftHint() {
+    const hint = document.getElementById('noteDraftHint');
+    if (!hint) return;
+    hint.hidden = false;
+    if (noteDraftHintTimer) clearTimeout(noteDraftHintTimer);
+    noteDraftHintTimer = setTimeout(hideNoteDraftHint, 2200);
+}
+
+function hideNoteDraftHint() {
+    const hint = document.getElementById('noteDraftHint');
+    if (hint) hint.hidden = true;
+}
+
+function loadNoteDraft() {
+    try {
+        const raw = localStorage.getItem(noteDraftStorageKey(getCurrentAccountId()));
+        if (!raw) return null;
+        const draft = JSON.parse(raw);
+        return draft && typeof draft === 'object' ? draft : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function restoreNoteDraftIfAny() {
+    const draft = loadNoteDraft();
+    if (!draft || !noteDraftHasContent(draft)) return false;
+    if (draft.editId) {
+        const exists = cachedNotes.some(function (n) { return n.id === draft.editId; });
+        if (exists) {
+            startEditNote(draft.editId);
+        } else {
+            editingNoteId = null;
+        }
+    }
+    const titleEl = document.getElementById('noteTitle');
+    const submitBtn = document.getElementById('noteFormSubmit');
+    if (titleEl) titleEl.value = draft.title || '';
+    setNoteEditorContent(draft.content || '');
+    setNoteReminderValue(draft.reminderAt || '', { dispatch: false });
+    setNoteReminderEmailChecked(!!(draft.reminderAt && draft.reminderEmail));
+    if (draft.clientName) setInvoiceClientControl('noteClient', draft.clientName);
+    fillCategorySelect(document.getElementById('noteCategory'), draft.category || '');
+    if (submitBtn) submitBtn.textContent = editingNoteId ? 'Enregistrer' : 'Ajouter la note';
+    showNotification('Brouillon de note restauré.', 'info', { transient: true, duration: 2600 });
+    showNoteDraftHint();
+    return true;
+}
+
 function resetNoteForm() {
     editingNoteId = null;
     const idEl = document.getElementById('noteEditId');
@@ -2077,11 +3359,18 @@ function resetNoteForm() {
         titleEl.value = '';
         titleEl.classList.remove('error', 'valid');
     }
-    if (contentEl) contentEl.value = '';
+    if (contentEl) {
+        if (contentEl.isContentEditable) clearNoteEditor();
+        else contentEl.value = '';
+    }
+    setNoteReminderValue('', { dispatch: false });
+    setNoteReminderEmailChecked(false);
+    closeNoteReminderPopover();
     if (errorEl) errorEl.textContent = '';
     resetClientSelectForm('noteClient');
     resetCategorySelectForm('noteCategory');
     if (submitBtn) submitBtn.textContent = 'Ajouter la note';
+    clearNoteDraft();
 }
 
 function startEditNote(noteId) {
@@ -2099,11 +3388,17 @@ function startEditNote(noteId) {
         titleEl.value = note.title;
         titleEl.focus();
     }
-    if (contentEl) contentEl.value = note.content || '';
+    if (contentEl) {
+        if (contentEl.isContentEditable) setNoteEditorContent(note.content || '');
+        else contentEl.value = note.content || '';
+    }
+    setNoteReminderValue(note.reminderAt || '', { dispatch: false });
+    setNoteReminderEmailChecked(!!(note.reminderAt && note.reminderEmail));
     setInvoiceClientControl('noteClient', note.clientName || '');
     fillCategorySelect(document.getElementById('noteCategory'), note.category || '');
     if (submitBtn) submitBtn.textContent = 'Enregistrer';
     if (typeof applyActiveTab === 'function') applyActiveTab('notes');
+    scheduleNoteDraftSave();
 }
 
 function formatNoteDate(iso) {
@@ -2150,21 +3445,32 @@ function filterNotesByQuery(query, quickFilter) {
     const filter = quickFilter || notesQuickFilter || 'all';
     let list = cachedNotes.slice();
 
-    if (filter === 'client') {
-        list = list.filter(function (n) { return !!(n.clientId || n.clientName); });
-    } else if (filter === 'category') {
-        list = list.filter(function (n) { return !!(n.category && String(n.category).trim()); });
+    if (filter === 'archived') {
+        list = list.filter(function (n) { return !!n.archived; });
+    } else {
+        list = list.filter(function (n) { return !n.archived; });
+        if (filter === 'pinned') {
+            list = list.filter(function (n) { return !!n.pinned; });
+        } else if (filter === 'reminders') {
+            list = list.filter(function (n) { return !!n.reminderAt; });
+        } else if (filter === 'client') {
+            list = list.filter(function (n) { return !!(n.clientId || n.clientName); });
+        } else if (filter === 'category') {
+            list = list.filter(function (n) { return !!(n.category && String(n.category).trim()); });
+        }
     }
 
     if (q) {
         list = list.filter(function (n) {
             return (n.title || '').toLowerCase().indexOf(q) !== -1
-                || (n.content || '').toLowerCase().indexOf(q) !== -1
+                || notePlainText(n.content || '').toLowerCase().indexOf(q) !== -1
                 || (n.clientName || '').toLowerCase().indexOf(q) !== -1
                 || (n.category || '').toLowerCase().indexOf(q) !== -1;
         });
     }
     list.sort(function (a, b) {
+        const pinDiff = Number(!!b.pinned) - Number(!!a.pinned);
+        if (pinDiff) return pinDiff;
         const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
         const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
         return tb - ta;
@@ -2177,10 +3483,11 @@ function getFilteredNotes() {
 }
 
 function truncateNotePreview(text, maxLen) {
-    const raw = String(text || '').trim().replace(/\s+/g, ' ');
+    const raw = notePlainText(text);
     if (!raw) return '';
-    if (raw.length <= maxLen) return raw;
-    return raw.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
+    const limit = Number(maxLen) || 160;
+    if (raw.length <= limit) return raw;
+    return raw.slice(0, limit).replace(/\s+\S*$/, '').trim() + '…';
 }
 
 function getNotesEmptyStateHtml(isSearchOrFilter) {
@@ -2205,11 +3512,31 @@ function getNotesEmptyStateHtml(isSearchOrFilter) {
         + '</div>';
 }
 
+function formatNoteReminderLabel(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    let full = '';
+    try {
+        full = d.toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch (e) {
+        full = formatNoteDate(iso);
+    }
+    if (d.getTime() <= Date.now()) return 'Rappel passé' + (full ? ' — ' + full : '');
+    return 'Rappel' + (full ? ' — ' + full : '');
+}
+
 function buildNoteItemHtml(note, index) {
     const isoDate = note.updatedAt || note.createdAt;
     const dateLabel = formatNoteRelativeDate(isoDate);
     const dateFull = formatNoteDate(isoDate);
-    const preview = escapeHtml(truncateNotePreview(note.content, 220));
+    const plainContent = notePlainText(note.content);
+    const preview = plainContent ? escapeHtml(truncateNotePreview(plainContent, 180)) : '';
     const linkBits = [];
     if (note.clientName) {
         linkBits.push('<span class="transaction-client"><span class="transaction-client-label">Client\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.clientName) + '</span></span>');
@@ -2217,17 +3544,41 @@ function buildNoteItemHtml(note, index) {
     if (note.category) {
         linkBits.push('<span class="transaction-category"><span class="transaction-client-label">Catégorie\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.category) + '</span></span>');
     }
+    const reminderLabel = formatNoteReminderLabel(note.reminderAt);
+    if (reminderLabel) {
+        linkBits.push('<span class="note-reminder-badge' + (new Date(note.reminderAt).getTime() <= Date.now() ? ' is-due' : '') + '">' + escapeHtml(reminderLabel) + '</span>');
+    }
     const isNew = lastAddedNoteId && note.id === lastAddedNoteId;
-    return '<article class="note-item note-card visible' + (isNew ? ' note-item--new' : '') + '"'
+    const cardClasses = 'note-item note-card visible'
+        + (isNew ? ' note-item--new' : '')
+        + (note.pinned ? ' note-card--pinned' : '')
+        + (note.archived ? ' note-card--archived' : '')
+        + (preview ? ' note-card--has-content' : '');
+    const pinTitle = note.pinned ? 'Désépingler' : 'Épingler';
+    const archiveTitle = note.archived ? 'Désarchiver' : 'Archiver';
+    return '<article class="' + cardClasses + '"'
         + ' data-note-open="' + escapeHtml(note.id) + '"'
         + ' title="Cliquer pour lire la note"'
         + ' style="animation-delay:' + (index * 0.04) + 's">'
+        + '<div class="note-card-heading">'
+        + (note.pinned
+            ? '<span class="note-pin-marker" title="Épinglée" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 17v5M9 3h6l-1 7h3l-5 6-5-6h3L9 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+            : '')
         + '<h3 class="note-card-title">' + escapeHtml(note.title) + '</h3>'
+        + '</div>'
         + (linkBits.length ? '<div class="note-item-links">' + linkBits.join('') + '</div>' : '')
-        + (preview ? '<p class="note-card-text">' + preview + '</p>' : '')
+        + (preview
+            ? '<p class="note-card-text">' + preview + '</p>'
+            : '')
         + '<div class="note-card-footer">'
         + '<span class="note-card-date" title="' + escapeHtml(dateFull) + '">' + escapeHtml(dateLabel) + '</span>'
         + '<div class="note-card-actions">'
+        + '<button type="button" class="note-pin-btn' + (note.pinned ? ' is-active' : '') + '" data-note-pin="' + escapeHtml(note.id) + '" title="' + pinTitle + '" aria-label="' + pinTitle + '">'
+        + '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 7h3l-5 6-5-6h3L9 3z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</button>'
+        + '<button type="button" class="note-archive-btn' + (note.archived ? ' is-active' : '') + '" data-note-archive="' + escapeHtml(note.id) + '" title="' + archiveTitle + '" aria-label="' + archiveTitle + '">'
+        + '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 7h18M5 7v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7M10 11h4" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</button>'
         + '<button type="button" class="edit-btn" data-note-edit="' + escapeHtml(note.id) + '" title="Modifier" aria-label="Modifier la note">'
         + '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         + '</button>'
@@ -2239,21 +3590,29 @@ function buildNoteItemHtml(note, index) {
 
 function renderNotesList() {
     const listEl = document.getElementById('notesList');
+    const hintEl = document.getElementById('notesPreviewHint');
     if (!listEl) return;
     const notes = getFilteredNotes();
     const hasQuery = !!getNotesSearchQuery('noteSearch');
     const hasFilter = notesQuickFilter && notesQuickFilter !== 'all';
+    const previewLimit = 2;
 
     if (notes.length === 0) {
         listEl.innerHTML = getNotesEmptyStateHtml(cachedNotes.length > 0 && (hasQuery || hasFilter));
+        if (hintEl) hintEl.hidden = true;
         return;
     }
 
-    // Panneau « Mes notes » : uniquement les 2 plus récentes ; le reste via « Voir toutes les notes »
-    const previewNotes = notes.slice(0, 2);
+    // Panneau « Mes notes » : 2 plus récentes ; le reste via « Voir toutes les notes »
+    const previewNotes = notes.slice(0, previewLimit);
     listEl.innerHTML = previewNotes.map(function (note, index) {
         return buildNoteItemHtml(note, index);
     }).join('');
+
+    if (hintEl) {
+        hintEl.textContent = 'Aperçu des 2 notes les plus récentes ou épinglées, ouvrez « Voir toutes les notes » pour voir le tableau complet.';
+        hintEl.hidden = false;
+    }
 
     if (lastAddedNoteId) {
         const animId = lastAddedNoteId;
@@ -2282,7 +3641,7 @@ function updateNotesPaginationInfo(totalPages, totalItems) {
 }
 
 function changeNotesPage(direction) {
-    const filtered = filterNotesByQuery(getNotesSearchQuery('notesModalSearch'), 'all');
+    const filtered = filterNotesByQuery(getNotesSearchQuery('notesModalSearch'), notesQuickFilter || 'all');
     const totalPages = Math.ceil(filtered.length / notesItemsPerPage) || 1;
     notesCurrentPage += direction;
     notesCurrentPage = Math.max(1, Math.min(notesCurrentPage, totalPages));
@@ -2301,7 +3660,7 @@ function renderNotesModalList() {
 
     const isEmpty = cachedNotes.length === 0;
     const query = getNotesSearchQuery('notesModalSearch');
-    const filtered = filterNotesByQuery(query, 'all');
+    const filtered = filterNotesByQuery(query, notesQuickFilter || 'all');
     const totalPages = Math.ceil(filtered.length / notesItemsPerPage) || 1;
     notesCurrentPage = Math.min(notesCurrentPage, totalPages) || 1;
     const startIndex = (notesCurrentPage - 1) * notesItemsPerPage;
@@ -2359,6 +3718,8 @@ window.openNotesListModal = openNotesListModal;
 window.closeNotesListModal = closeNotesListModal;
 window.changeNotesPage = changeNotesPage;
 
+let viewingNoteId = null;
+
 function openNoteViewModal(noteId) {
     const note = cachedNotes.find(function (n) { return n.id === noteId; });
     if (!note) return;
@@ -2370,10 +3731,21 @@ function openNoteViewModal(noteId) {
     const editBtn = document.getElementById('noteViewEditBtn');
     if (!modal) return;
 
+    viewingNoteId = note.id;
     if (titleEl) titleEl.textContent = note.title || 'Note';
 
     if (metaEl) {
         const bits = [];
+        if (note.pinned) {
+            bits.push('<span class="note-status-badge note-status-badge--pinned">Épinglée</span>');
+        }
+        if (note.archived) {
+            bits.push('<span class="note-status-badge note-status-badge--archived">Archivée</span>');
+        }
+        const reminderLabel = formatNoteReminderLabel(note.reminderAt);
+        if (reminderLabel) {
+            bits.push('<span class="note-reminder-badge' + (new Date(note.reminderAt).getTime() <= Date.now() ? ' is-due' : '') + '">' + escapeHtml(reminderLabel) + '</span>');
+        }
         if (note.clientName) {
             bits.push('<span class="transaction-client"><span class="transaction-client-label">Client\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.clientName) + '</span></span>');
         }
@@ -2386,8 +3758,15 @@ function openNoteViewModal(noteId) {
 
     if (bodyEl) {
         const content = String(note.content || '').trim();
-        bodyEl.textContent = content || 'Aucun contenu.';
-        bodyEl.classList.toggle('note-view-body--empty', !content);
+        if (!content) {
+            bodyEl.textContent = 'Aucun contenu.';
+            bodyEl.classList.add('note-view-body--empty');
+            bodyEl.classList.remove('note-view-body--plain');
+        } else {
+            bodyEl.innerHTML = formatNoteContentForDisplay(content);
+            bodyEl.classList.remove('note-view-body--empty');
+            bodyEl.classList.toggle('note-view-body--plain', !noteContentLooksLikeHtml(content));
+        }
     }
 
     if (dateEl) {
@@ -2404,9 +3783,80 @@ function openNoteViewModal(noteId) {
     lockPageScroll();
 }
 
+function buildNoteCopyText(note) {
+    if (!note) return '';
+    const title = String(note.title || '').trim();
+    const body = notePlainText(note.content || '').trim();
+    if (title && body) return title + '\n\n' + body;
+    return title || body || '';
+}
+
+function copyNoteFromView() {
+    const note = cachedNotes.find(function (n) { return n.id === viewingNoteId; });
+    if (!note) {
+        showNotification('Note introuvable.', 'error');
+        return;
+    }
+    const text = buildNoteCopyText(note);
+    if (!text) {
+        showNotification('Rien à copier.', 'info');
+        return;
+    }
+
+    function onCopied() {
+        showNotification('Note copiée dans le presse-papiers.', 'success', {
+            transient: true,
+            duration: 2200,
+        });
+    }
+
+    function onFailed() {
+        showNotification('Impossible de copier la note.', 'error');
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onCopied).catch(function () {
+            // Fallback exécutif
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (ok) onCopied();
+                else onFailed();
+            } catch (e) {
+                onFailed();
+            }
+        });
+        return;
+    }
+
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) onCopied();
+        else onFailed();
+    } catch (e) {
+        onFailed();
+    }
+}
+
 function closeNoteViewModal() {
     const modal = document.getElementById('noteViewModal');
     if (modal) modal.style.display = 'none';
+    viewingNoteId = null;
     const listModal = document.getElementById('notesListModal');
     if (!listModal || listModal.style.display !== 'flex') {
         unlockPageScroll();
@@ -2414,6 +3864,7 @@ function closeNoteViewModal() {
 }
 window.openNoteViewModal = openNoteViewModal;
 window.closeNoteViewModal = closeNoteViewModal;
+window.copyNoteFromView = copyNoteFromView;
 
 function clearAllNotes() {
     if (cachedNotes.length === 0) {
@@ -2440,11 +3891,26 @@ function clearAllNotes() {
 function submitNoteForm() {
     const titleEl = document.getElementById('noteTitle');
     const contentEl = document.getElementById('noteContent');
+    const reminderEl = document.getElementById('noteReminder');
     const errorEl = document.getElementById('noteTitleError');
     const title = normalizeNoteTitle(titleEl ? titleEl.value : '');
-    const content = normalizeNoteContent(contentEl ? contentEl.value : '');
+    const content = contentEl && contentEl.isContentEditable
+        ? getNoteEditorHtml()
+        : normalizeNoteContent(contentEl ? contentEl.value : '');
     const clientSel = getInvoiceClientSelectionFromControl('noteClient');
     const category = getCategorySelectionFromControl('noteCategory');
+    const reminderAt = noteReminderIsoFromInput(reminderEl ? reminderEl.value : '');
+    const reminderEmail = !!(reminderAt && getNoteReminderEmailChecked());
+    if (reminderEmail) {
+        const userEmail = (window.XALISS_DJANGO && window.XALISS_DJANGO.userEmail) || '';
+        if (!String(userEmail).trim()) {
+            showNotification(
+                'Ajoutez une adresse e-mail à votre compte pour recevoir le rappel par mail.',
+                'warning'
+            );
+            return Promise.resolve(false);
+        }
+    }
 
     if (errorEl) errorEl.textContent = '';
     if (!title) {
@@ -2464,6 +3930,10 @@ function submitNoteForm() {
             clientId: client && client.id ? client.id : null,
             clientName: client && client.name ? client.name : null,
             category: category || '',
+            pinned: !!base.pinned,
+            archived: !!base.archived,
+            reminderAt: reminderAt,
+            reminderEmail: reminderEmail,
             updatedAt: now,
         });
     }
@@ -2477,22 +3947,44 @@ function submitNoteForm() {
                 return buildNotePayload({
                     id: n.id,
                     createdAt: n.createdAt || now,
+                    pinned: n.pinned,
+                    archived: n.archived,
                 }, client);
             });
         } else {
             const newNote = buildNotePayload({
                 id: generateNoteId(),
                 createdAt: now,
+                pinned: false,
+                archived: false,
             }, client);
             lastAddedNoteId = newNote.id;
             nextNotes = [newNote].concat(cachedNotes);
         }
-        return saveNotesList(accountId, { notes: nextNotes }).then(function () {
+        return saveNotesList(accountId, { notes: nextNotes }).then(function (saveResult) {
             resetNoteForm();
-            showNotification(
-                wasEdit ? 'Note modifiée avec succès.' : 'Note ajoutée avec succès.',
-                'success'
-            );
+            if (typeof ensureNoteReminders === 'function') ensureNoteReminders();
+            const userEmail = String((window.XALISS_DJANGO && window.XALISS_DJANGO.userEmail) || '').trim();
+            if (reminderEmail && saveResult && saveResult.reminderEmailSent) {
+                showNotification(
+                    'Note enregistrée — rappel e-mail envoyé' + (userEmail ? ' à ' + userEmail : '') + '.',
+                    'success'
+                );
+            } else if (reminderEmail) {
+                const when = new Date(reminderAt).getTime();
+                const due = !isNaN(when) && when <= Date.now();
+                showNotification(
+                    due
+                        ? ('Note enregistrée — envoi e-mail en cours' + (userEmail ? ' vers ' + userEmail : '') + '.')
+                        : ('Note enregistrée — rappel e-mail programmé' + (userEmail ? ' pour ' + userEmail : '') + '.'),
+                    'success'
+                );
+            } else {
+                showNotification(
+                    wasEdit ? 'Note modifiée avec succès.' : 'Note ajoutée avec succès.',
+                    'success'
+                );
+            }
             return true;
         });
     }
@@ -2531,9 +4023,42 @@ function deleteNoteEntry(noteId) {
     });
 }
 
+function toggleNotePinned(noteId) {
+    const accountId = getCurrentAccountId();
+    const now = new Date().toISOString();
+    let nextPinned = false;
+    const next = cachedNotes.map(function (n) {
+        if (n.id !== noteId) return n;
+        nextPinned = !n.pinned;
+        return Object.assign({}, n, { pinned: nextPinned, updatedAt: now });
+    });
+    return saveNotesList(accountId, { notes: next }).then(function () {
+        showNotification(nextPinned ? 'Note épinglée.' : 'Note désépinglée.', 'success', { transient: true, duration: 2000 });
+    });
+}
+
+function toggleNoteArchived(noteId) {
+    const accountId = getCurrentAccountId();
+    const now = new Date().toISOString();
+    let nextArchived = false;
+    const next = cachedNotes.map(function (n) {
+        if (n.id !== noteId) return n;
+        nextArchived = !n.archived;
+        return Object.assign({}, n, { archived: nextArchived, updatedAt: now });
+    });
+    return saveNotesList(accountId, { notes: next }).then(function () {
+        if (editingNoteId === noteId && nextArchived) resetNoteForm();
+        closeNoteViewModal();
+        showNotification(nextArchived ? 'Note archivée.' : 'Note désarchivée.', 'success', { transient: true, duration: 2000 });
+    });
+}
+
 function bindNotesListeners() {
     if (notesListenersBound) return;
     notesListenersBound = true;
+
+    initNoteRichEditor();
+    initNoteReminderPicker();
 
     const form = document.getElementById('noteForm');
     const cancelBtn = document.getElementById('noteFormCancel');
@@ -2552,6 +4077,12 @@ function bindNotesListeners() {
             e.preventDefault();
             submitNoteForm();
         });
+        form.addEventListener('input', scheduleNoteDraftSave);
+        form.addEventListener('change', scheduleNoteDraftSave);
+    }
+    const noteContentEl = document.getElementById('noteContent');
+    if (noteContentEl) {
+        noteContentEl.addEventListener('input', scheduleNoteDraftSave);
     }
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function () {
@@ -2604,13 +4135,31 @@ function bindNotesListeners() {
     }
 
     function onNotesListClick(e) {
+        const pinBtn = e.target.closest('[data-note-pin]');
+        if (pinBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleNotePinned(pinBtn.getAttribute('data-note-pin'));
+            return;
+        }
+        const archiveBtn = e.target.closest('[data-note-archive]');
+        if (archiveBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleNoteArchived(archiveBtn.getAttribute('data-note-archive'));
+            return;
+        }
         const editBtn = e.target.closest('[data-note-edit]');
         if (editBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             startEditNote(editBtn.getAttribute('data-note-edit'));
             return;
         }
         const delBtn = e.target.closest('[data-note-delete]');
         if (delBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             deleteNoteEntry(delBtn.getAttribute('data-note-delete'));
             return;
         }
@@ -2624,12 +4173,16 @@ function bindNotesListeners() {
 
     const viewModal = document.getElementById('noteViewModal');
     const viewEditBtn = document.getElementById('noteViewEditBtn');
+    const viewCopyBtn = document.getElementById('noteViewCopyBtn');
     const viewCloseBtn = document.getElementById('noteViewCloseBtn');
     if (viewEditBtn) {
         viewEditBtn.addEventListener('click', function () {
             const id = viewEditBtn.getAttribute('data-note-edit');
             if (id) startEditNote(id);
         });
+    }
+    if (viewCopyBtn) {
+        viewCopyBtn.addEventListener('click', copyNoteFromView);
     }
     if (viewCloseBtn) {
         viewCloseBtn.addEventListener('click', closeNoteViewModal);
@@ -2647,6 +4200,8 @@ function initNotesUI() {
     cachedNotes = localData.notes.slice();
     bindNotesListeners();
     renderNotesList();
+    restoreNoteDraftIfAny();
+    if (typeof ensureNoteReminders === 'function') ensureNoteReminders();
 }
 
 function bindCategorySettingsListeners() {
@@ -6001,9 +7556,9 @@ function getFilteredTransactions() {
 // Fonction pour effacer tous les filtres
 function clearFilters() {
     document.getElementById('searchInput').value = '';
-    document.getElementById('singleDate').value = '';
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value = '';
+    setDateTimeLocalValue('singleDate', '', { mode: 'date', dispatch: false });
+    setDateTimeLocalValue('dateFrom', '', { mode: 'date', dispatch: false });
+    setDateTimeLocalValue('dateTo', '', { mode: 'date', dispatch: false });
     searchKeyword = '';
     singleDate = '';
     dateFrom = '';
@@ -6181,11 +7736,15 @@ function validateDate(date, errorElementId) {
     
     // Réinitialiser
     errorElement.textContent = '';
+    if (!inputElement) return true;
     inputElement.classList.remove('error', 'valid');
+    const trigger = document.getElementById(inputElement.id + 'Trigger');
+    if (trigger) trigger.classList.remove('error', 'valid');
     
     // La date est optionnelle, donc si vide, c'est valide
     if (!date || date.trim() === '') {
         inputElement.classList.add('valid');
+        if (trigger) trigger.classList.add('valid');
         return true;
     }
     
@@ -6197,12 +7756,14 @@ function validateDate(date, errorElementId) {
     if (isNaN(selectedDate.getTime())) {
         errorElement.textContent = 'Date invalide';
         inputElement.classList.add('error');
+        if (trigger) trigger.classList.add('error');
         return false;
     }
     
     if (selectedDate > maxFutureDate) {
         errorElement.textContent = 'La date ne peut pas être plus d\'un an dans le futur';
         inputElement.classList.add('error');
+        if (trigger) trigger.classList.add('error');
         return false;
     }
     
@@ -6212,10 +7773,12 @@ function validateDate(date, errorElementId) {
     if (selectedDate < minDate) {
         errorElement.textContent = 'La date ne peut pas être plus de 10 ans dans le passé';
         inputElement.classList.add('error');
+        if (trigger) trigger.classList.add('error');
         return false;
     }
     
     inputElement.classList.add('valid');
+    if (trigger) trigger.classList.add('valid');
     return true;
 }
 
@@ -6353,7 +7916,7 @@ function openEditModal(id) {
     }
     
     // Remplir le formulaire avec les données de la transaction
-    const dateValue = new Date(transaction.date).toISOString().slice(0, 16);
+    const dateValue = toDateTimeLocalValue(transaction.date);
     document.getElementById('editAmount').value = transaction.amount;
     document.getElementById('editDescription').value = transaction.description;
     document.getElementById('editDate').value = dateValue;
@@ -7225,9 +8788,9 @@ function attachEventListeners() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Ajout en cours...';
         
-        // Si la date n'est pas remplie, utiliser la date/heure actuelle
+        // Si la date n'est pas remplie, utiliser la date/heure locale actuelle
         if (!date) {
-            date = new Date().toISOString().slice(0, 16);
+            date = toDateTimeLocalValue(new Date());
         }
         
         const paymentType = paymentPartial && paymentPartial.checked ? 'partial' : 'complete';
@@ -7253,13 +8816,15 @@ function attachEventListeners() {
             document.getElementById('incomeForm').reset();
             resetClientSelectForm('incomeInvoiceClient');
             resetCategorySelectForm('incomeCategory');
-            document.getElementById('incomeDate').value = new Date().toISOString().slice(0, 16);
+            setDateTimeLocalValue('incomeDate', new Date(), { dispatch: false });
             if (paymentComplete) paymentComplete.checked = true;
             if (remainingAmountGroup) remainingAmountGroup.style.display = 'none';
             if (remainingAmount) remainingAmount.removeAttribute('required');
             if (incomeAmount) incomeAmount.setAttribute('required', 'required');
             document.querySelectorAll('#incomeForm .error-message').forEach(el => el.textContent = '');
             document.querySelectorAll('#incomeForm input').forEach(el => el.classList.remove('error', 'valid'));
+            const incomeDateTrigger = document.getElementById('incomeDateTrigger');
+            if (incomeDateTrigger) incomeDateTrigger.classList.remove('error', 'valid');
             document.getElementById('incomeDescriptionCounter').textContent = '0';
             document.getElementById('incomeDescriptionCounter').parentElement.classList.remove('warning', 'danger');
 
@@ -7390,9 +8955,9 @@ function attachEventListeners() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Ajout en cours...';
     
-    // Si la date n'est pas remplie, utiliser la date/heure actuelle
+    // Si la date n'est pas remplie, utiliser la date/heure locale actuelle
     if (!date) {
-        date = new Date().toISOString().slice(0, 16);
+        date = toDateTimeLocalValue(new Date());
     }
     
     // Récupérer le type de paiement et le montant restant
@@ -7411,12 +8976,14 @@ function attachEventListeners() {
 
         document.getElementById('expenseForm').reset();
         resetClientSelectForm('expenseInvoiceClient');
-        document.getElementById('expenseDate').value = new Date().toISOString().slice(0, 16);
+        setDateTimeLocalValue('expenseDate', new Date(), { dispatch: false });
         if (expensePaymentComplete) expensePaymentComplete.checked = true;
         if (expenseRemainingAmountGroup) expenseRemainingAmountGroup.style.display = 'none';
         if (expenseRemainingAmount) expenseRemainingAmount.removeAttribute('required');
         document.querySelectorAll('#expenseForm .error-message').forEach(el => el.textContent = '');
         document.querySelectorAll('#expenseForm input').forEach(el => el.classList.remove('error', 'valid'));
+        const expenseDateTrigger = document.getElementById('expenseDateTrigger');
+        if (expenseDateTrigger) expenseDateTrigger.classList.remove('error', 'valid');
         document.getElementById('expenseDescriptionCounter').textContent = '0';
         document.getElementById('expenseDescriptionCounter').parentElement.classList.remove('warning', 'danger');
 
@@ -7457,8 +9024,8 @@ function attachEventListeners() {
             singleDate = e.target.value;
             // Si un jour unique est sélectionné, vider les champs de plage
             if (singleDate) {
-                if (dateFromInput) dateFromInput.value = '';
-                if (dateToInput) dateToInput.value = '';
+                setDateTimeLocalValue('dateFrom', '', { mode: 'date', dispatch: false });
+                setDateTimeLocalValue('dateTo', '', { mode: 'date', dispatch: false });
                 dateFrom = '';
                 dateTo = '';
             }
@@ -7473,7 +9040,7 @@ function attachEventListeners() {
             dateFrom = e.target.value;
             // Si une plage est utilisée, vider le champ jour unique
             if (dateFrom || dateTo) {
-                if (singleDateInput) singleDateInput.value = '';
+                setDateTimeLocalValue('singleDate', '', { mode: 'date', dispatch: false });
                 singleDate = '';
             }
             currentPage = 1; // Réinitialiser à la première page
@@ -7486,7 +9053,7 @@ function attachEventListeners() {
             dateTo = e.target.value;
             // Si une plage est utilisée, vider le champ jour unique
             if (dateFrom || dateTo) {
-                if (singleDateInput) singleDateInput.value = '';
+                setDateTimeLocalValue('singleDate', '', { mode: 'date', dispatch: false });
                 singleDate = '';
             }
             currentPage = 1; // Réinitialiser à la première page
@@ -7505,8 +9072,8 @@ function attachEventListeners() {
             const completeAmount = document.getElementById('completeAmount').value;
             let date = document.getElementById('completeDate').value;
             
-            // Date optionnelle : défaut = maintenant (pour recette du jour correcte)
-            if (!date) date = new Date().toISOString().slice(0, 16);
+            // Date optionnelle : défaut = maintenant (heure locale exacte)
+            if (!date) date = toDateTimeLocalValue(new Date());
             
             const isAmountValid = validateAmount(completeAmount, 'completeAmountError');
             const isDateValid = validateDate(date, 'completeDateError');
@@ -7702,13 +9269,15 @@ function attachEventListeners() {
         }
     });
 
-    // Initialiser les dates à aujourd'hui
-    if (incomeDate) {
-        incomeDate.value = new Date().toISOString().slice(0, 16);
-    }
-    if (expenseDate) {
-        expenseDate.value = new Date().toISOString().slice(0, 16);
-    }
+    // Initialiser les dates à aujourd'hui (picker compact)
+    initKpDateTimePicker('incomeDate', { placeholder: 'Choisir date et heure', allowClear: true });
+    initKpDateTimePicker('expenseDate', { placeholder: 'Choisir date et heure', allowClear: true });
+    setDateTimeLocalValue('incomeDate', new Date(), { dispatch: false });
+    setDateTimeLocalValue('expenseDate', new Date(), { dispatch: false });
+
+    initKpDateTimePicker('singleDate', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
+    initKpDateTimePicker('dateFrom', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
+    initKpDateTimePicker('dateTo', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
     
     // Initialiser les compteurs de caractères
     const incomeCounter = document.getElementById('incomeDescriptionCounter');
@@ -7995,6 +9564,7 @@ function exportToPDF() {
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
+        yPos += 4;
         doc.text('Résumé Financier', margin, yPos);
         yPos += 10;
         
@@ -8033,107 +9603,135 @@ function exportToPDF() {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
         doc.text('Détail des Transactions', margin, yPos);
-        yPos += 7;
-        
-        // En-tête du tableau
-        doc.setFillColor(...violetDark);
-        doc.rect(margin, yPos - 4, contentWidth, 7, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.text('N°', margin + 1, yPos);
-        doc.text('Type', margin + 8, yPos);
-        doc.text('Description', margin + 20, yPos);
-        doc.text('Montant', margin + 85, yPos);
-        doc.text('Date', margin + 125, yPos);
-        doc.text('Heure', margin + 155, yPos);
-        yPos += 7;
-        
+        yPos += 6;
+
+        // Colonnes (total ≈ contentWidth mm)
+        const cols = {
+            num: { x: margin, w: 10 },
+            type: { x: margin + 10, w: 18 },
+            desc: { x: margin + 28, w: 70 },
+            amount: { x: margin + 98, w: 40 },
+            date: { x: margin + 138, w: 24 },
+            time: { x: margin + 162, w: contentWidth - 162 },
+        };
+        const tableFontSize = 8;
+        const lineH = 4.2;
+        const cellPadY = 2.4;
+        const headerH = 8;
+        const bottomSafe = 20;
+
+        function drawPdfTableHeader(startY) {
+            doc.setFillColor(...violetDark);
+            doc.rect(margin, startY, contentWidth, headerH, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(tableFontSize);
+            doc.setFont('helvetica', 'bold');
+            const hy = startY + cellPadY + 3;
+            doc.text('N°', cols.num.x + 1, hy);
+            doc.text('Type', cols.type.x + 1, hy);
+            doc.text('Description', cols.desc.x + 1, hy);
+            doc.text('Montant', cols.amount.x + cols.amount.w - 1, hy, { align: 'right' });
+            doc.text('Date', cols.date.x + 1, hy);
+            doc.text('Heure', cols.time.x + 1, hy);
+            return startY + headerH;
+        }
+
+        yPos = drawPdfTableHeader(yPos);
+
         // Trier les transactions par date (plus récent en premier)
         const sortedTransactions = [...transactionsToExport].sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
-        
+
         sortedTransactions.forEach((transaction, index) => {
-            // Vérifier si on doit créer une nouvelle page
-            if (yPos > pageHeight - 30) {
-                doc.addPage();
-                yPos = 20;
-                // Réafficher l'en-tête du tableau sur la nouvelle page
-                doc.setFillColor(...violetDark);
-                doc.rect(margin, yPos - 4, contentWidth, 7, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.text('N°', margin + 1, yPos);
-                doc.text('Type', margin + 8, yPos);
-                doc.text('Description', margin + 20, yPos);
-                doc.text('Montant', margin + 85, yPos);
-                doc.text('Date', margin + 125, yPos);
-                doc.text('Heure', margin + 155, yPos);
-                yPos += 7;
-            }
-            
             const type = transaction.type === 'income' ? 'Entrant' : 'Sortant';
             const amount = formatAmount(transaction.amount);
             const transactionDate = new Date(transaction.date);
             const date = transactionDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const time = transactionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            
-            // Calculer la hauteur nécessaire pour la description (texte multiligne)
-            const descriptionWidth = 85 - 20; // Largeur disponible pour la description (de margin+20 à margin+85)
-            doc.setFontSize(8);
+            const desc = String(transaction.description || '').trim() || '—';
+
+            doc.setFontSize(tableFontSize);
             doc.setFont('helvetica', 'normal');
-            const descriptionLines = doc.splitTextToSize(transaction.description, descriptionWidth);
-            const lineHeight = 4; // Hauteur d'une ligne en mm
-            const descriptionHeight = descriptionLines.length * lineHeight;
-            const rowHeight = Math.max(6, descriptionHeight + 1); // Hauteur minimale de 6mm
-            
-            // Ligne avec fond alterné
+            const descriptionLines = doc.splitTextToSize(desc, cols.desc.w - 2);
+            const rowHeight = Math.max(
+                cellPadY * 2 + lineH,
+                cellPadY * 2 + (descriptionLines.length * lineH)
+            );
+
+            // Nouvelle page si la ligne entière ne tient pas
+            if (yPos + rowHeight > pageHeight - bottomSafe) {
+                doc.addPage();
+                yPos = drawPdfTableHeader(18);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(tableFontSize);
+            }
+
+            // Toujours repasser en normal (l'en-tête laisse le gras actif)
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(tableFontSize);
+
+            // Fond alterné
             if (index % 2 === 0) {
                 doc.setFillColor(...gray);
-                doc.rect(margin, yPos - 4, contentWidth, rowHeight, 'F');
+                doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
             }
-            
-            // Couleur selon le type
+
+            // Légère bordure bas pour séparer les lignes
+            doc.setDrawColor(...darkGray);
+            doc.setLineWidth(0.15);
+            doc.line(margin, yPos + rowHeight, margin + contentWidth, yPos + rowHeight);
+
+            const textY = yPos + cellPadY + 3;
+
+            // N°
+            doc.setTextColor(55, 65, 81);
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(sortedTransactions.length - index), cols.num.x + 1, textY);
+
+            // Type coloré
             if (transaction.type === 'income') {
                 doc.setTextColor(...green);
             } else {
                 doc.setTextColor(...red);
             }
-            
-            // Afficher le numéro et le type (centré verticalement)
-            const textY = yPos + (rowHeight / 2) - 2;
-            doc.text(String(sortedTransactions.length - index), margin + 1, textY);
-            doc.text(type, margin + 8, textY);
-            
-            // Afficher la description (multiligne)
-            doc.setTextColor(0, 0, 0);
-            doc.text(descriptionLines, margin + 20, yPos + 2);
-            
-            // Afficher le montant, date et heure (centrés verticalement)
+            doc.setFont('helvetica', 'normal');
+            doc.text(type, cols.type.x + 1, textY);
+
+            // Description (noir, multiligne, sans débordement)
+            doc.setTextColor(30, 41, 59);
+            doc.setFont('helvetica', 'normal');
+            doc.text(descriptionLines, cols.desc.x + 1, textY);
+
+            // Montant aligné à droite (seul élément en gras de la ligne)
             if (transaction.type === 'income') {
                 doc.setTextColor(...green);
             } else {
                 doc.setTextColor(...red);
             }
-            doc.text(amount, margin + 85, textY);
-            
-            doc.setTextColor(0, 0, 0);
-            doc.text(date, margin + 125, textY);
-            doc.text(time, margin + 155, textY);
-            
+            doc.setFont('helvetica', 'bold');
+            doc.text(amount, cols.amount.x + cols.amount.w - 1, textY, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+
+            // Date / heure
+            doc.setTextColor(55, 65, 81);
+            doc.setFont('helvetica', 'normal');
+            doc.text(date, cols.date.x + 1, textY);
+            doc.text(time, cols.time.x + 1, textY);
+
             yPos += rowHeight;
         });
         
-        // Pied de page avec statistiques supplémentaires
-        if (yPos > pageHeight - 40) {
+        // Pied de page avec statistiques complémentaires
+        if (yPos > pageHeight - 45) {
             doc.addPage();
             yPos = 20;
+        } else {
+            yPos += 12;
         }
         
-        yPos += 5;
+        yPos += 4;
         doc.setFillColor(...darkGray);
         doc.rect(margin, yPos - 4, contentWidth, 7, 'F');
         doc.setFont('helvetica', 'bold');

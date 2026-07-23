@@ -196,18 +196,24 @@ def notes_list_create(request):
     org = request.organisation
 
     if request.method == 'GET':
-        return JsonResponse({'notes': note_service.list_notes(org)})
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 50)
+        from finances.services.note_reminders import process_due_note_reminder_emails
+        process_due_note_reminder_emails(org)
+        payload = note_service.list_notes(org, page=page, page_size=page_size)
+        return JsonResponse(payload)
 
     data = _parse_json_body(request)
     if data is None:
         return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
 
     try:
-        note = note_service.create_note(org, data)
+        note = note_service.create_note(org, data, user=request.user)
     except note_service.NoteServiceError as exc:
         return _service_error_response(exc)
 
-    return JsonResponse({'note': note}, status=201)
+    email_sent = bool(note.pop('reminderEmailSent', False))
+    return JsonResponse({'note': note, 'reminderEmailSent': email_sent}, status=201)
 
 
 @login_required
@@ -229,11 +235,89 @@ def note_detail(request, note_id):
         return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
 
     try:
-        note = note_service.update_note(org, note_id, data)
+        note = note_service.update_note(org, note_id, data, user=request.user)
     except note_service.NoteServiceError as exc:
         return _service_error_response(exc)
 
-    return JsonResponse({'note': note})
+    email_sent = bool(note.pop('reminderEmailSent', False))
+    return JsonResponse({'note': note, 'reminderEmailSent': email_sent})
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['POST'])
+def notes_process_reminder_emails(request):
+    from finances.services.note_reminders import process_due_note_reminder_emails
+    sent = process_due_note_reminder_emails(request.organisation)
+    return JsonResponse({'sent': sent})
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def notifications_list_create_clear(request):
+    from finances.services import notifications as notif_service
+
+    org = request.organisation
+    user = request.user
+
+    if request.method == 'GET':
+        return JsonResponse(notif_service.list_notifications(org, user))
+
+    if request.method == 'DELETE':
+        deleted = notif_service.clear_notifications(org, user)
+        return JsonResponse({'succes': True, 'deleted': deleted})
+
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
+
+    # Migration one-shot depuis localStorage
+    if isinstance(data.get('notifications'), list):
+        payload = notif_service.migrate_notifications(org, user, data['notifications'])
+        return JsonResponse(payload)
+
+    try:
+        notif = notif_service.create_notification(org, user, data)
+    except notif_service.NotificationServiceError as exc:
+        return _service_error_response(exc)
+
+    if notif is None:
+        return JsonResponse({'notification': None, 'ignored': True})
+    return JsonResponse({'notification': notif}, status=201)
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['DELETE'])
+def notification_detail(request, notif_id):
+    from finances.services import notifications as notif_service
+
+    try:
+        notif_service.delete_notification(request.organisation, request.user, notif_id)
+    except notif_service.NotificationServiceError as exc:
+        return _service_error_response(exc)
+    return JsonResponse({'succes': True})
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['POST'])
+def notifications_remove_by_prefix(request):
+    from finances.services import notifications as notif_service
+
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
+    prefix = str(data.get('prefix') or '').strip()
+    deleted = notif_service.remove_by_system_id_prefix(
+        request.organisation, request.user, prefix,
+    )
+    return JsonResponse({'succes': True, 'deleted': deleted})
 
 
 @login_required

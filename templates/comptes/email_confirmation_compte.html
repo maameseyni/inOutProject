@@ -1,0 +1,17 @@
+{% extends "comptes/email_base.html" %}
+{% block title %}Confirmez votre compte {{ app_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;">Bonjour{% if utilisateur.first_name %} {{ utilisateur.first_name }}{% endif %},</p>
+<p style="margin:0 0 16px;">Bienvenue sur <strong>{{ app_name }}</strong>.</p>
+<p style="margin:0 0 22px;">Confirmez votre compte en cliquant sur le bouton ci-dessous :</p>
+<p style="margin:0 0 22px;text-align:center;">
+    <a href="{{ confirmation_url }}"
+       style="display:inline-block;background:#43277d;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:10px;">
+        Confirmer mon compte
+    </a>
+</p>
+<p style="margin:0;font-size:13px;color:#64748b;">
+    Ou copiez ce lien :<br>
+    <a href="{{ confirmation_url }}" style="color:#43277d;word-break:break-all;">{{ confirmation_url }}</a>
+</p>
+{% endblock %}

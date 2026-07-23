@@ -106,6 +106,10 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+# Google (fournisseur de confiance) : connecter / connecter un compte local
+# existant si l’e-mail correspond, sans passer par /auth/3rdparty/signup/.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -116,6 +120,7 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
+        'EMAIL_AUTHENTICATION': True,
     },
 }
 
@@ -147,15 +152,28 @@ LOGIN_URL = 'connexion'
 LOGIN_REDIRECT_URL = 'finances:application'
 LOGOUT_REDIRECT_URL = 'connexion'
 
-if DEBUG:
+# E-mail : SMTP si EMAIL_HOST est renseigné (même en DEBUG), sinon console en DEBUG.
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@xaliss.local')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '').strip()
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587') or '587')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = _env_bool('EMAIL_USE_TLS', not _env_bool('EMAIL_USE_SSL', False))
+EMAIL_USE_SSL = _env_bool('EMAIL_USE_SSL', False)
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '20') or '20')
+
+if EMAIL_HOST:
+    EMAIL_BACKEND = os.environ.get(
+        'DJANGO_EMAIL_BACKEND',
+        'django.core.mail.backends.smtp.EmailBackend',
+    )
+elif DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@xaliss.local')
 else:
     EMAIL_BACKEND = os.environ.get(
         'DJANGO_EMAIL_BACKEND',
         'django.core.mail.backends.smtp.EmailBackend',
     )
-    DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@xaliss.app')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

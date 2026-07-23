@@ -357,6 +357,40 @@ header {
     height: 22px;
 }
 
+.app-notifications-btn.has-new-notification {
+    border-color: rgba(231, 32, 96, 0.55);
+    box-shadow: 0 0 0 0 rgba(231, 32, 96, 0.45), 0 6px 18px rgba(67, 39, 125, 0.16);
+    animation: notifBellRing 0.7s ease, notifBellPulse 1.6s ease 0.7s 3;
+}
+
+.app-notifications-btn.has-new-notification svg {
+    transform-origin: 50% 0%;
+    animation: notifBellSwing 0.7s ease;
+}
+
+@keyframes notifBellRing {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(10deg); }
+    60% { transform: rotate(-8deg); }
+    75% { transform: rotate(4deg); }
+}
+
+@keyframes notifBellSwing {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(16deg); }
+    40% { transform: rotate(-14deg); }
+    60% { transform: rotate(10deg); }
+    80% { transform: rotate(-6deg); }
+}
+
+@keyframes notifBellPulse {
+    0% { box-shadow: 0 0 0 0 rgba(231, 32, 96, 0.45), 0 6px 18px rgba(67, 39, 125, 0.16); }
+    70% { box-shadow: 0 0 0 12px rgba(231, 32, 96, 0), 0 6px 18px rgba(67, 39, 125, 0.16); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 32, 96, 0), 0 6px 18px rgba(67, 39, 125, 0.16); }
+}
+
 .notifications-count {
     position: absolute;
     top: -7px;
@@ -371,6 +405,16 @@ header {
     font-weight: 800;
     line-height: 20px;
     box-shadow: 0 3px 10px rgba(231, 32, 96, 0.28);
+}
+
+.app-notifications-btn.has-new-notification .notifications-count {
+    animation: notifBadgePop 0.45s ease;
+}
+
+@keyframes notifBadgePop {
+    0% { transform: scale(0.6); }
+    55% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }
 
 .notifications-count[hidden] {
@@ -880,6 +924,11 @@ body.app-tab-notes header {
     min-height: 100%;
     height: 100%;
     box-sizing: border-box;
+    padding: 28px;
+}
+
+.notes-layout .action-card h2 {
+    margin: 0 0 12px;
 }
 
 .notes-form-card .note-form {
@@ -887,6 +936,15 @@ body.app-tab-notes header {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
+    gap: 0;
+}
+
+.notes-form-card .note-form > .form-group {
+    margin-bottom: 20px;
+}
+
+.notes-form-card .note-form > .form-group > label {
+    margin-bottom: 8px;
 }
 
 .notes-form-card .note-form > .note-content-group {
@@ -894,11 +952,265 @@ body.app-tab-notes header {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    margin-bottom: 20px;
+}
+
+.notes-intro {
+    margin: 0 0 20px;
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.notes-attach-label {
+    margin: 0 0 10px;
+    font-weight: 400;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.notes-form-card #noteContent {
+    flex: 1 1 auto;
+    min-height: 140px;
+    resize: vertical;
+}
+
+.notes-attach-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+    overflow: visible;
+    position: relative;
+    z-index: 2;
+}
+
+.notes-attach-row > .form-group {
+    min-width: 0;
+    margin-bottom: 0;
+    overflow: visible;
+}
+
+.notes-attach-row > .form-group > label {
+    margin-bottom: 8px;
+}
+
+.notes-attach-row .kp-select-trigger,
+.notes-attach-row .form-group select,
+.notes-attach-row .client-other-input {
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding: 0 16px;
+    line-height: 1.2;
+    border-radius: var(--param-btn-radius, 8px);
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+.notes-attach-row .kp-select-trigger-label {
+    padding: 0;
+    line-height: 1.2;
+    font-size: 1rem;
+}
+
+.notes-form-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 0;
+}
+
+.notes-layout .note-field-hint {
+    margin-top: 5px;
+    font-size: 0.85em;
+}
+
+.notes-layout .note-draft-hint {
+    margin: 8px 0 0;
+}
+
+.notes-layout .note-rich-editor {
+    min-height: 180px;
+}
+
+.notes-layout .note-reminder-trigger,
+.notes-layout .note-reminder-clear {
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding: 0 16px;
+    line-height: 1.2;
+    border-radius: var(--param-btn-radius, 8px);
+    box-sizing: border-box;
+}
+
+.notes-layout .note-reminder-clear {
+    width: 48px;
+    padding: 0;
+}
+
+.note-rich-editor {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 180px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.note-rich-editor:focus-within {
+    border-color: #43277d;
+    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1);
+}
+
+.note-rich-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    background: #f8f6fc;
+    border-bottom: 1px solid #ebe6f2;
+}
+
+.note-rich-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #43277d;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.note-rich-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.note-rich-btn:hover {
+    background: rgba(67, 39, 125, 0.1);
+}
+
+.note-rich-btn.is-active {
+    background: #43277d;
+    color: #fff;
+}
+
+.note-rich-sep {
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: #ddd5eb;
+    flex-shrink: 0;
+}
+
+.modal-content.modal-content-note-link {
+    max-width: 440px;
+}
+
+.note-rich-body {
+    flex: 1 1 auto;
+    min-height: 140px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 14px 16px;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: #1f2937;
+    outline: none;
+    word-break: break-word;
+}
+
+.note-rich-body:empty::before,
+.note-rich-body.is-empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.note-rich-body p,
+.note-view-body p {
+    margin: 0 0 0.55em;
+}
+
+.note-rich-body p:last-child,
+.note-view-body p:last-child {
+    margin-bottom: 0;
+}
+
+.note-rich-body ul,
+.note-rich-body ol,
+.note-view-body ul,
+.note-view-body ol {
+    margin: 0.35em 0 0.65em;
+    padding-left: 1.35em;
+}
+
+.note-rich-body li,
+.note-view-body li {
+    margin: 0.2em 0;
+}
+
+.note-rich-body h3,
+.note-view-body h3 {
+    margin: 0.55em 0 0.35em;
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: #43277d;
+    line-height: 1.35;
+}
+
+.note-rich-body blockquote,
+.note-view-body blockquote {
+    margin: 0.5em 0;
+    padding: 8px 12px;
+    border-left: 3px solid #43277d;
+    background: #f8f6fc;
+    color: #475569;
+    border-radius: 0 8px 8px 0;
+}
+
+.note-rich-body strong,
+.note-view-body strong,
+.note-rich-body b,
+.note-view-body b {
+    font-weight: 700;
+}
+
+.note-rich-body a,
+.note-view-body a {
+    color: #43277d;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-word;
+}
+
+.note-rich-body a:hover,
+.note-view-body a:hover {
+    color: #e72060;
 }
 
 .notes-list-card .notes-list {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
+    height: 340px;
+    min-height: 340px;
+    max-height: 340px;
+    overflow-y: auto;
 }
 
 .notes-list-title {
@@ -925,6 +1237,22 @@ body.app-tab-notes header {
     margin-top: auto;
     padding-top: 14px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notes-preview-hint {
+    margin: 0;
+    padding: 0 2px;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    flex-shrink: 0;
+}
+
+.notes-preview-hint[hidden] {
+    display: none;
 }
 
 .notes-list-card-bottom .clients-form-actions {
@@ -981,46 +1309,8 @@ body.app-tab-notes header {
     box-shadow: none;
 }
 
-.notes-intro {
-    margin: 0 0 16px;
-    color: #64748b;
-    font-size: 0.95rem;
-    line-height: 1.45;
-}
-
-.notes-attach-label {
-    margin: 18px 0 10px;
-    font-weight: 400;
-    color: #334155;
-    font-size: 0.95rem;
-}
-
-.notes-form-card #noteContent {
-    flex: 1 1 auto;
-    min-height: 140px;
-    resize: vertical;
-}
-
-.notes-attach-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-.notes-attach-row > .form-group {
-    min-width: 0;
-    margin-bottom: 0;
-}
-
-.notes-form-actions {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 10px;
-    margin-top: auto;
-    padding-top: 8px;
+.notes-attach-row .kp-select-wrap.is-open {
+    z-index: 90;
 }
 
 .notes-layout .btn.btn-income.parametres-btn-compact {
@@ -1087,32 +1377,49 @@ body.app-tab-notes header {
 .notes-filter-chips {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
-    margin: 0 0 14px;
+    margin: 0 0 16px;
+    padding: 6px;
+    background: #f3eef9;
+    border: 1px solid #ebe6f2;
+    border-radius: 14px;
 }
 
 .notes-filter-chip {
     appearance: none;
-    border: 1px solid #d8d0ea;
-    background: #fff;
-    color: #43277d;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #5b4a7a;
     font-size: 0.82rem;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: inherit;
     line-height: 1.2;
-    padding: 6px 12px;
-    border-radius: 999px;
+    padding: 8px 14px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease;
 }
 
 .notes-filter-chip:hover {
-    border-color: #43277d;
-    background: #f8f6fc;
+    background: rgba(255, 255, 255, 0.72);
+    color: #43277d;
+}
+
+.notes-filter-chip:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.18);
 }
 
 .notes-filter-chip.active {
     background: #43277d;
     border-color: #43277d;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(67, 39, 125, 0.28);
+}
+
+.notes-filter-chip.active:hover {
+    background: #361f66;
     color: #fff;
 }
 
@@ -1171,14 +1478,26 @@ body.app-tab-notes header {
 }
 
 @media (min-width: 769px) {
-    .notes-list {
+    .notes-modal-list {
         max-height: none;
+    }
+
+    .notes-list-card .notes-list {
+        height: 340px;
+        min-height: 340px;
+        max-height: 340px;
     }
 }
 
 @media (max-width: 768px) {
-    .notes-list {
+    .notes-modal-list {
         max-height: min(70vh, 640px);
+    }
+
+    .notes-list-card .notes-list {
+        height: 340px;
+        min-height: 340px;
+        max-height: 340px;
     }
 }
 
@@ -1186,12 +1505,12 @@ body.app-tab-notes header {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 14px 104px 10px 18px;
+    padding: 14px 188px 10px 18px;
     border-radius: 12px;
     background: #faf9fc;
     border: 1px solid #ebe6f2;
     position: relative;
-    min-height: 118px;
+    min-height: 0;
     cursor: pointer;
     opacity: 0;
     animation: slideInRight 0.4s ease backwards;
@@ -1207,19 +1526,6 @@ body.app-tab-notes header {
     transform: translateY(-2px);
     box-shadow: 0 10px 24px rgba(67, 39, 125, 0.14);
     border-color: rgba(67, 39, 125, 0.28);
-}
-
-/* Palette pastel déterministe (selon l'id de la note) — tons violets assortis à l'app */
-/* Barre d'accent jaune à gauche, comme le vert/rouge des transactions */
-.note-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 4px;
-    border-radius: 2px;
-    background-color: #f59e0b;
 }
 
 .note-item--new {
@@ -1262,13 +1568,16 @@ body.app-tab-notes header {
     color: #475569;
     font-size: 0.88rem;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.45;
     word-break: break-word;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 5;
-    line-clamp: 5;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    max-height: calc(1.45em * 3);
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 .note-item-links {
@@ -1279,8 +1588,8 @@ body.app-tab-notes header {
 }
 
 .note-card-footer {
-    margin-top: auto;
-    padding-top: 6px;
+    margin-top: 4px;
+    padding-top: 4px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1297,12 +1606,596 @@ body.app-tab-notes header {
 
 .note-card-actions {
     position: absolute;
-    top: 50%;
+    top: 12px;
     right: 14px;
-    transform: translateY(-50%);
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
+    z-index: 2;
+}
+
+.note-card-actions .edit-btn,
+.note-card-actions .delete-btn,
+.note-card-actions .note-pin-btn,
+.note-card-actions .note-archive-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid #43277d;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 0;
+    box-sizing: border-box;
+    color: #43277d;
+    transition: all 0.3s ease;
+}
+
+.note-card-actions .edit-btn svg,
+.note-card-actions .delete-btn svg,
+.note-card-actions .note-pin-btn svg,
+.note-card-actions .note-archive-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.note-card-actions .edit-btn:hover,
+.note-card-actions .delete-btn:hover,
+.note-card-actions .note-pin-btn:hover,
+.note-card-actions .note-archive-btn:hover {
+    background: #43277d;
+    transform: scale(1.05);
+}
+
+.note-card-actions .edit-btn:hover svg path,
+.note-card-actions .delete-btn:hover svg path,
+.note-card-actions .note-pin-btn:hover svg path,
+.note-card-actions .note-archive-btn:hover svg path {
+    stroke: #fff;
+}
+
+.note-card-actions .note-pin-btn.is-active {
+    background: #43277d;
+    border-color: #43277d;
+    color: #fff;
+}
+
+.note-card-actions .note-pin-btn.is-active svg path {
+    stroke: #fff;
+}
+
+.note-card-actions .note-archive-btn.is-active {
+    background: #e2e8f0;
+    border-color: #64748b;
+    color: #475569;
+}
+
+.note-card-actions .note-archive-btn.is-active svg path {
+    stroke: #475569;
+}
+
+.note-card-actions .note-pin-btn.is-active:hover,
+.note-card-actions .note-archive-btn.is-active:hover {
+    background: #43277d;
+    border-color: #43277d;
+    color: #fff;
+}
+
+.note-card-actions .note-pin-btn.is-active:hover svg path,
+.note-card-actions .note-archive-btn.is-active:hover svg path {
+    stroke: #fff;
+}
+
+.note-card-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.note-card-heading .note-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.note-pin-marker {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: #43277d;
+    margin-top: 2px;
+}
+
+.note-pin-marker svg {
+    width: 16px;
+    height: 16px;
+}
+
+.note-card--archived {
+    opacity: 0.78;
+}
+
+.note-card--archived .note-card-title {
+    color: #64748b;
+}
+
+.note-reminder-badge,
+.note-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.35;
+    background: #f3eef9;
+    color: #43277d;
+}
+
+.note-reminder-badge.is-due {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.note-status-badge--pinned {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.note-status-badge--archived {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.note-reminder-picker {
+    position: relative;
+    width: 100%;
+}
+
+.note-reminder-control {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.note-reminder-trigger {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--kp-color-border-input, #e5e7eb);
+    border-radius: var(--kp-radius-input, 10px);
+    background: var(--kp-color-surface-solid, #fff);
+    color: var(--kp-color-text, #333);
+    font-size: 1em;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: var(--kp-shadow-input, 0 2px 4px rgba(67, 39, 125, 0.05));
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.note-reminder-trigger:hover {
+    border-color: var(--kp-color-border-input-hover, #cbd5e1);
+    box-shadow: var(--kp-shadow-input-hover, 0 2px 8px rgba(67, 39, 125, 0.08));
+}
+
+.note-reminder-trigger[aria-expanded="true"],
+.note-reminder-trigger:focus {
+    outline: none;
+    border-color: var(--kp-color-primary, #43277d);
+    box-shadow: var(--kp-focus-ring, 0 0 0 3px rgba(67, 39, 125, 0.12)), var(--kp-shadow-input-hover, 0 2px 8px rgba(67, 39, 125, 0.08));
+}
+
+.note-reminder-trigger.error {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.note-reminder-trigger.valid {
+    border-color: #10b981;
+}
+
+.note-reminder-trigger-icon {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: #43277d;
+}
+
+.note-reminder-trigger-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-reminder-trigger-text.is-placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.note-reminder-clear {
+    flex: 0 0 auto;
+    width: 52px;
+    align-self: stretch;
+    border: 2px solid var(--kp-color-border-input, #e5e7eb);
+    border-radius: var(--kp-radius-input, 10px);
+    background: var(--kp-color-surface-solid, #fff);
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--kp-shadow-input, 0 2px 4px rgba(67, 39, 125, 0.05));
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.note-reminder-clear:hover {
+    color: #c41e5a;
+    border-color: #f0c8d6;
+    background: #fff7fa;
+}
+
+.note-reminder-clear svg {
+    width: 14px;
+    height: 14px;
+}
+
+.note-reminder-popover {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    z-index: 40;
+    width: min(100%, 340px);
+    padding: 10px;
+    border: 1px solid #ebe6f2;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(67, 39, 125, 0.16);
+}
+
+.note-reminder-body {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.note-reminder-cal {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.note-reminder-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.note-reminder-month-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: capitalize;
+}
+
+.note-reminder-nav {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: #f8f6fc;
+    color: #43277d;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.note-reminder-nav:hover {
+    background: #efeaf8;
+}
+
+.note-reminder-weekdays,
+.note-reminder-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.note-reminder-weekdays {
+    margin-bottom: 4px;
+}
+
+.note-reminder-weekdays span {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: lowercase;
+    padding: 2px 0;
+}
+
+.note-reminder-day {
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #334155;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.note-reminder-day:hover:not(:disabled) {
+    background: #f3eef9;
+    color: #43277d;
+}
+
+.note-reminder-day.is-outside {
+    color: #cbd5e1;
+}
+
+.note-reminder-day.is-today:not(.is-selected) {
+    box-shadow: inset 0 0 0 1px rgba(67, 39, 125, 0.35);
+}
+
+.note-reminder-day.is-selected {
+    background: #43277d;
+    color: #fff;
+    font-weight: 600;
+}
+
+.note-reminder-day:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.note-reminder-time-panel {
+    flex: 0 0 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 4px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f8f6fc 0%, #f3eef9 100%);
+    border: 1px solid #ebe6f2;
+}
+
+.note-reminder-time-title {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #7c6b9a;
+}
+
+.note-reminder-time-wheels {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+}
+
+.note-reminder-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.note-reminder-spin-btn {
+    width: 24px;
+    height: 18px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #43277d;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.note-reminder-spin-btn:hover {
+    background: rgba(67, 39, 125, 0.1);
+}
+
+.note-reminder-spin-btn:active {
+    background: rgba(67, 39, 125, 0.16);
+}
+
+.note-reminder-spin-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.note-reminder-spin-value {
+    box-sizing: border-box;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    margin: 0;
+    padding: 0 2px !important;
+    display: inline-block;
+    text-align: center;
+    border-radius: 6px;
+    background: #fff !important;
+    border: 1px solid rgba(67, 39, 125, 0.18) !important;
+    box-shadow: 0 1px 2px rgba(67, 39, 125, 0.08) !important;
+    color: #43277d !important;
+    font-size: 0.78rem !important;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-family: inherit;
+    line-height: 26px !important;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.form-group input.note-reminder-spin-value:hover,
+.note-reminder-spin-value:hover {
+    border-color: rgba(67, 39, 125, 0.35) !important;
+    box-shadow: 0 1px 2px rgba(67, 39, 125, 0.08) !important;
+}
+
+.form-group input.note-reminder-spin-value:focus,
+.note-reminder-spin-value:focus {
+    outline: none;
+    border-color: #43277d !important;
+    box-shadow: 0 0 0 2px rgba(67, 39, 125, 0.18) !important;
+    background: #fff !important;
+}
+
+.note-reminder-spin-value::-webkit-outer-spin-button,
+.note-reminder-spin-value::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.note-reminder-time-colon {
+    color: #43277d;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin: 0 1px;
+    padding-bottom: 1px;
+}
+
+.note-reminder-time-select-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.note-reminder-popover-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f1eef6;
+}
+
+.note-reminder-link-btn {
+    border: none;
+    background: transparent;
+    color: #43277d;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 4px;
+}
+
+.note-reminder-link-btn:hover {
+    text-decoration: underline;
+}
+
+.note-reminder-apply-btn {
+    border: none;
+    border-radius: 7px;
+    background: #43277d;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+}
+
+.note-reminder-apply-btn:hover {
+    background: #361f66;
+}
+
+@media (max-width: 420px) {
+    .note-reminder-popover {
+        width: min(100%, 300px);
+    }
+
+    .note-reminder-body {
+        flex-direction: column;
+    }
+
+    .note-reminder-time-panel {
+        flex: 1 1 auto;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 8px 12px;
+    }
+
+    .note-reminder-time-wheels {
+        gap: 6px;
+    }
+}
+
+.note-field-hint {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.note-reminder-email-opt {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.35;
+}
+
+.note-reminder-email-opt[hidden] {
+    display: none;
+}
+
+.note-reminder-email-input {
+    width: 13px;
+    height: 13px;
+    margin: 0.2em 0 0;
+    padding: 0;
+    accent-color: #43277d;
+    cursor: pointer;
+    flex-shrink: 0;
+    vertical-align: top;
+}
+
+.note-reminder-email-opt > span {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.note-draft-hint {
+    margin: 8px 0 0;
+    color: #059669;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
 .modal-content.modal-content-note-view {
@@ -1353,13 +2246,17 @@ body.app-tab-notes header {
     color: #1e293b;
     font-size: 0.95rem;
     line-height: 1.6;
-    white-space: pre-wrap;
     word-break: break-word;
+}
+
+.note-view-body.note-view-body--plain {
+    white-space: pre-wrap;
 }
 
 .note-view-body--empty {
     color: #94a3b8;
     font-style: italic;
+    white-space: pre-wrap;
 }
 
 .note-view-date {
@@ -1410,6 +2307,39 @@ body.app-tab-notes header {
     transform: none;
 }
 
+.note-view-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.note-view-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1.5px solid #ddd5eb;
+    border-radius: 8px;
+    background: #faf9fc;
+    color: #43277d;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.note-view-copy-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.note-view-copy-btn:hover {
+    background: #43277d;
+    border-color: #43277d;
+    color: #fff;
+}
+
 .note-view-actions .clients-btn-clear {
     background: #fff;
     color: #c41e5a;
@@ -1432,21 +2362,26 @@ body.app-tab-notes header {
     }
 
     .note-card {
-        padding-right: 96px;
+        padding-right: 172px;
     }
 
     .note-card-actions {
-        right: 12px;
+        right: 10px;
+        gap: 6px;
     }
 
     .note-card-actions .edit-btn,
-    .note-card-actions .delete-btn {
+    .note-card-actions .delete-btn,
+    .note-card-actions .note-pin-btn,
+    .note-card-actions .note-archive-btn {
         width: 34px;
         height: 34px;
     }
 
     .note-card-actions .edit-btn svg,
-    .note-card-actions .delete-btn svg {
+    .note-card-actions .delete-btn svg,
+    .note-card-actions .note-pin-btn svg,
+    .note-card-actions .note-archive-btn svg {
         width: 16px;
         height: 16px;
     }
@@ -2251,7 +3186,7 @@ body.app-tab-notes header {
     margin-bottom: 0;
 }
 
-.transactions-layout .action-card .form-group input,
+.transactions-layout .action-card .form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value),
 .transactions-layout .action-card .form-group select,
 .transactions-layout .action-card .kp-select-trigger {
     height: 48px;
@@ -2261,6 +3196,54 @@ body.app-tab-notes header {
     line-height: 1.2;
     border-radius: var(--tx-btn-radius);
     box-sizing: border-box;
+}
+
+.transactions-layout .action-card .note-reminder-trigger,
+.transactions-layout .action-card .note-reminder-clear {
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding: 0 16px;
+    line-height: 1.2;
+    border-radius: var(--tx-btn-radius);
+    box-sizing: border-box;
+}
+
+.transactions-layout .action-card .note-reminder-clear {
+    width: 48px;
+    padding: 0;
+}
+
+.transactions-layout .date-filters .note-reminder-picker {
+    min-width: 220px;
+}
+
+.transactions-layout .date-filters .note-reminder-trigger,
+.transactions-layout .date-filters .note-reminder-clear {
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding: 0 16px;
+    line-height: 1.2;
+    border-radius: var(--tx-btn-radius);
+    box-sizing: border-box;
+}
+
+.transactions-layout .date-filters .note-reminder-clear {
+    width: 48px;
+    padding: 0;
+}
+
+.note-reminder-popover--date {
+    width: min(100%, 248px);
+}
+
+.note-reminder-popover--date .note-reminder-body {
+    display: block;
+}
+
+.note-reminder-popover--date .note-reminder-popover-actions {
+    justify-content: flex-start;
 }
 
 .transactions-layout .action-card .kp-select-trigger {
@@ -2627,6 +3610,17 @@ body.app-tab-notes header {
     box-shadow: 0 12px 32px rgba(67, 39, 125, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06);
     overflow: hidden;
     box-sizing: border-box;
+}
+
+.kp-select-wrap.is-open {
+    z-index: 80;
+}
+
+.kp-select-wrap.is-dropup .kp-select-dropdown,
+.kp-select-wrap.is-dropup > .kp-select-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    box-shadow: 0 -12px 32px rgba(67, 39, 125, 0.14), 0 -4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .kp-select-dropdown[hidden] {
@@ -3073,7 +4067,8 @@ body.app-tab-notes header {
     border-left-color: #ef4444;
 }
 
-.notification-item--warning {
+.notification-item--warning,
+.notification-item--info {
     border-left-color: #f59e0b;
 }
 
@@ -3112,7 +4107,8 @@ body.app-tab-notes header {
     background: rgba(239, 68, 68, 0.12);
 }
 
-.notification-item--warning .notification-item-icon {
+.notification-item--warning .notification-item-icon,
+.notification-item--info .notification-item-icon {
     color: #b45309;
     background: rgba(245, 158, 11, 0.14);
 }
@@ -3158,7 +4154,8 @@ body.app-tab-notes header {
     background: rgba(239, 68, 68, 0.12);
 }
 
-.notification-item--warning .notification-item-badge {
+.notification-item--warning .notification-item-badge,
+.notification-item--info .notification-item-badge {
     color: #b45309;
     background: rgba(245, 158, 11, 0.14);
 }
@@ -3888,28 +4885,36 @@ body.app-tab-notes header {
     box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1), 0 4px 14px rgba(67, 39, 125, 0.08);
 }
 
-.form-group-company-website .company-website-field {
+.form-group-company-website .company-website-field,
+.parametres-layout .company-profile-banner .form-group-company-website .company-website-field,
+.parametres-layout .form-group-company-website input.company-website-field {
     flex: 1 1 auto;
     min-width: 0;
     width: auto;
     max-width: 100%;
     margin: 0;
-    border: none;
+    border: none !important;
     border-radius: 0;
-    box-shadow: none;
-    background: transparent;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
-.form-group-company-website .company-website-field:hover {
-    border: none;
-    box-shadow: none;
+.form-group-company-website .company-website-field:hover,
+.parametres-layout .form-group-company-website input.company-website-field:hover {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
-.form-group-company-website .company-website-field:focus {
+.form-group-company-website .company-website-field:focus,
+.parametres-layout .form-group-company-website input.company-website-field:focus {
     outline: none;
-    border: none;
-    box-shadow: none;
-    background: rgba(255, 255, 255, 0.65);
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 .company-website-qr-block {
@@ -4074,7 +5079,7 @@ body.app-tab-notes header {
     font-weight: 500;
 }
 
-.form-group input,
+.form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value),
 .form-group select {
     width: 100%;
     padding: 14px 16px;
@@ -4088,13 +5093,13 @@ body.app-tab-notes header {
     box-sizing: border-box;
 }
 
-.form-group input:hover,
+.form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value):hover,
 .form-group select:hover {
     border-color: var(--kp-color-border-input-hover);
     box-shadow: var(--kp-shadow-input-hover);
 }
 
-.form-group input:focus,
+.form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value):focus,
 .form-group select:focus {
     outline: none;
     border-color: var(--kp-color-primary);
@@ -4102,12 +5107,12 @@ body.app-tab-notes header {
     background-color: var(--kp-color-surface-solid);
 }
 
-.form-group input.error {
+.form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value).error {
     border-color: #ef4444;
     background-color: #fef2f2;
 }
 
-.form-group input.valid {
+.form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value).valid {
     border-color: #10b981;
 }
 
@@ -4173,10 +5178,28 @@ body.app-tab-notes header {
 }
 
 .radio-label input[type="radio"] {
-    width: auto;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
     margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    box-shadow: none;
+    background: transparent;
+    flex-shrink: 0;
     cursor: pointer;
     accent-color: #43277d;
+    appearance: auto;
+    -webkit-appearance: auto;
+}
+
+.radio-label input[type="radio"]:hover,
+.radio-label input[type="radio"]:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
 }
 
 .radio-label input[type="radio"]:checked + span {

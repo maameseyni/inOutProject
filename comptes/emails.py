@@ -1,13 +1,16 @@
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
+from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_encode
 
 from .models import EnvoiEmailJournalier
 from .tokens import confirmation_email_token
+
+APP_NAME = 'Xaliss'
 
 
 def _email_normalise(email: str) -> str:
@@ -58,6 +61,33 @@ def _rendre_template_ou_defaut(template_name: str, context: dict, fallback: str)
         return fallback
 
 
+def envoyer_mail(
+    sujet: str,
+    message: str,
+    destinataires: list[str],
+    html_message: str | None = None,
+) -> None:
+    """Envoi texte (+ HTML) — même canal SMTP que confirmation / mot de passe oublié."""
+    destinataires = [str(e or '').strip() for e in destinataires if str(e or '').strip()]
+    if not destinataires:
+        raise ValueError('Aucun destinataire e-mail.')
+    sujet = ' '.join(str(sujet or '').splitlines()).strip()
+    email = EmailMultiAlternatives(
+        sujet,
+        message,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+        destinataires,
+    )
+    if html_message:
+        email.attach_alternative(html_message, 'text/html')
+    email.send(fail_silently=False)
+
+
+# Compatibilité anciens appels
+def envoyer_mail_texte(sujet: str, message: str, destinataires: list[str]) -> None:
+    envoyer_mail(sujet, message, destinataires)
+
+
 def envoyer_confirmation_email(request, utilisateur) -> None:
     uidb64 = urlsafe_base64_encode(force_bytes(utilisateur.pk))
     token = confirmation_email_token.make_token(utilisateur)
@@ -67,30 +97,75 @@ def envoyer_confirmation_email(request, utilisateur) -> None:
         'user': utilisateur,
         'utilisateur': utilisateur,
         'confirmation_url': confirmation_url,
-        'app_name': 'Xaliss',
+        'app_name': APP_NAME,
     }
 
     subject = _rendre_template_ou_defaut(
         'comptes/email_confirmation_compte_sujet.txt',
         context,
-        'Confirmez votre compte Xaliss',
+        f'Confirmez votre compte {APP_NAME}',
     )
-    subject = ' '.join(subject.splitlines()).strip()
     message = _rendre_template_ou_defaut(
         'comptes/email_confirmation_compte.txt',
         context,
         (
-            'Bienvenue sur Xaliss.\n\n'
+            f'Bienvenue sur {APP_NAME}.\n\n'
             'Confirmez votre compte en ouvrant ce lien :\n'
             f'{confirmation_url}\n'
         ),
     )
+    html_message = _rendre_template_ou_defaut(
+        'comptes/email_confirmation_compte.html',
+        context,
+        '',
+    ) or None
 
-    send_mail(
-        subject,
-        message,
-        getattr(settings, 'DEFAULT_FROM_EMAIL', None),
-        [utilisateur.email],
-        fail_silently=False,
-    )
+    envoyer_mail(subject, message, [utilisateur.email], html_message=html_message)
     _marquer_email_envoye(utilisateur.email, EnvoiEmailJournalier.TYPE_CONFIRMATION)
+
+
+def envoyer_rappel_note_email(note, utilisateur) -> None:
+    """Rappel de note — même design / canal que confirmation et mot de passe oublié."""
+    email = (utilisateur.email or '').strip() if utilisateur else ''
+    if not email or not note.rappel_le:
+        raise ValueError('Destinataire ou date de rappel manquant.')
+
+    titre = (note.titre or 'Note').strip() or 'Note'
+    when = timezone.localtime(note.rappel_le)
+    when_label = when.strftime('%d/%m/%Y à %H:%M')
+    apercu = ' '.join(strip_tags(note.contenu or '').split())
+    if len(apercu) > 280:
+        apercu = apercu[:279].rstrip() + '…'
+
+    context = {
+        'user': utilisateur,
+        'utilisateur': utilisateur,
+        'note': note,
+        'titre': titre,
+        'when_label': when_label,
+        'apercu': apercu,
+        'app_name': APP_NAME,
+    }
+
+    subject = _rendre_template_ou_defaut(
+        'finances/email_rappel_note_sujet.txt',
+        context,
+        f'Rappel : {titre} — {APP_NAME}',
+    )
+    message = _rendre_template_ou_defaut(
+        'finances/email_rappel_note.txt',
+        context,
+        (
+            f'Bonjour,\n\n'
+            f'Rappel pour votre note « {titre} » ({when_label}).\n\n'
+            f'{apercu}\n\n'
+            f"L'équipe {APP_NAME}\n"
+        ),
+    )
+    html_message = _rendre_template_ou_defaut(
+        'finances/email_rappel_note.html',
+        context,
+        '',
+    ) or None
+
+    envoyer_mail(subject, message, [email], html_message=html_message)

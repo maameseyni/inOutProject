@@ -657,21 +657,152 @@
     }
 
     async function loadNotesFromApi() {
-        const data = await apiFetch('/notes/');
         const accountId = getCurrentAccountId();
-        persistNotesLocal(accountId, { notes: data.notes || [] });
+        const pageSize = 50;
+        let page = 1;
+        let totalPages = 1;
+        const allNotes = [];
+
+        do {
+            const data = await apiFetch(
+                '/notes/?page=' + encodeURIComponent(page)
+                + '&page_size=' + encodeURIComponent(pageSize)
+            );
+            const batch = Array.isArray(data.notes) ? data.notes : [];
+            allNotes.push.apply(allNotes, batch);
+            totalPages = Math.max(1, Number(data.totalPages) || 1);
+            if (page === 1) {
+                persistNotesLocal(accountId, { notes: allNotes.slice() });
+            }
+            page += 1;
+        } while (page <= totalPages);
+
+        persistNotesLocal(accountId, { notes: allNotes });
+        if (typeof ensureNoteReminders === 'function') ensureNoteReminders();
         await persistOfflineSnapshot();
     }
+
+    let noteReminderEmailInFlight = false;
+    let noteReminderEmailLastAt = 0;
+    window.xalissProcessNoteReminderEmails = function () {
+        const now = Date.now();
+        if (noteReminderEmailInFlight || (now - noteReminderEmailLastAt) < 20000) return;
+        if (offline && !offline.isOnline()) return;
+        noteReminderEmailInFlight = true;
+        noteReminderEmailLastAt = now;
+        apiFetchNetwork('/notes/rappels-email/', {
+            method: 'POST',
+            body: '{}',
+        }).catch(function () {
+            /* silencieux : l’envoi sera retenté au prochain sync */
+        }).finally(function () {
+            noteReminderEmailInFlight = false;
+        });
+    };
 
     async function loadUserProfileFromApi() {
         const data = await apiFetch('/utilisateur/profil/');
         if (typeof applyUserProfileToForm === 'function') {
-            applyUserProfileToForm(data.profil || {});
+            await applyUserProfileToForm(data.profil || {});
         }
         if (data.profil && typeof applyOrgAppSettingsFromApi === 'function') {
             applyOrgAppSettingsFromApi({ currencyLabel: data.profil.currencyLabel });
         }
     }
+
+    function getLocalNotificationsMigrationKey() {
+        const userId = (cfg && cfg.userId) || 'anonymous';
+        const orgSlug = (cfg && cfg.orgSlug) || 'default';
+        return 'xaliss_notifications_migrated_' + orgSlug + '_' + userId;
+    }
+
+    async function loadNotificationsFromApi() {
+        const data = await apiFetch('/notifications/');
+        const remote = Array.isArray(data.notifications) ? data.notifications : [];
+        const ignored = Array.isArray(data.ignoredSystemIds) ? data.ignoredSystemIds : [];
+
+        const migrationKey = getLocalNotificationsMigrationKey();
+        const alreadyMigrated = localStorage.getItem(migrationKey) === '1';
+        const localList = typeof window.xalissGetNotifications === 'function'
+            ? window.xalissGetNotifications()
+            : [];
+
+        if (!alreadyMigrated && localList.length && remote.length === 0) {
+            try {
+                const migrated = await apiFetchNetwork('/notifications/', {
+                    method: 'POST',
+                    body: JSON.stringify({ notifications: localList }),
+                });
+                localStorage.setItem(migrationKey, '1');
+                if (typeof window.xalissReplaceNotifications === 'function') {
+                    window.xalissReplaceNotifications(
+                        migrated.notifications || [],
+                        migrated.ignoredSystemIds || ignored
+                    );
+                }
+                return;
+            } catch (e) {
+                /* keep local until next boot */
+            }
+        }
+
+        if (!alreadyMigrated) {
+            localStorage.setItem(migrationKey, '1');
+        }
+        if (typeof window.xalissReplaceNotifications === 'function') {
+            window.xalissReplaceNotifications(remote, ignored);
+        }
+    }
+
+    let notifRemoteQueue = Promise.resolve();
+    function enqueueNotifRemote(task) {
+        notifRemoteQueue = notifRemoteQueue.then(task).catch(function () { /* ignore */ });
+        return notifRemoteQueue;
+    }
+
+    window.xalissNotificationsRemoteAdd = function (item) {
+        if (!item || !item.message) return;
+        enqueueNotifRemote(function () {
+            return apiFetchNetwork('/notifications/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    id: item.id,
+                    message: item.message,
+                    type: item.type || 'info',
+                    systemId: item.systemId || '',
+                }),
+            }).then(function (data) {
+                if (data && data.ignored && item.systemId) {
+                    if (typeof window.xalissMarkNotificationSystemIdsIgnored === 'function') {
+                        window.xalissMarkNotificationSystemIdsIgnored([item.systemId]);
+                    }
+                    if (typeof window.xalissReplaceNotifications === 'function'
+                        && typeof window.xalissGetNotifications === 'function') {
+                        const list = window.xalissGetNotifications().filter(function (n) {
+                            return !(n && n.systemId === item.systemId);
+                        });
+                        window.xalissReplaceNotifications(list, null);
+                    }
+                }
+            });
+        });
+    };
+
+    window.xalissNotificationsRemoteClear = function () {
+        enqueueNotifRemote(function () {
+            return apiFetchNetwork('/notifications/', { method: 'DELETE' });
+        });
+    };
+
+    window.xalissNotificationsRemoteRemovePrefix = function (prefix) {
+        if (!prefix) return;
+        enqueueNotifRemote(function () {
+            return apiFetchNetwork('/notifications/remove-prefix/', {
+                method: 'POST',
+                body: JSON.stringify({ prefix: prefix }),
+            });
+        });
+    };
 
     async function loadProfileFromApi() {
         const data = await apiFetch('/organisation/profil/');
@@ -702,7 +833,8 @@
                 loadClientsFromApi(),
                 loadNotesFromApi(),
                 loadCategoriesFromApi(),
-                loadTransactionsFromApi()
+                loadTransactionsFromApi(),
+                loadNotificationsFromApi()
             ]);
             const syncData = await apiFetch('/sync/');
             if (syncData && syncData.syncSeq !== undefined) {
@@ -719,6 +851,9 @@
             if (!window._xalissLocksPollStarted) {
                 window._xalissLocksPollStarted = true;
                 setInterval(loadActiveLocksFromApi, 8000);
+            }
+            if (typeof window.xalissEnsureWelcomeNotification === 'function') {
+                window.xalissEnsureWelcomeNotification();
             }
             if (typeof window.xalissCheckScheduledNotifications === 'function') {
                 window.xalissCheckScheduledNotifications();
@@ -1118,6 +1253,7 @@
         cachedNotes.forEach(function (n) { oldMap[n.id] = n; });
         const newMap = {};
         newNotes.forEach(function (n) { newMap[n.id] = n; });
+        const result = { reminderEmailSent: false };
 
         const tasks = [];
 
@@ -1154,7 +1290,7 @@
 
         if (tasks.length === 0) {
             persistNotesLocal(accountId, payload);
-            return Promise.resolve();
+            return Promise.resolve(result);
         }
 
         // Affiche tout de suite la note (animation d’ajout incluse), puis sync serveur.
@@ -1179,15 +1315,23 @@
             return apiFetchNetwork(task.path, {
                 method: task.method,
                 body: task.body,
+            }).then(function (data) {
+                if (data && data.reminderEmailSent) {
+                    result.reminderEmailSent = true;
+                }
+                return data;
             }).catch(function (error) {
                 if (!isNetworkError(error)) throw error;
                 return offline.enqueue(task);
             });
         })).then(function () {
-            return xalissReloadAfterWrite();
+            return xalissReloadAfterWrite().then(function () {
+                return result;
+            });
         }).catch(function (error) {
             notifyApiError(error, 'Impossible de synchroniser les notes.');
             persistNotesLocal(accountId, payload);
+            return result;
         });
     };
 

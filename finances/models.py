@@ -190,6 +190,18 @@ class Note(models.Model):
         related_name='notes',
     )
     categorie_produit = models.CharField(max_length=120, blank=True, default='')
+    epinglee = models.BooleanField(default=False)
+    archivee = models.BooleanField(default=False)
+    rappel_le = models.DateTimeField(null=True, blank=True)
+    rappel_par_email = models.BooleanField(default=False)
+    rappel_email_utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notes_rappel_email',
+    )
+    rappel_email_envoye_le = models.DateTimeField(null=True, blank=True)
     cree_le = models.DateTimeField(null=True, blank=True)
     modifie_le = models.DateTimeField(auto_now=True)
 
@@ -197,7 +209,7 @@ class Note(models.Model):
         db_table = 'notes'
         verbose_name = 'note'
         verbose_name_plural = 'notes'
-        ordering = ['-modifie_le', '-cree_le']
+        ordering = ['-epinglee', '-modifie_le', '-cree_le']
 
     def __str__(self):
         return self.titre
@@ -245,3 +257,71 @@ class VerrouEdition(models.Model):
     @property
     def est_actif(self):
         return self.expire_le > timezone.now()
+
+
+class Notification(models.Model):
+    TYPE_SUCCESS = 'success'
+    TYPE_ERROR = 'error'
+    TYPE_INFO = 'info'
+    TYPE_WARNING = 'warning'
+    TYPE_CHOICES = [
+        (TYPE_SUCCESS, 'Succès'),
+        (TYPE_ERROR, 'Erreur'),
+        (TYPE_INFO, 'Info'),
+        (TYPE_WARNING, 'Avertissement'),
+    ]
+
+    id = models.CharField(max_length=64, primary_key=True)
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+    )
+    utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+    )
+    message = models.TextField()
+    type_notif = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_INFO)
+    system_id = models.CharField(max_length=160, blank=True, default='')
+    cree_le = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'notifications'
+        ordering = ['-cree_le']
+        indexes = [
+            models.Index(fields=['organisation', 'utilisateur', '-cree_le']),
+            models.Index(fields=['organisation', 'utilisateur', 'system_id']),
+        ]
+
+    def __str__(self):
+        return self.message[:80]
+
+
+class NotificationIgnoree(models.Model):
+    """system_id ignorés après suppression — empêche la réapparition automatique."""
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name='notifications_ignorees',
+    )
+    utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications_ignorees',
+    )
+    system_id = models.CharField(max_length=160)
+    ignoree_le = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'notifications_ignorees'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organisation', 'utilisateur', 'system_id'],
+                name='uniq_notif_ignoree_org_user_system',
+            ),
+        ]
+
+    def __str__(self):
+        return self.system_id

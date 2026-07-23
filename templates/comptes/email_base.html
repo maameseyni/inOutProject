@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name|default:"Xaliss" }}{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f1f8;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1e293b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1f8;padding:28px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:2px solid #43277d;border-radius:16px;overflow:hidden;">
+                    <tr>
+                        <td style="background:#43277d;padding:22px 28px;text-align:center;">
+                            <div style="font-size:22px;font-weight:700;letter-spacing:0.02em;color:#ffffff;">{{ app_name|default:"Xaliss" }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:28px 28px 8px;font-size:15px;line-height:1.55;color:#334155;">
+                            {% block content %}{% endblock %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 28px 28px;font-size:13px;line-height:1.5;color:#64748b;">
+                            {% block footer %}
+                            L’équipe {{ app_name|default:"Xaliss" }}
+                            {% endblock %}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

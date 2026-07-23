@@ -1,0 +1,12 @@
+{% extends "comptes/email_base.html" %}
+{% block title %}Rappel : {{ titre }} — {{ app_name }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;">Bonjour{% if utilisateur.first_name %} {{ utilisateur.first_name }}{% endif %},</p>
+<p style="margin:0 0 16px;">Voici le rappel pour votre note sur <strong>{{ app_name }}</strong>.</p>
+<p style="margin:0 0 8px;"><strong>« {{ titre }} »</strong></p>
+<p style="margin:0 0 16px;color:#64748b;font-size:14px;">Échéance : {{ when_label }}</p>
+{% if apercu %}
+<p style="margin:0 0 22px;padding:14px 16px;background:#f8f6fc;border-left:4px solid #43277d;border-radius:8px;color:#475569;">{{ apercu }}</p>
+{% endif %}
+<p style="margin:0;font-size:13px;color:#64748b;">Ouvrez l’application {{ app_name }} pour consulter ou modifier la note.</p>
+{% endblock %}

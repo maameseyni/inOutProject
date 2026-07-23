@@ -1,0 +1,14 @@
+Bonjour{% if utilisateur.first_name %} {{ utilisateur.first_name }}{% endif %},
+
+Voici le rappel pour votre note sur {{ app_name }}.
+
+« {{ titre }} »
+Échéance : {{ when_label }}
+{% if apercu %}
+
+{{ apercu }}
+{% endif %}
+
+Ouvrez l’application {{ app_name }} pour consulter ou modifier la note.
+
+L'équipe {{ app_name }}
