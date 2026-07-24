@@ -347,7 +347,7 @@
                         <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par description ou montant...">
                     </div>
                 </div>
-                <div class="date-filters">
+                <div class="date-filters history-filters-grid">
                     <div class="date-filter-group note-reminder-group">
                         <label for="singleDateTrigger"><svg class="icon-inline-small" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#43277d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Filtrer par jour</label>
                         <div class="note-reminder-picker note-reminder-picker--date" id="singleDatePicker">
@@ -356,9 +356,6 @@
                                 <button type="button" class="note-reminder-trigger" id="singleDateTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="singleDatePopover">
                                     <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     <span class="note-reminder-trigger-text" id="singleDateTriggerText">Choisir une date</span>
-                                </button>
-                                <button type="button" class="note-reminder-clear" id="singleDateClear" hidden title="Effacer la date" aria-label="Effacer la date">
-                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                                 </button>
                             </div>
                             <div class="note-reminder-popover note-reminder-popover--date" id="singleDatePopover" role="dialog" aria-label="Choisir une date" hidden>
@@ -390,9 +387,6 @@
                                     <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     <span class="note-reminder-trigger-text" id="dateFromTriggerText">Choisir une date</span>
                                 </button>
-                                <button type="button" class="note-reminder-clear" id="dateFromClear" hidden title="Effacer la date" aria-label="Effacer la date">
-                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                                </button>
                             </div>
                             <div class="note-reminder-popover note-reminder-popover--date" id="dateFromPopover" role="dialog" aria-label="Choisir une date" hidden>
                                 <div class="note-reminder-body">
@@ -423,9 +417,6 @@
                                     <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     <span class="note-reminder-trigger-text" id="dateToTriggerText">Choisir une date</span>
                                 </button>
-                                <button type="button" class="note-reminder-clear" id="dateToClear" hidden title="Effacer la date" aria-label="Effacer la date">
-                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                                </button>
                             </div>
                             <div class="note-reminder-popover note-reminder-popover--date" id="dateToPopover" role="dialog" aria-label="Choisir une date" hidden>
                                 <div class="note-reminder-body">
@@ -447,7 +438,22 @@
                             </div>
                         </div>
                     </div>
-                    <button class="clear-filters-btn" onclick="clearFilters()">Effacer filtres</button>
+                    <div class="date-filter-group history-entity-filter">
+                        <label for="historyFilterClient">Client / prestataire</label>
+                        <select id="historyFilterClient" class="kp-select-native history-filter-select" data-kp-searchable="1" aria-label="Filtrer par client ou prestataire">
+                            <option value="">Tous</option>
+                        </select>
+                    </div>
+                    <div class="date-filter-group history-entity-filter">
+                        <label for="historyFilterCategory">Catégorie</label>
+                        <select id="historyFilterCategory" class="kp-select-native history-filter-select" data-kp-searchable="1" aria-label="Filtrer par catégorie">
+                            <option value="">Toutes</option>
+                        </select>
+                    </div>
+                    <div class="date-filter-group history-clear-wrap">
+                        <label class="history-clear-label" aria-hidden="true">&nbsp;</label>
+                        <button type="button" class="clear-filters-btn" onclick="clearFilters()">Effacer les filtres</button>
+                    </div>
                 </div>
             </div>
             
@@ -457,19 +463,12 @@
                 <button class="filter-btn" data-filter="expense">Sortants</button>
                 <button class="filter-btn" data-filter="pending">En attente de complément</button>
             </div>
-            <div class="client-transaction-filter" id="clientTransactionFilterBar" hidden>
+            <div class="client-transaction-filter" id="entityTransactionFilterBar" hidden>
                 <div class="client-transaction-filter-left">
-                    <span class="client-transaction-filter-text">Transactions liées à : <strong id="clientTransactionFilterLabel"></strong></span>
-                    <span class="client-transaction-filter-total" id="clientTransactionFilterTotal" hidden></span>
+                    <span class="client-transaction-filter-text" id="entityTransactionFilterText"></span>
+                    <span class="client-transaction-filter-total" id="entityTransactionFilterTotal" hidden></span>
                 </div>
-                <button type="button" class="clear-filters-btn" onclick="clearClientTransactionFilter()">Effacer le filtre</button>
-            </div>
-            <div class="client-transaction-filter category-transaction-filter" id="categoryTransactionFilterBar" hidden>
-                <div class="client-transaction-filter-left">
-                    <span class="client-transaction-filter-text">Transactions de la catégorie : <strong id="categoryTransactionFilterLabel"></strong></span>
-                    <span class="client-transaction-filter-total" id="categoryTransactionFilterTotal" hidden></span>
-                </div>
-                <button type="button" class="clear-filters-btn" onclick="clearCategoryTransactionFilter()">Effacer le filtre</button>
+                <button type="button" class="clear-filters-btn" onclick="clearEntityTransactionFilters()">Effacer le filtre</button>
             </div>
             <div class="transactions-list" id="transactionsList">
                 <p class="list-empty-state" id="transactionsEmptyState">Aucune transaction pour le moment.</p>
@@ -567,18 +566,14 @@
                         <p class="benefit-value" id="benefitDayValue">0&nbsp;<span class="js-currency-label">FCFA</span></p>
                         <span class="benefit-margin-pill" id="benefitMarginPill">—</span>
                     </div>
-                    <div class="benefit-flow-bar" id="benefitFlowBar" aria-hidden="true">
-                        <span class="benefit-flow-bar-income" id="benefitFlowBarIncome"></span>
-                        <span class="benefit-flow-bar-expense" id="benefitFlowBarExpense"></span>
-                    </div>
-                    <div class="benefit-flow-rows">
-                        <div class="benefit-flow-row benefit-flow-row--income">
-                            <span class="benefit-flow-label">Entrants</span>
-                            <span class="benefit-flow-value" id="benefitIncomeValue">0</span>
+                    <div class="benefit-insights">
+                        <div class="benefit-insight">
+                            <span class="benefit-insight-label">Nombre de commandes</span>
+                            <span class="benefit-insight-value" id="benefitOrderCount">—</span>
                         </div>
-                        <div class="benefit-flow-row benefit-flow-row--expense">
-                            <span class="benefit-flow-label">Sortants</span>
-                            <span class="benefit-flow-value" id="benefitExpenseValue">0</span>
+                        <div class="benefit-insight">
+                            <span class="benefit-insight-label">Plus grosse commande</span>
+                            <span class="benefit-insight-value" id="benefitBiggestOrder">—</span>
                         </div>
                     </div>
                     <p class="benefit-breakdown" id="benefitBreakdownHint"></p>

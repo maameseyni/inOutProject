@@ -246,12 +246,22 @@ body.app-body {
     transition: all 0.3s ease;
     gap: var(--sidebar-icon-gap);
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
 }
 
 .app-sidebar-nav .main-tab:hover,
 .app-sidebar-footer .sidebar-logout-btn:hover {
     color: var(--kp-color-primary);
     background: var(--kp-color-hover);
+}
+
+.app-sidebar-nav .main-tab.active,
+.app-sidebar-nav .main-tab.active:hover,
+.app-sidebar-nav .main-tab.active:focus {
+    background: linear-gradient(135deg, var(--kp-color-primary), var(--kp-color-primary-light));
+    color: white;
+    box-shadow: var(--kp-shadow-nav-active);
 }
 
 .app-sidebar-nav .main-tab .icon-inline,
@@ -728,6 +738,13 @@ body.app-tab-notes header {
     border-radius: var(--kp-radius-sm);
     cursor: pointer;
     transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+.main-tab:focus,
+.main-tab:focus-visible {
+    outline: none;
 }
 
 .main-tab:hover {
@@ -735,7 +752,9 @@ body.app-tab-notes header {
     background: var(--kp-color-hover);
 }
 
-.main-tab.active {
+.main-tab.active,
+.main-tab.active:hover,
+.main-tab.active:focus {
     background: linear-gradient(135deg, var(--kp-color-primary), var(--kp-color-primary-light));
     color: white;
     box-shadow: var(--kp-shadow-nav-active);
@@ -788,16 +807,33 @@ body.app-tab-notes header {
         box-shadow: var(--kp-shadow-bar);
         background: rgba(255, 255, 255, 0.96);
         backdrop-filter: blur(12px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+    }
+
+    .app-bottom-nav.main-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Mobile étroit : 4 items visibles, scroll pour le 5e */
+    .app-bottom-nav .main-tab,
+    .sidebar-logout-btn.app-bottom-nav-logout {
+        flex: 0 0 calc((100% - 12px) / 4);
+        width: calc((100% - 12px) / 4);
+        max-width: calc((100% - 12px) / 4);
+        min-width: calc((100% - 12px) / 4);
+        scroll-snap-align: start;
     }
 
     .app-bottom-nav .main-tab {
-        flex: 1 1 0;
         flex-direction: column;
         gap: 4px;
         padding: 8px 4px;
         font-size: 0.68rem;
-        min-width: 0;
-        width: auto;
         border-radius: var(--kp-radius-nav);
     }
 
@@ -805,7 +841,11 @@ body.app-tab-notes header {
         background: var(--kp-color-hover);
     }
 
-    .app-bottom-nav .main-tab.active {
+    .app-bottom-nav .main-tab.active,
+    .app-bottom-nav .main-tab.active:hover,
+    .app-bottom-nav .main-tab.active:focus {
+        background: linear-gradient(135deg, var(--kp-color-primary), var(--kp-color-primary-light));
+        color: #fff;
         border-radius: var(--kp-radius-nav);
         box-shadow: var(--kp-shadow-nav-active);
     }
@@ -828,15 +868,12 @@ body.app-tab-notes header {
 
     .sidebar-logout-btn.app-bottom-nav-logout {
         display: flex;
-        flex: 1 1 0;
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        width: auto;
         padding: 8px 4px;
         font-size: 0.68rem;
         font-weight: 600;
-        min-width: 0;
         min-height: auto;
         border: none;
         border-radius: 14px;
@@ -844,6 +881,13 @@ body.app-tab-notes header {
         color: #666;
         justify-content: center;
         box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        outline: none;
+    }
+
+    .sidebar-logout-btn.app-bottom-nav-logout:focus,
+    .sidebar-logout-btn.app-bottom-nav-logout:focus-visible {
+        outline: none;
     }
 
     .sidebar-logout-btn.app-bottom-nav-logout:hover {
@@ -860,12 +904,33 @@ body.app-tab-notes header {
         line-height: 1.1;
         text-align: center;
         font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
     }
 
     .sidebar-logout-btn.app-bottom-nav-logout .icon-inline,
     .sidebar-logout-btn.app-bottom-nav-logout svg {
         width: 22px;
         height: 22px;
+    }
+
+    /* Tablette / large mobile : assez d'espace → les 5 items visibles */
+    @media (min-width: 560px) {
+        .app-bottom-nav.main-tabs {
+            overflow-x: visible;
+            scroll-snap-type: none;
+        }
+
+        .app-bottom-nav .main-tab,
+        .sidebar-logout-btn.app-bottom-nav-logout {
+            flex: 1 1 0;
+            width: auto;
+            max-width: none;
+            min-width: 0;
+            scroll-snap-align: none;
+        }
     }
 }
 
@@ -3363,6 +3428,102 @@ body.app-tab-notes header {
     gap: 16px;
 }
 
+.transactions-layout .history-filters-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 20px;
+    align-items: end;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.transactions-layout .history-filters-grid .date-filter-group {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    gap: 8px;
+}
+
+.transactions-layout .history-filters-grid .note-reminder-picker,
+.transactions-layout .history-filters-grid .note-reminder-control,
+.transactions-layout .history-filters-grid .note-reminder-trigger,
+.transactions-layout .history-filters-grid .history-filter-select,
+.transactions-layout .history-filters-grid .kp-select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+}
+
+.transactions-layout .history-clear-wrap {
+    flex: 0 0 auto;
+    min-width: auto;
+}
+
+.transactions-layout .history-clear-wrap .clear-filters-btn {
+    width: auto;
+    white-space: nowrap;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding: 0 14px;
+    line-height: 1.2;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.transactions-layout .history-clear-label {
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+@media (max-width: 900px) {
+    .transactions-layout .history-filters-grid {
+        flex-wrap: wrap;
+    }
+
+    .transactions-layout .history-filters-grid .date-filter-group {
+        flex: 1 1 calc(50% - 20px);
+        min-width: 140px;
+    }
+
+    .transactions-layout .history-clear-wrap {
+        flex: 1 1 100%;
+    }
+
+    .transactions-layout .history-clear-wrap .clear-filters-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .transactions-layout .history-filters-grid .date-filter-group {
+        flex: 1 1 100%;
+    }
+}
+
+.transactions-layout .history-entity-filter {
+    min-width: 0;
+}
+
+.transactions-layout .history-filter-select,
+.transactions-layout .history-entity-filter .kp-select {
+    min-height: 48px;
+    height: 48px;
+}
+
+.transactions-layout .history-entity-filter .kp-select-trigger {
+    min-height: 48px;
+    height: 48px;
+}
+
+/* Pas de bouton X dans les filtres de l'historique */
+.transactions-layout .date-filters .note-reminder-clear {
+    display: none !important;
+}
+
 .transactions-layout .clear-filters-btn {
     min-height: var(--tx-btn-h);
     height: var(--tx-btn-h);
@@ -4887,40 +5048,14 @@ body.app-tab-notes header {
     color: #dc2626;
 }
 
-.benefit-flow-bar {
-    display: flex;
-    width: 100%;
-    height: 10px;
-    border-radius: 999px;
-    overflow: hidden;
-    background: #eee8f6;
-    margin-bottom: 14px;
-}
-
-.benefit-flow-bar-income,
-.benefit-flow-bar-expense {
-    display: block;
-    height: 100%;
-    min-width: 0;
-    transition: width 0.35s ease;
-}
-
-.benefit-flow-bar-income {
-    background: #059669;
-}
-
-.benefit-flow-bar-expense {
-    background: #dc2626;
-}
-
-.benefit-flow-rows {
+.benefit-insights {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 }
 
-.benefit-flow-row {
+.benefit-insight {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -4932,27 +5067,28 @@ body.app-tab-notes header {
     min-width: 0;
 }
 
-.benefit-flow-label {
-    font-size: 0.78em;
+.benefit-insight-label {
+    font-size: 0.72em;
     font-weight: 600;
     color: #5b5270;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
-.benefit-flow-value {
+.benefit-insight-value {
     font-size: 0.95em;
     font-weight: 700;
+    color: #43277d;
     line-height: 1.2;
     word-break: break-word;
 }
 
-.benefit-flow-row--income .benefit-flow-value {
-    color: #059669;
+.benefit-insight-value.is-positive {
+    color: #10b981;
 }
 
-.benefit-flow-row--expense .benefit-flow-value {
-    color: #dc2626;
+.benefit-insight-value.is-negative {
+    color: #ef4444;
 }
 
 .benefit-card.benefit-day .benefit-value,

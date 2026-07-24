@@ -1839,6 +1839,7 @@ function refreshCategorySelectOptions() {
         fillCategorySelect(sel);
         enhanceSelectField(sel);
     });
+    refreshHistoryFilterSelects();
 }
 
 function addCategoryEntry(name, description) {
@@ -4848,6 +4849,140 @@ function refreshClientSelectOptions() {
         }
         enhanceSelectField(sel);
     });
+    refreshHistoryFilterSelects();
+}
+
+function getHistoryFilterClientNames() {
+    const names = {};
+    cachedClients.forEach(function (c) {
+        const name = String(c.name || '').trim();
+        if (name) names[name.toLowerCase()] = name;
+    });
+    transactions.forEach(function (t) {
+        const name = resolveTransactionClientName(t);
+        if (name) names[name.toLowerCase()] = name;
+    });
+    return Object.keys(names).map(function (k) { return names[k]; }).sort(function (a, b) {
+        return a.localeCompare(b, 'fr', { sensitivity: 'base' });
+    });
+}
+
+function getHistoryFilterCategoryNames() {
+    const names = {};
+    cachedProductCategories.forEach(function (name) {
+        const normalized = normalizeCategoryName(name);
+        if (normalized) names[categoryNameKey(normalized)] = normalized;
+    });
+    transactions.forEach(function (t) {
+        if (t.type !== 'income') return;
+        const cat = getTransactionCategory(t);
+        if (cat) names[categoryNameKey(cat)] = cat;
+    });
+    return Object.keys(names).map(function (k) { return names[k]; }).sort(function (a, b) {
+        return a.localeCompare(b, 'fr', { sensitivity: 'base' });
+    });
+}
+
+function refreshHistoryFilterSelects() {
+    const clientSel = document.getElementById('historyFilterClient');
+    if (clientSel) {
+        const prev = transactionClientFilter || clientSel.value || '';
+        while (clientSel.options.length > 0) clientSel.remove(0);
+        const optAll = document.createElement('option');
+        optAll.value = '';
+        optAll.textContent = 'Tous';
+        clientSel.appendChild(optAll);
+        getHistoryFilterClientNames().forEach(function (name) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            clientSel.appendChild(opt);
+        });
+        if (prev) {
+            const match = Array.from(clientSel.options).find(function (o) {
+                return o.value && o.value.toLowerCase() === String(prev).toLowerCase();
+            });
+            clientSel.value = match ? match.value : '';
+            if (!match) transactionClientFilter = '';
+        } else {
+            clientSel.value = '';
+        }
+        enhanceSelectField(clientSel);
+    }
+
+    const categorySel = document.getElementById('historyFilterCategory');
+    if (categorySel) {
+        const prev = transactionCategoryFilter || categorySel.value || '';
+        while (categorySel.options.length > 0) categorySel.remove(0);
+        const optAll = document.createElement('option');
+        optAll.value = '';
+        optAll.textContent = 'Toutes';
+        categorySel.appendChild(optAll);
+        getHistoryFilterCategoryNames().forEach(function (name) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            categorySel.appendChild(opt);
+        });
+        if (prev) {
+            const match = Array.from(categorySel.options).find(function (o) {
+                return o.value && categoryNameKey(o.value) === categoryNameKey(prev);
+            });
+            categorySel.value = match ? match.value : '';
+            if (!match) transactionCategoryFilter = '';
+        } else {
+            categorySel.value = '';
+        }
+        enhanceSelectField(categorySel);
+    }
+}
+
+function syncHistoryFilterSelectsFromState() {
+    const clientSel = document.getElementById('historyFilterClient');
+    if (clientSel) {
+        clientSel.value = transactionClientFilter || '';
+        if (transactionClientFilter && clientSel.value !== transactionClientFilter) {
+            const match = Array.from(clientSel.options).find(function (o) {
+                return o.value && o.value.toLowerCase() === transactionClientFilter.toLowerCase();
+            });
+            clientSel.value = match ? match.value : '';
+        }
+        syncEnhancedSelectLabel(clientSel);
+    }
+    const categorySel = document.getElementById('historyFilterCategory');
+    if (categorySel) {
+        categorySel.value = transactionCategoryFilter || '';
+        if (transactionCategoryFilter && categoryNameKey(categorySel.value) !== categoryNameKey(transactionCategoryFilter)) {
+            const match = Array.from(categorySel.options).find(function (o) {
+                return o.value && categoryNameKey(o.value) === categoryNameKey(transactionCategoryFilter);
+            });
+            categorySel.value = match ? match.value : '';
+        }
+        syncEnhancedSelectLabel(categorySel);
+    }
+}
+
+function bindHistoryFilterSelects() {
+    const clientSel = document.getElementById('historyFilterClient');
+    const categorySel = document.getElementById('historyFilterCategory');
+    if (clientSel && clientSel.dataset.historyFilterBound !== '1') {
+        clientSel.dataset.historyFilterBound = '1';
+        clientSel.addEventListener('change', function () {
+            transactionClientFilter = String(clientSel.value || '').trim();
+            currentPage = 1;
+            updateEntityTransactionFilterBar();
+            displayTransactions(currentFilter);
+        });
+    }
+    if (categorySel && categorySel.dataset.historyFilterBound !== '1') {
+        categorySel.dataset.historyFilterBound = '1';
+        categorySel.addEventListener('change', function () {
+            transactionCategoryFilter = normalizeCategoryName(categorySel.value || '');
+            currentPage = 1;
+            updateEntityTransactionFilterBar();
+            displayTransactions(currentFilter);
+        });
+    }
 }
 
 function getInvoiceClientValueFromControl(selectId) {
@@ -5560,17 +5695,114 @@ function closeClientEditModal() {
 }
 window.closeClientEditModal = closeClientEditModal;
 
-function updateClientTransactionFilterBar() {
-    const bar = document.getElementById('clientTransactionFilterBar');
-    const label = document.getElementById('clientTransactionFilterLabel');
-    const totalEl = document.getElementById('clientTransactionFilterTotal');
+function transactionMatchesClientFilter(transaction, clientName) {
+    if (!clientName) return true;
+    const filterClient = findClientByName(clientName);
+    if (filterClient) return transactionBelongsToClient(transaction, filterClient);
+    const clientKey = String(clientName).toLowerCase();
+    return resolveTransactionClientName(transaction).toLowerCase() === clientKey;
+}
+
+function transactionMatchesEntityFilters(transaction, clientName, categoryName) {
+    if (clientName && !transactionMatchesClientFilter(transaction, clientName)) return false;
+    if (categoryName && !transactionBelongsToCategory(transaction, categoryName)) return false;
+    return true;
+}
+
+function getEntityFilterOrderStats(clientName, categoryName) {
+    let incomeCount = 0;
+    let expenseCount = 0;
+    let totalOrdered = 0;
+    let totalExpensed = 0;
+    let totalRemaining = 0;
+    let totalExpenseRemaining = 0;
+    let txCount = 0;
+
+    transactions.forEach(function (t) {
+        if (!transactionMatchesEntityFilters(t, clientName, categoryName)) return;
+        txCount++;
+        const paid = parseFloat(t.amount) || 0;
+        const rest = parseFloat(t.remainingAmount) || 0;
+        if (t.type === 'income') {
+            incomeCount++;
+            totalOrdered += paid + rest;
+            totalRemaining += rest;
+        } else if (t.type === 'expense') {
+            expenseCount++;
+            totalExpensed += paid + rest;
+            totalExpenseRemaining += rest;
+        }
+    });
+
+    return {
+        incomeCount: incomeCount,
+        expenseCount: expenseCount,
+        totalOrdered: totalOrdered,
+        totalExpensed: totalExpensed,
+        totalRemaining: totalRemaining,
+        totalExpenseRemaining: totalExpenseRemaining,
+        txCount: txCount,
+        count: incomeCount
+    };
+}
+
+function updateEntityTransactionFilterBar() {
+    const bar = document.getElementById('entityTransactionFilterBar');
+    const textEl = document.getElementById('entityTransactionFilterText');
+    const totalEl = document.getElementById('entityTransactionFilterTotal');
     if (!bar) return;
-    if (transactionClientFilter) {
-        bar.hidden = false;
-        if (label) label.textContent = transactionClientFilter;
-        const stats = getClientOrderStats(transactionClientFilter);
+
+    const hasClient = !!transactionClientFilter;
+    const hasCategory = !!transactionCategoryFilter;
+
+    if (!hasClient && !hasCategory) {
+        bar.hidden = true;
         if (totalEl) {
-            const totalParts = [];
+            totalEl.hidden = true;
+            totalEl.textContent = '';
+        }
+        if (textEl) textEl.textContent = '';
+        return;
+    }
+
+    bar.hidden = false;
+    const stats = getEntityFilterOrderStats(
+        hasClient ? transactionClientFilter : '',
+        hasCategory ? transactionCategoryFilter : ''
+    );
+
+    if (textEl) {
+        if (hasClient && hasCategory) {
+            textEl.innerHTML = 'Commandes de <strong></strong> · catégorie <strong></strong>';
+            const strongs = textEl.querySelectorAll('strong');
+            if (strongs[0]) strongs[0].textContent = transactionClientFilter;
+            if (strongs[1]) strongs[1].textContent = transactionCategoryFilter;
+        } else if (hasClient) {
+            textEl.innerHTML = 'Transactions liées à : <strong></strong>';
+            const strong = textEl.querySelector('strong');
+            if (strong) strong.textContent = transactionClientFilter;
+        } else {
+            textEl.innerHTML = 'Transactions de la catégorie : <strong></strong>';
+            const strong = textEl.querySelector('strong');
+            if (strong) strong.textContent = transactionCategoryFilter;
+        }
+    }
+
+    if (totalEl) {
+        const totalParts = [];
+        if (hasClient && hasCategory) {
+            totalParts.push(
+                stats.count + ' commande' + (stats.count !== 1 ? 's' : '') +
+                ' · Total : ' + formatAmount(stats.totalOrdered) +
+                (stats.totalRemaining > 0 ? ' · Reste ' + formatAmount(stats.totalRemaining) : '')
+            );
+        } else if (hasCategory) {
+            totalParts.push(
+                stats.count + ' commande' + (stats.count !== 1 ? 's' : '') +
+                ' · Total commandes : ' + formatAmount(stats.totalOrdered) +
+                (stats.totalRemaining > 0 ? ' · Reste ' + formatAmount(stats.totalRemaining) : '')
+            );
+        } else {
             if (stats.totalOrdered > 0) {
                 let incomeText = (stats.incomeCount > 0 && stats.expenseCount === 0 ? 'Total client' : 'Total entrant') +
                     ' : ' + formatAmount(stats.totalOrdered);
@@ -5587,21 +5819,24 @@ function updateClientTransactionFilterBar() {
                 }
                 totalParts.push(expenseText);
             }
-            if (totalParts.length > 0) {
-                totalEl.hidden = false;
-                totalEl.textContent = totalParts.join(' · ');
-            } else {
-                totalEl.hidden = true;
-                totalEl.textContent = '';
-            }
         }
-    } else {
-        bar.hidden = true;
-        if (totalEl) {
+
+        if (totalParts.length > 0) {
+            totalEl.hidden = false;
+            totalEl.textContent = totalParts.join(' · ');
+        } else {
             totalEl.hidden = true;
             totalEl.textContent = '';
         }
     }
+}
+
+function updateClientTransactionFilterBar() {
+    updateEntityTransactionFilterBar();
+}
+
+function updateCategoryTransactionFilterBar() {
+    updateEntityTransactionFilterBar();
 }
 
 function scrollToTransactionsSection() {
@@ -5621,46 +5856,28 @@ function viewClientTransactions(clientId) {
     currentPage = 1;
     sessionStorage.setItem('kaayprint_active_tab', 'transactions');
     applyActiveTab('transactions');
-    updateClientTransactionFilterBar();
+    refreshHistoryFilterSelects();
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
     displayTransactions(currentFilter);
     scrollToTransactionsSection();
-    const count = countTransactionsForClient(client.name);
+    const count = getEntityFilterOrderStats(client.name, transactionCategoryFilter || '').txCount;
     if (count === 0) {
-        showNotification('Aucune transaction trouvée pour « ' + client.name + ' »', 'info');
+        const msg = transactionCategoryFilter
+            ? 'Aucune commande de « ' + client.name + ' » pour la catégorie « ' + transactionCategoryFilter + ' »'
+            : 'Aucune transaction trouvée pour « ' + client.name + ' »';
+        showNotification(msg, 'info');
     }
 }
 
 function clearClientTransactionFilter() {
     transactionClientFilter = '';
     currentPage = 1;
-    updateClientTransactionFilterBar();
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
     displayTransactions(currentFilter);
 }
 window.clearClientTransactionFilter = clearClientTransactionFilter;
-
-function updateCategoryTransactionFilterBar() {
-    const bar = document.getElementById('categoryTransactionFilterBar');
-    const label = document.getElementById('categoryTransactionFilterLabel');
-    const totalEl = document.getElementById('categoryTransactionFilterTotal');
-    if (!bar) return;
-    if (transactionCategoryFilter) {
-        const stats = getCategoryOrderStats(transactionCategoryFilter);
-        bar.hidden = false;
-        if (label) label.textContent = transactionCategoryFilter;
-        if (totalEl) {
-            totalEl.hidden = false;
-            totalEl.textContent = stats.count + ' commande' + (stats.count !== 1 ? 's' : '') +
-                ' · Total commandes : ' + formatAmount(stats.totalOrdered) +
-                (stats.totalRemaining > 0 ? ' · Reste ' + formatAmount(stats.totalRemaining) : '');
-        }
-    } else {
-        bar.hidden = true;
-        if (totalEl) {
-            totalEl.hidden = true;
-            totalEl.textContent = '';
-        }
-    }
-}
 
 function activateTransactionFilterButton(filter) {
     document.querySelectorAll('.filter-btn').forEach(function (btn) {
@@ -5678,23 +5895,38 @@ function viewCategoryTransactions(name) {
     activateTransactionFilterButton('all');
     sessionStorage.setItem('kaayprint_active_tab', 'transactions');
     applyActiveTab('transactions');
-    updateCategoryTransactionFilterBar();
+    refreshHistoryFilterSelects();
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
     displayTransactions(currentFilter);
     scrollToTransactionsSection();
-    const stats = getCategoryOrderStats(normalized);
+    const stats = getEntityFilterOrderStats(transactionClientFilter || '', normalized);
     if (stats.count === 0) {
-        showNotification('Aucune commande trouvée pour « ' + normalized + ' »', 'info');
+        const msg = transactionClientFilter
+            ? 'Aucune commande de « ' + transactionClientFilter + ' » pour la catégorie « ' + normalized + ' »'
+            : 'Aucune commande trouvée pour « ' + normalized + ' »';
+        showNotification(msg, 'info');
     }
 }
 
 function clearCategoryTransactionFilter() {
     transactionCategoryFilter = '';
     currentPage = 1;
-    updateCategoryTransactionFilterBar();
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
     displayTransactions(currentFilter);
 }
-
 window.clearCategoryTransactionFilter = clearCategoryTransactionFilter;
+
+function clearEntityTransactionFilters() {
+    transactionClientFilter = '';
+    transactionCategoryFilter = '';
+    currentPage = 1;
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
+    displayTransactions(currentFilter);
+}
+window.clearEntityTransactionFilters = clearEntityTransactionFilters;
 
 function exportCategoriesToExcel() {
     const categoriesToExport = getFilteredCategoriesForModal();
@@ -5968,6 +6200,7 @@ function initClientsUI() {
     initClientsModalProvenanceFilter();
     refreshClientSelectOptions();
     refreshCategorySelectOptions();
+    bindHistoryFilterSelects();
     renderClientsModalTable();
     renderCategoriesList();
     bindClientProfileReminderBadge();
@@ -6290,8 +6523,8 @@ function calculateRemainingStats() {
  * Source unique des stats cashflow : somme des paiements datés
  * (respecte le filtre Jour/Période de la page Statistiques).
  */
-function getPeriodCashflowTotals() {
-    const bounds = getChartsPeriodBounds();
+function getCashflowTotalsForBounds(bounds) {
+    const safeBounds = bounds || {};
     let income = 0;
     let expense = 0;
     let paymentIncomeCount = 0;
@@ -6302,7 +6535,7 @@ function getPeriodCashflowTotals() {
     transactions.forEach(function (t) {
         let paidInPeriod = 0;
         getPaymentEntries(t).forEach(function (entry) {
-            if (!isDateInChartsPeriod(entry.date, bounds)) return;
+            if (!isDateInChartsPeriod(entry.date, safeBounds)) return;
             const amount = parseFloat(entry.amount) || 0;
             if (!amount) return;
             paidInPeriod += amount;
@@ -6338,6 +6571,45 @@ function getPeriodCashflowTotals() {
         incomeTxCount: incomeTxCount,
         expenseTxCount: expenseTxCount
     };
+}
+
+function getPeriodCashflowTotals() {
+    return getCashflowTotalsForBounds(getChartsPeriodBounds());
+}
+
+/** Période immédiatement précédente, même durée (pour comparaison). */
+function getPreviousPeriodBounds(bounds) {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    let from = bounds && bounds.from ? new Date(bounds.from) : null;
+    let to = bounds && bounds.to ? new Date(bounds.to) : null;
+
+    if (!from && !to) {
+        const end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        const start = new Date(now);
+        start.setDate(start.getDate() - 29);
+        start.setHours(0, 0, 0, 0);
+        const prevEnd = new Date(start);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        prevEnd.setHours(23, 59, 59, 999);
+        const prevStart = new Date(prevEnd);
+        prevStart.setDate(prevStart.getDate() - 29);
+        prevStart.setHours(0, 0, 0, 0);
+        return { from: prevStart, to: prevEnd, label: '30 j. préc.' };
+    }
+
+    if (!from) from = new Date(to);
+    if (!to) to = new Date(from);
+    from.setHours(0, 0, 0, 0);
+    to.setHours(23, 59, 59, 999);
+
+    const durationMs = Math.max(to.getTime() - from.getTime(), 24 * 60 * 60 * 1000 - 1);
+    const prevTo = new Date(from.getTime() - 1);
+    prevTo.setHours(23, 59, 59, 999);
+    const prevFrom = new Date(prevTo.getTime() - durationMs);
+    prevFrom.setHours(0, 0, 0, 0);
+    return { from: prevFrom, to: prevTo, label: 'période préc.' };
 }
 
 /** Compat : totaux = cashflow paiements (+ créances). */
@@ -6659,42 +6931,39 @@ function updateDisplay() {
         setTimeout(function () { el.classList.remove('updated'); }, 500);
     });
 
+    refreshHistoryFilterSelects();
     displayTransactions();
     updateBenefitDisplays();
     refreshAllCharts();
 }
 
-// Bénéfice = entrants − sortants selon le filtre de période global
+// Bénéfice = entrants − sortants + insights (sans redondance avec les KPI)
 function updateBenefitDisplays() {
     const dayEl = document.getElementById('benefitDayValue');
     if (!dayEl) return;
-    const period = getPeriodCashflowTotals();
+    const bounds = getChartsPeriodBounds();
+    const period = getCashflowTotalsForBounds(bounds);
     dayEl.textContent = formatAmount(period.net);
     dayEl.classList.toggle('negative', period.net < 0);
 
     const scopeHint = document.getElementById('benefitScopeHint');
     if (scopeHint) {
-        const from = (document.getElementById('benefitPeriodFrom') || {}).value || '';
-        const to = (document.getElementById('benefitPeriodTo') || {}).value || '';
+        const from = bounds.periodFrom || '';
+        const to = bounds.periodTo || '';
         if (!from && !to) {
-            scopeHint.textContent = 'Entrants − sortants sur toutes les données';
+            scopeHint.textContent = 'Ce que tu as vraiment gagné (entrants − sortants)';
         } else if (from && to && from === to) {
-            scopeHint.textContent = 'Entrants − sortants sur ce jour';
+            scopeHint.textContent = 'Ce que tu as gagné ce jour-là';
         } else {
-            scopeHint.textContent = 'Entrants − sortants sur la période filtrée';
+            scopeHint.textContent = 'Ce que tu as gagné sur la période choisie';
         }
     }
-
-    const incomeEl = document.getElementById('benefitIncomeValue');
-    const expenseEl = document.getElementById('benefitExpenseValue');
-    if (incomeEl) incomeEl.textContent = formatAmount(period.income);
-    if (expenseEl) expenseEl.textContent = formatAmount(period.expense);
 
     const marginPill = document.getElementById('benefitMarginPill');
     if (marginPill) {
         if (period.income > 0) {
             const rate = Math.round((period.net / period.income) * 1000) / 10;
-            marginPill.textContent = rate.toLocaleString('fr-FR') + '\u00A0% des entrants';
+            marginPill.textContent = rate.toLocaleString('fr-FR') + '\u00A0% gardés';
             marginPill.classList.toggle('is-negative', rate < 0);
         } else {
             marginPill.textContent = '—';
@@ -6702,27 +6971,35 @@ function updateBenefitDisplays() {
         }
     }
 
-    const totalFlow = period.income + period.expense;
-    const incomeBar = document.getElementById('benefitFlowBarIncome');
-    const expenseBar = document.getElementById('benefitFlowBarExpense');
-    if (incomeBar && expenseBar) {
-        if (totalFlow > 0) {
-            incomeBar.style.width = ((period.income / totalFlow) * 100) + '%';
-            expenseBar.style.width = ((period.expense / totalFlow) * 100) + '%';
-        } else {
-            incomeBar.style.width = '0%';
-            expenseBar.style.width = '0%';
-        }
+    const orderCountEl = document.getElementById('benefitOrderCount');
+    if (orderCountEl) {
+        orderCountEl.textContent = period.incomeTxCount > 0
+            ? formatCountLabel(period.incomeTxCount, 'commande', 'commandes')
+            : 'Aucune';
+    }
+
+    const biggestEl = document.getElementById('benefitBiggestOrder');
+    if (biggestEl) {
+        let biggest = 0;
+        transactions.forEach(function (t) {
+            if (t.type !== 'income') return;
+            const paid = sumPaymentsInChartsPeriod(t, bounds);
+            if (paid > biggest) biggest = paid;
+        });
+        biggestEl.textContent = biggest > 0 ? formatAmount(biggest) : '—';
     }
 
     const breakdown = document.getElementById('benefitBreakdownHint');
     if (breakdown) {
-        const txLabel = formatCountLabel(
-            (period.incomeTxCount || 0) + (period.expenseTxCount || 0),
-            'mouvement',
-            'mouvements'
-        );
-        breakdown.textContent = txLabel + ' sur la sélection';
+        const from = bounds.periodFrom || '';
+        const to = bounds.periodTo || '';
+        if (!from && !to) {
+            breakdown.textContent = 'Sur toutes tes commandes';
+        } else if (from && to && from === to) {
+            breakdown.textContent = 'Sur les commandes de ce jour';
+        } else {
+            breakdown.textContent = 'Sur les commandes de la période';
+        }
     }
 }
 
@@ -6822,11 +7099,11 @@ function initAppSidebar() {
 
 // --- Graphiques (Chart.js) ---
 const MONTH_NAMES = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-// Couleurs graphiques — verts/rouges bien saturés (lisibles sur fond clair)
-const CHART_COLOR_ENTRANTS = '#059669';
-const CHART_COLOR_ENTRANTS_FILL = 'rgba(5, 150, 105, 0.92)';
-const CHART_COLOR_SORTANTS = '#dc2626';
-const CHART_COLOR_SORTANTS_FILL = 'rgba(220, 38, 38, 0.92)';
+// Couleurs graphiques — verts/rouges doux mais lisibles (alignés cartes KPI)
+const CHART_COLOR_ENTRANTS = '#10b981';
+const CHART_COLOR_ENTRANTS_FILL = 'rgba(16, 185, 129, 0.78)';
+const CHART_COLOR_SORTANTS = '#ef4444';
+const CHART_COLOR_SORTANTS_FILL = 'rgba(239, 68, 68, 0.78)';
 // Alias conservés
 const CHART_COLOR_SORTANTS_RGBA = CHART_COLOR_SORTANTS_FILL;
 let chartIncomeVsExpense = null;
@@ -7208,8 +7485,8 @@ function getTop5IncomeData() {
 }
 
 const CHART_CATEGORY_PALETTE = [
-    '#43277d', '#059669', '#d97706', '#2563eb', '#dc2626',
-    '#7c3aed', '#0d9488', '#db2777', '#65a30d', '#0284c7'
+    '#43277d', '#10b981', '#f59e0b', '#3b82f6', '#ef4444',
+    '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16', '#0ea5e9'
 ];
 
 function getChartPaletteColors(count) {
@@ -7937,6 +8214,9 @@ function getTransactionsEmptyMessage() {
     if (transactions.length === 0) {
         return 'Aucune transaction pour le moment.';
     }
+    if (transactionClientFilter && transactionCategoryFilter) {
+        return 'Aucune commande de ce contact pour cette catégorie.';
+    }
     if (transactionClientFilter) {
         return 'Aucune transaction pour ce contact.';
     }
@@ -7974,18 +8254,9 @@ function displayTransactions(filter = currentFilter) {
         });
     }
 
-    if (transactionClientFilter) {
-        const filterClient = findClientByName(transactionClientFilter);
+    if (transactionClientFilter || transactionCategoryFilter) {
         filteredTransactions = filteredTransactions.filter(function (t) {
-            if (filterClient) return transactionBelongsToClient(t, filterClient);
-            const clientKey = transactionClientFilter.toLowerCase();
-            return resolveTransactionClientName(t).toLowerCase() === clientKey;
-        });
-    }
-
-    if (transactionCategoryFilter) {
-        filteredTransactions = filteredTransactions.filter(function (t) {
-            return transactionBelongsToCategory(t, transactionCategoryFilter);
+            return transactionMatchesEntityFilters(t, transactionClientFilter, transactionCategoryFilter);
         });
     }
     
@@ -8127,8 +8398,7 @@ function displayTransactions(filter = currentFilter) {
         pagination.style.display = 'none';
     }
 
-    updateClientTransactionFilterBar();
-    updateCategoryTransactionFilterBar();
+    updateEntityTransactionFilterBar();
 
     if (typeof applyRolePermissionsUI === 'function') {
         applyRolePermissionsUI();
@@ -8217,18 +8487,9 @@ function getFilteredTransactions() {
         });
     }
 
-    if (transactionClientFilter) {
-        const filterClient = findClientByName(transactionClientFilter);
+    if (transactionClientFilter || transactionCategoryFilter) {
         filteredTransactions = filteredTransactions.filter(function (t) {
-            if (filterClient) return transactionBelongsToClient(t, filterClient);
-            const clientKey = transactionClientFilter.toLowerCase();
-            return resolveTransactionClientName(t).toLowerCase() === clientKey;
-        });
-    }
-
-    if (transactionCategoryFilter) {
-        filteredTransactions = filteredTransactions.filter(function (t) {
-            return transactionBelongsToCategory(t, transactionCategoryFilter);
+            return transactionMatchesEntityFilters(t, transactionClientFilter, transactionCategoryFilter);
         });
     }
     
@@ -8280,8 +8541,8 @@ function clearFilters() {
     dateTo = '';
     transactionClientFilter = '';
     transactionCategoryFilter = '';
-    updateClientTransactionFilterBar();
-    updateCategoryTransactionFilterBar();
+    syncHistoryFilterSelectsFromState();
+    updateEntityTransactionFilterBar();
     currentPage = 1; // Réinitialiser à la première page
     displayTransactions(currentFilter);
 }
@@ -9991,9 +10252,9 @@ function attachEventListeners() {
     setDateTimeLocalValue('incomeDate', new Date(), { dispatch: false });
     setDateTimeLocalValue('expenseDate', new Date(), { dispatch: false });
 
-    initKpDateTimePicker('singleDate', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
-    initKpDateTimePicker('dateFrom', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
-    initKpDateTimePicker('dateTo', { mode: 'date', placeholder: 'Choisir une date', allowClear: true });
+    initKpDateTimePicker('singleDate', { mode: 'date', placeholder: 'Choisir une date', allowClear: false });
+    initKpDateTimePicker('dateFrom', { mode: 'date', placeholder: 'Choisir une date', allowClear: false });
+    initKpDateTimePicker('dateTo', { mode: 'date', placeholder: 'Choisir une date', allowClear: false });
     
     // Initialiser les compteurs de caractères
     const incomeCounter = document.getElementById('incomeDescriptionCounter');
@@ -10029,6 +10290,11 @@ function exportToExcel() {
         showNotification('Aucune transaction à exporter', 'error');
         return;
     }
+
+    function exportRemainingValue(transaction) {
+        const remaining = parseFloat(transaction && transaction.remainingAmount) || 0;
+        return remaining > 0 ? remaining : 0;
+    }
     
     // Créer le contenu HTML pour Excel (format table)
     let htmlContent = `
@@ -10056,6 +10322,7 @@ function exportToExcel() {
                 tr:nth-child(even) { background-color: #f9fafb; }
                 .income { color: #10b981; }
                 .expense { color: #ef4444; }
+                .remaining { color: #d97706; }
             </style>
         </head>
         <body>
@@ -10066,6 +10333,7 @@ function exportToExcel() {
                         <th>Type</th>
                         <th>Description</th>
                         <th>Montant (${getCurrencyLabel()})</th>
+                        <th>Créance (${getCurrencyLabel()})</th>
                         <th>Date</th>
                         <th>Heure</th>
                     </tr>
@@ -10081,6 +10349,9 @@ function exportToExcel() {
         const typeClass = transaction.type === 'income' ? 'income' : 'expense';
         const description = transaction.description.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const amount = formatAmount(transaction.amount);
+        const remainingValue = exportRemainingValue(transaction);
+        const remaining = remainingValue > 0 ? formatAmount(remainingValue) : '—';
+        const remainingClass = remainingValue > 0 ? 'remaining' : '';
         const transactionDate = new Date(transaction.date);
         const date = transactionDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const time = transactionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -10091,6 +10362,7 @@ function exportToExcel() {
                 <td class="${typeClass}">${type}</td>
                 <td>${description}</td>
                 <td class="${typeClass}">${amount}</td>
+                <td class="${remainingClass}">${remaining}</td>
                 <td>${date}</td>
                 <td>${time}</td>
             </tr>
@@ -10100,9 +10372,11 @@ function exportToExcel() {
     // Calculer les totaux basés sur les transactions filtrées
     const totalIncome = transactionsToExport.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactionsToExport.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const totalReceivable = transactionsToExport.reduce((sum, t) => sum + exportRemainingValue(t), 0);
     const balance = totalIncome - totalExpense;
     const incomeCount = transactionsToExport.filter(t => t.type === 'income').length;
     const expenseCount = transactionsToExport.filter(t => t.type === 'expense').length;
+    const receivableCount = transactionsToExport.filter(t => exportRemainingValue(t) > 0).length;
     const totalCount = transactionsToExport.length;
     const avgIncome = incomeCount > 0 ? totalIncome / incomeCount : 0;
     const avgExpense = expenseCount > 0 ? totalExpense / expenseCount : 0;
@@ -10117,46 +10391,54 @@ function exportToExcel() {
                 </tbody>
                 <tfoot>
                     <tr style="background-color: #e5e7eb; font-weight: bold; font-size: 1.1em;">
-                        <td colspan="6" style="text-align: center; padding: 15px;">RÉSUMÉ FINANCIER</td>
+                        <td colspan="7" style="text-align: center; padding: 15px;">RÉSUMÉ FINANCIER</td>
                     </tr>
                     <tr style="background-color: #f3f4f6; font-weight: bold;">
-                        <td colspan="2">Nombre total de transactions</td>
+                        <td colspan="3">Nombre total de transactions</td>
                         <td colspan="4">${totalCount}</td>
                     </tr>
                     <tr style="background-color: #f3f4f6;">
-                        <td colspan="2">Nombre d'entrants</td>
+                        <td colspan="3">Nombre d'entrants</td>
                         <td colspan="4">${incomeCount}</td>
                     </tr>
                     <tr style="background-color: #f3f4f6;">
-                        <td colspan="2">Nombre de sortants</td>
+                        <td colspan="3">Nombre de sortants</td>
                         <td colspan="4">${expenseCount}</td>
                     </tr>
+                    <tr style="background-color: #f3f4f6;">
+                        <td colspan="3">Commandes avec créance</td>
+                        <td colspan="4">${receivableCount}</td>
+                    </tr>
                     <tr style="background-color: #f3f4f6; font-weight: bold;">
-                        <td colspan="2">Total Entrants</td>
+                        <td colspan="3">Total Entrants</td>
                         <td class="income" colspan="4">${formatAmount(totalIncome)}</td>
                     </tr>
                     <tr style="background-color: #f3f4f6; font-weight: bold;">
-                        <td colspan="2">Total Sortants</td>
+                        <td colspan="3">Total Sortants</td>
                         <td class="expense" colspan="4">${formatAmount(totalExpense)}</td>
                     </tr>
+                    <tr style="background-color: #fef3c7; font-weight: bold;">
+                        <td colspan="3">Total créances (reste à payer)</td>
+                        <td class="remaining" colspan="4">${formatAmount(totalReceivable)}</td>
+                    </tr>
                     <tr style="background-color: #43277d; color: white; font-weight: bold; font-size: 1.1em;">
-                        <td colspan="2">Recette Actuelle (Bénéfice)</td>
+                        <td colspan="3">Recette Actuelle (Bénéfice)</td>
                         <td style="color: white;" colspan="4">${formatAmount(balance)}</td>
                     </tr>
                     <tr style="background-color: #f9fafb;">
-                        <td colspan="2">Moyenne par entrant</td>
+                        <td colspan="3">Moyenne par entrant</td>
                         <td class="income" colspan="4">${formatAmount(avgIncome)}</td>
                     </tr>
                     <tr style="background-color: #f9fafb;">
-                        <td colspan="2">Moyenne par sortant</td>
+                        <td colspan="3">Moyenne par sortant</td>
                         <td class="expense" colspan="4">${formatAmount(avgExpense)}</td>
                     </tr>
                     <tr style="background-color: #e5e7eb;">
-                        <td colspan="2">Période couverte</td>
+                        <td colspan="3">Période couverte</td>
                         <td colspan="4">Du ${minDate} au ${maxDate}</td>
                     </tr>
                     <tr style="background-color: #e5e7eb;">
-                        <td colspan="2">Date d'export</td>
+                        <td colspan="3">Date d'export</td>
                         <td colspan="4">${exportDate}</td>
                     </tr>
                 </tfoot>
@@ -10269,12 +10551,19 @@ function exportToPDF() {
         
         yPos = 50;
         
+        function exportRemainingValue(transaction) {
+            const remaining = parseFloat(transaction && transaction.remainingAmount) || 0;
+            return remaining > 0 ? remaining : 0;
+        }
+
         // Statistiques en haut (basées sur les transactions filtrées)
         const totalIncome = transactionsToExport.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpense = transactionsToExport.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const totalReceivable = transactionsToExport.reduce((sum, t) => sum + exportRemainingValue(t), 0);
         const balance = totalIncome - totalExpense;
         const incomeCount = transactionsToExport.filter(t => t.type === 'income').length;
         const expenseCount = transactionsToExport.filter(t => t.type === 'expense').length;
+        const receivableCount = transactionsToExport.filter(t => exportRemainingValue(t) > 0).length;
         const totalCount = transactionsToExport.length;
         
         doc.setTextColor(0, 0, 0);
@@ -10293,7 +10582,7 @@ function exportToPDF() {
         
         doc.setFillColor(...gray);
         doc.rect(margin, yPos - 5, contentWidth, 8, 'F');
-        doc.text(`Entrants : ${incomeCount} | Sortants : ${expenseCount}`, margin + 2, yPos);
+        doc.text(`Entrants : ${incomeCount} | Sortants : ${expenseCount} | Avec créance : ${receivableCount}`, margin + 2, yPos);
         yPos += 10;
         
         // Totaux
@@ -10306,6 +10595,12 @@ function exportToPDF() {
         doc.setFillColor(...red);
         doc.rect(margin + contentWidth / 2 + 2, yPos - 5, contentWidth / 2 - 2, 8, 'F');
         doc.text(`Total Sortants : ${formatAmount(totalExpense)}`, margin + contentWidth / 2 + 4, yPos);
+        yPos += 10;
+
+        doc.setFillColor(217, 119, 6);
+        doc.rect(margin, yPos - 5, contentWidth, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Total créances : ${formatAmount(totalReceivable)}`, margin + 2, yPos);
         yPos += 10;
         
         doc.setFillColor(...violet);
@@ -10323,18 +10618,20 @@ function exportToPDF() {
 
         // Colonnes (total ≈ contentWidth mm)
         const cols = {
-            num: { x: margin, w: 10 },
-            type: { x: margin + 10, w: 18 },
-            desc: { x: margin + 28, w: 70 },
-            amount: { x: margin + 98, w: 40 },
-            date: { x: margin + 138, w: 24 },
-            time: { x: margin + 162, w: contentWidth - 162 },
+            num: { x: margin, w: 9 },
+            type: { x: margin + 9, w: 16 },
+            desc: { x: margin + 25, w: 52 },
+            amount: { x: margin + 77, w: 28 },
+            remaining: { x: margin + 105, w: 28 },
+            date: { x: margin + 133, w: 22 },
+            time: { x: margin + 155, w: contentWidth - 155 },
         };
         const tableFontSize = 8;
         const lineH = 4.2;
         const cellPadY = 2.4;
         const headerH = 8;
         const bottomSafe = 20;
+        const amber = [217, 119, 6];
 
         function drawPdfTableHeader(startY) {
             doc.setFillColor(...violetDark);
@@ -10347,6 +10644,7 @@ function exportToPDF() {
             doc.text('Type', cols.type.x + 1, hy);
             doc.text('Description', cols.desc.x + 1, hy);
             doc.text('Montant', cols.amount.x + cols.amount.w - 1, hy, { align: 'right' });
+            doc.text('Créance', cols.remaining.x + cols.remaining.w - 1, hy, { align: 'right' });
             doc.text('Date', cols.date.x + 1, hy);
             doc.text('Heure', cols.time.x + 1, hy);
             return startY + headerH;
@@ -10363,6 +10661,8 @@ function exportToPDF() {
         sortedTransactions.forEach((transaction, index) => {
             const type = transaction.type === 'income' ? 'Entrant' : 'Sortant';
             const amount = formatAmount(transaction.amount);
+            const remainingValue = exportRemainingValue(transaction);
+            const remaining = remainingValue > 0 ? formatAmount(remainingValue) : '—';
             const transactionDate = new Date(transaction.date);
             const date = transactionDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const time = transactionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -10428,6 +10728,16 @@ function exportToPDF() {
             }
             doc.setFont('helvetica', 'bold');
             doc.text(amount, cols.amount.x + cols.amount.w - 1, textY, { align: 'right' });
+
+            // Créance
+            if (remainingValue > 0) {
+                doc.setTextColor(...amber);
+                doc.setFont('helvetica', 'bold');
+            } else {
+                doc.setTextColor(148, 163, 184);
+                doc.setFont('helvetica', 'normal');
+            }
+            doc.text(remaining, cols.remaining.x + cols.remaining.w - 1, textY, { align: 'right' });
             doc.setFont('helvetica', 'normal');
 
             // Date / heure
@@ -10474,9 +10784,16 @@ function exportToPDF() {
         doc.rect(margin, yPos - 4, contentWidth, 6, 'F');
         doc.text(`Moyenne par sortant : ${formatAmount(avgExpense)}`, margin + 2, yPos);
         yPos += 7;
+
+        doc.setFillColor(...gray);
+        doc.rect(margin, yPos - 4, contentWidth, 6, 'F');
+        doc.setTextColor(...amber);
+        doc.text(`Total créances (reste à payer) : ${formatAmount(totalReceivable)}`, margin + 2, yPos);
+        yPos += 7;
         
         doc.setFillColor(...gray);
         doc.rect(margin, yPos - 4, contentWidth, 6, 'F');
+        doc.setTextColor(0, 0, 0);
         doc.text(`Période couverte : Du ${minDate} au ${maxDate}`, margin + 2, yPos);
         
         // Télécharger le PDF
