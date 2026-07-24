@@ -4158,6 +4158,7 @@ body.app-tab-notes header {
     font-size: 0.88em;
 }
 
+.notifications-mark-read-btn,
 .notifications-clear-btn {
     flex: 0 0 auto;
     width: auto;
@@ -4170,20 +4171,22 @@ body.app-tab-notes header {
     font-size: 0.86em;
     font-weight: 600;
     line-height: 1.2;
-    color: #c41e5a;
+    color: var(--kp-color-primary);
     background: #fff;
-    box-shadow: inset 0 0 0 2px #f0c8d6;
+    box-shadow: inset 0 0 0 2px rgba(67, 39, 125, 0.22);
     cursor: pointer;
     font-family: inherit;
     transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.notifications-mark-read-btn:hover:not(:disabled),
 .notifications-clear-btn:hover:not(:disabled) {
-    background: #e72060;
+    background: var(--kp-color-primary);
     color: #fff;
     box-shadow: none;
 }
 
+.notifications-mark-read-btn:disabled,
 .notifications-clear-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
@@ -4217,7 +4220,27 @@ body.app-tab-notes header {
     background: transparent;
     box-shadow: none;
     overflow: visible;
-    transition: background 0.18s ease, border-color 0.18s ease;
+    transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.notification-item--unread {
+    background: linear-gradient(135deg, rgba(67, 39, 125, 0.06), rgba(231, 32, 96, 0.03));
+}
+
+.notification-item--unread::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--kp-color-primary);
+}
+
+.notification-item--unread .notification-item-message {
+    font-weight: 700;
 }
 
 @media (hover: hover) {
@@ -7322,6 +7345,7 @@ body.app-tab-notes header {
     }
 
     .notifications-modal-count,
+    .notifications-mark-read-btn,
     .notifications-clear-btn {
         width: auto;
         flex: 0 0 auto;

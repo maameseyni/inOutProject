@@ -36,6 +36,7 @@ def notification_to_js(notif: Notification) -> dict:
         'type': notif.type_notif,
         'systemId': notif.system_id or None,
         'createdAt': format_iso_date(notif.cree_le),
+        'read': bool(notif.lu),
     }
 
 
@@ -95,6 +96,8 @@ def create_notification(org, user, data: dict) -> dict | None:
         if existing:
             return notification_to_js(existing)
 
+    already_read = bool(data.get('read'))
+
     with db_transaction.atomic():
         notif = Notification.objects.create(
             id=notif_id,
@@ -103,6 +106,7 @@ def create_notification(org, user, data: dict) -> dict | None:
             message=message[:2000],
             type_notif=type_notif,
             system_id=system_id,
+            lu=already_read,
             cree_le=timezone.now(),
         )
         _trim_overflow(org, user)
@@ -122,6 +126,15 @@ def _ignorer_system_ids(org, user, system_ids: list[str]) -> None:
             system_id=sid,
             defaults={'ignoree_le': now},
         )
+
+
+def mark_notifications_read(org, user) -> int:
+    """Marque toutes les notifications comme lues (sans les supprimer)."""
+    return Notification.objects.filter(
+        organisation=org,
+        utilisateur=user,
+        lu=False,
+    ).update(lu=True)
 
 
 def clear_notifications(org, user) -> int:
@@ -177,6 +190,7 @@ def migrate_notifications(org, user, items: list) -> dict:
                 'message': raw.get('message'),
                 'type': raw.get('type'),
                 'systemId': raw.get('systemId'),
+                'read': raw.get('read'),
             })
             if result:
                 created += 1

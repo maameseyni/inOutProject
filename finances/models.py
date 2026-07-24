@@ -285,6 +285,7 @@ class Notification(models.Model):
     message = models.TextField()
     type_notif = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_INFO)
     system_id = models.CharField(max_length=160, blank=True, default='')
+    lu = models.BooleanField(default=False)
     cree_le = models.DateTimeField(default=timezone.now)
 
     class Meta:

@@ -376,11 +376,13 @@ function getNotificationHistory() {
 
 function updateNotificationsBadge() {
     const countEl = document.getElementById('notificationsCount');
-    const count = getNotificationHistory().length;
+    const unread = getNotificationHistory().filter(function (item) {
+        return item && item.read !== true;
+    }).length;
     if (!countEl) return;
-    if (count > 0) {
+    if (unread > 0) {
         countEl.hidden = false;
-        countEl.textContent = count > 99 ? '99+' : String(count);
+        countEl.textContent = unread > 99 ? '99+' : String(unread);
     } else {
         countEl.hidden = true;
         countEl.textContent = '0';
@@ -391,20 +393,26 @@ function renderNotificationsModal() {
     const listEl = document.getElementById('notificationsList');
     const emptyEl = document.getElementById('notificationsEmpty');
     const countEl = document.getElementById('notificationsModalCount');
-    const clearBtn = document.getElementById('notificationsClearBtn');
+    const markReadBtn = document.getElementById('notificationsMarkReadBtn')
+        || document.getElementById('notificationsClearBtn');
     if (!listEl) return;
     const notifications = getNotificationHistory();
     const count = notifications.length;
+    const unread = notifications.filter(function (item) {
+        return item && item.read !== true;
+    }).length;
     if (countEl) countEl.textContent = count + ' notification' + (count !== 1 ? 's' : '');
     if (emptyEl) emptyEl.hidden = count > 0;
-    if (clearBtn) clearBtn.disabled = count === 0;
+    if (markReadBtn) markReadBtn.disabled = unread === 0;
     if (!count) {
         listEl.innerHTML = '';
         return;
     }
     listEl.innerHTML = notifications.map(function (item) {
         const type = item && item.type ? item.type : 'info';
-        return '<div class="notification-item notification-item--' + escapeHtml(type) + '">' +
+        const isUnread = !(item && item.read === true);
+        return '<div class="notification-item notification-item--' + escapeHtml(type)
+            + (isUnread ? ' notification-item--unread' : ' notification-item--read') + '">' +
             '<div class="notification-item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' + getNotificationIcon(type) + '</svg></div>' +
             '<div class="notification-item-main">' +
             '<div class="notification-item-topline">' +
@@ -461,18 +469,22 @@ function initNotificationsUI() {
     notificationsListenersBound = true;
     const btn = document.getElementById('notificationsBtn');
     const modal = document.getElementById('notificationsModal');
-    const clearBtn = document.getElementById('notificationsClearBtn');
+    const markReadBtn = document.getElementById('notificationsMarkReadBtn')
+        || document.getElementById('notificationsClearBtn');
     if (btn) btn.addEventListener('click', openNotificationsModal);
     if (modal) {
         modal.addEventListener('click', function (e) {
             if (e.target === modal) closeNotificationsModal();
         });
     }
-    if (clearBtn) {
-        clearBtn.addEventListener('click', function () {
-            if (typeof window.xalissClearNotifications === 'function') {
+    if (markReadBtn) {
+        markReadBtn.addEventListener('click', function () {
+            if (typeof window.xalissMarkNotificationsRead === 'function') {
+                window.xalissMarkNotificationsRead();
+            } else if (typeof window.xalissClearNotifications === 'function') {
                 window.xalissClearNotifications();
             }
+            clearNotificationsAttention();
             renderNotificationsModal();
             updateNotificationsBadge();
         });

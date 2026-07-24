@@ -77,6 +77,7 @@
             message: String(item.message || ''),
             type: item.type || 'info',
             createdAt: item.createdAt || new Date().toISOString(),
+            read: item.read === true,
         };
         if (item.systemId) next.systemId = String(item.systemId);
         if (next.systemId === 'welcome-v1' && next.type !== 'success') {
@@ -297,6 +298,7 @@
             message: String(message || ''),
             type: type || 'info',
             createdAt: new Date().toISOString(),
+            read: false,
         };
         Object.keys(extras).forEach(function (key) {
             if (key === 'silent' || key === 'toast' || key === 'alert') return;
@@ -418,13 +420,21 @@
     global.xalissIsNotificationSystemIdIgnored = isSystemIdIgnored;
     global.xalissMarkNotificationSystemIdsIgnored = markSystemIdsIgnored;
     global.xalissClearNotifications = function () {
+        // Rétrocompat : « vider » = marquer comme lu (conserve l’historique).
+        global.xalissMarkNotificationsRead();
+    };
+    global.xalissMarkNotificationsRead = function () {
         var list = readNotificationHistory();
-        var systemIds = list
-            .map(function (item) { return item && item.systemId; })
-            .filter(Boolean);
-        markSystemIdsIgnored(systemIds);
-        writeNotificationHistory([]);
-        if (typeof global.xalissNotificationsRemoteClear === 'function') {
+        var next = list.map(function (item) {
+            if (!item) return item;
+            var copy = Object.assign({}, item);
+            copy.read = true;
+            return copy;
+        });
+        writeNotificationHistory(next);
+        if (typeof global.xalissNotificationsRemoteMarkRead === 'function') {
+            global.xalissNotificationsRemoteMarkRead();
+        } else if (typeof global.xalissNotificationsRemoteClear === 'function') {
             global.xalissNotificationsRemoteClear();
         }
     };

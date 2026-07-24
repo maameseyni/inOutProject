@@ -1072,6 +1072,7 @@
                     message: item.message,
                     type: item.type || 'info',
                     systemId: item.systemId || '',
+                    read: item.read === true,
                 }),
             }).then(function (data) {
                 if (data && data.ignored && item.systemId) {
@@ -1091,6 +1092,11 @@
     };
 
     window.xalissNotificationsRemoteClear = function () {
+        // Rétrocompat : DELETE marque désormais tout comme lu côté API.
+        window.xalissNotificationsRemoteMarkRead();
+    };
+
+    window.xalissNotificationsRemoteMarkRead = function () {
         enqueueNotifRemote(function () {
             return apiFetchNetwork('/notifications/', { method: 'DELETE' });
         });
