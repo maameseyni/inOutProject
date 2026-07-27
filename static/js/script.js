@@ -1594,6 +1594,7 @@ function persistClientsLocal(accountId, data) {
     if (prevJson === nextJson) return;
     hydrateTransactionClientLinks();
     if (transactions.length) updateDisplay();
+    else if (typeof refreshAllCharts === 'function') refreshAllCharts();
     syncTransactionClientLinks();
 }
 
@@ -7501,7 +7502,28 @@ const CHART_CATEGORY_PALETTE = [
     '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16', '#0ea5e9'
 ];
 
+const CHART_CATEGORY_PALETTE_FILL = [
+    'rgba(67, 39, 125, 0.78)',
+    'rgba(16, 185, 129, 0.78)',
+    'rgba(245, 158, 11, 0.78)',
+    'rgba(59, 130, 246, 0.78)',
+    'rgba(239, 68, 68, 0.78)',
+    'rgba(139, 92, 246, 0.78)',
+    'rgba(20, 184, 166, 0.78)',
+    'rgba(236, 72, 153, 0.78)',
+    'rgba(132, 204, 22, 0.78)',
+    'rgba(14, 165, 233, 0.78)'
+];
+
 function getChartPaletteColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        colors.push(CHART_CATEGORY_PALETTE_FILL[i % CHART_CATEGORY_PALETTE_FILL.length]);
+    }
+    return colors;
+}
+
+function getChartPaletteBorderColors(count) {
     const colors = [];
     for (let i = 0; i < count; i++) {
         colors.push(CHART_CATEGORY_PALETTE[i % CHART_CATEGORY_PALETTE.length]);
@@ -7526,15 +7548,6 @@ function getIncomeByCategoryData() {
     return {
         labels: rows.map(function (row) { return row.label; }),
         values: rows.map(function (row) { return row.value; })
-    };
-}
-
-function getIncomeExpenseShareData() {
-    const period = getPeriodCashflowTotals();
-    return {
-        labels: ['Entrants', 'Sortants'],
-        values: [period.income, period.expense],
-        colors: [CHART_COLOR_ENTRANTS, CHART_COLOR_SORTANTS]
     };
 }
 
@@ -7582,6 +7595,30 @@ function getReceivablesByClientData() {
     };
 }
 
+function getClientProvenancesData() {
+    const byProvenance = {};
+    (cachedClients || []).forEach(function (client) {
+        const code = normalizeClientProvenance(client && client.provenance);
+        const label = (code && getClientProvenanceLabel(code)) || 'Sans provenance';
+        if (!byProvenance[label]) byProvenance[label] = 0;
+        byProvenance[label] += 1;
+    });
+    const rows = Object.keys(byProvenance)
+        .map(function (label) { return { label: label, value: byProvenance[label] }; })
+        .filter(function (row) { return row.value > 0; })
+        .sort(function (a, b) {
+            if (a.label === 'Sans provenance') return 1;
+            if (b.label === 'Sans provenance') return -1;
+            return b.value - a.value;
+        });
+    return {
+        labels: rows.map(function (row) { return row.label; }),
+        values: rows.map(function (row) { return row.value; }),
+        colors: getChartPaletteColors(rows.length),
+        borderColors: getChartPaletteBorderColors(rows.length)
+    };
+}
+
 function getWeekdayActivityData() {
     const bounds = getChartsPeriodBounds();
     const dayNames = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
@@ -7604,9 +7641,9 @@ function getWeekdayActivityData() {
 let chartTop5Expenses = null;
 let chartTop5Income = null;
 let chartIncomeByCategory = null;
-let chartIncomeExpenseShare = null;
 let chartTopClients = null;
 let chartReceivables = null;
+let chartClientProvenances = null;
 let chartWeekdayActivity = null;
 
 function destroyChartInstance(chart) {
@@ -7839,9 +7876,9 @@ function invalidateAllCharts() {
     chartTop5Expenses = destroyChartInstance(chartTop5Expenses);
     chartTop5Income = destroyChartInstance(chartTop5Income);
     chartIncomeByCategory = destroyChartInstance(chartIncomeByCategory);
-    chartIncomeExpenseShare = destroyChartInstance(chartIncomeExpenseShare);
     chartTopClients = destroyChartInstance(chartTopClients);
     chartReceivables = destroyChartInstance(chartReceivables);
+    chartClientProvenances = destroyChartInstance(chartClientProvenances);
     chartWeekdayActivity = destroyChartInstance(chartWeekdayActivity);
     [
         'chartIncomeVsExpense',
@@ -7850,9 +7887,9 @@ function invalidateAllCharts() {
         'chartTop5Expenses',
         'chartTop5Income',
         'chartIncomeByCategory',
-        'chartIncomeExpenseShare',
         'chartTopClients',
         'chartReceivables',
+        'chartClientProvenances',
         'chartWeekdayActivity'
     ].forEach(rebuildChartCanvas);
 }
@@ -7864,7 +7901,6 @@ function refreshAllCharts() {
         return;
     }
     updateChartIncomeVsExpense();
-    updateChartIncomeExpenseShare();
     updateChartIncomeByCategory();
     updateChartBalanceEvolution();
     updateChartTop5Expenses();
@@ -7872,6 +7908,7 @@ function refreshAllCharts() {
     updateChartBenefitByMonth();
     updateChartTopClients();
     updateChartReceivables();
+    updateChartClientProvenances();
     updateChartWeekdayActivity();
 }
 
@@ -7959,8 +7996,10 @@ function updateChartIncomeByCategory() {
     }
     if (emptyEl) emptyEl.classList.remove('visible');
     if (containerEl) containerEl.style.display = '';
-    applyTop5ChartScrollWidth(containerEl, data.labels);
+    applyChartScrollWidth(containerEl, data.labels.length, 88);
     const total = data.values.reduce(function (sum, v) { return sum + v; }, 0);
+    const colors = getChartPaletteColors(data.labels.length);
+    const borderColors = getChartPaletteBorderColors(data.labels.length);
     chartIncomeByCategory = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -7968,25 +8007,14 @@ function updateChartIncomeByCategory() {
             datasets: [{
                 label: 'Entrants (' + getCurrencyLabel() + ')',
                 data: data.values.slice(),
-                backgroundColor: getChartPaletteColors(data.labels.length),
-                borderColor: getChartPaletteColors(data.labels.length),
+                backgroundColor: colors.slice(),
+                borderColor: borderColors.slice(),
                 borderWidth: 1
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: { left: 2, right: 8, top: 4, bottom: 4 }
-            },
-            datasets: {
-                bar: {
-                    categoryPercentage: 0.68,
-                    barPercentage: 0.82,
-                    maxBarThickness: 26
-                }
-            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -8000,60 +8028,19 @@ function updateChartIncomeByCategory() {
                 }
             },
             scales: {
-                y: getTop5YScaleOptions(data.labels),
                 x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 0,
+                        font: { size: 11 }
+                    }
+                },
+                y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function (v) {
                             return formatChartAxisTick(v);
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function updateChartIncomeExpenseShare() {
-    const canvasId = 'chartIncomeExpenseShare';
-    const emptyEl = document.getElementById('chartIncomeExpenseShareEmpty');
-    const containerEl = document.getElementById('chartIncomeExpenseShareContainer');
-    chartIncomeExpenseShare = destroyChartInstance(chartIncomeExpenseShare);
-    rebuildChartCanvas(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas || typeof Chart === 'undefined') return;
-    const data = getIncomeExpenseShareData();
-    if (!data.values[0] && !data.values[1]) {
-        if (emptyEl) emptyEl.classList.add('visible');
-        if (containerEl) containerEl.style.display = 'none';
-        return;
-    }
-    if (emptyEl) emptyEl.classList.remove('visible');
-    if (containerEl) containerEl.style.display = '';
-    const total = data.values[0] + data.values[1];
-    chartIncomeExpenseShare = new Chart(canvas, {
-        type: 'doughnut',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: data.colors,
-                borderColor: '#ffffff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '58%',
-            plugins: {
-                legend: getChartLegendOptions('bottom'),
-                tooltip: {
-                    callbacks: {
-                        label: function (ctx) {
-                            const value = ctx.raw || 0;
-                            const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
-                            return ctx.label + ' : ' + formatAmount(value) + ' (' + pct + ' %)';
                         }
                     }
                 }
@@ -8087,7 +8074,7 @@ function updateChartTopClients() {
                 label: 'Encaissé (' + getCurrencyLabel() + ')',
                 data: data.values.slice(),
                 fullDescriptions: data.fullDescriptions.slice(),
-                backgroundColor: CHART_COLOR_ENTRANTS_FILL,
+                backgroundColor: 'rgba(16, 185, 129, 0.78)',
                 borderColor: CHART_COLOR_ENTRANTS,
                 borderWidth: 1
             }]
@@ -8121,12 +8108,83 @@ function updateChartReceivables() {
                 label: 'Reste (' + getCurrencyLabel() + ')',
                 data: data.values.slice(),
                 fullDescriptions: data.fullDescriptions.slice(),
-                backgroundColor: 'rgba(217, 119, 6, 0.75)',
-                borderColor: '#d97706',
+                backgroundColor: 'rgba(245, 158, 11, 0.78)',
+                borderColor: '#f59e0b',
                 borderWidth: 1
             }]
         },
         options: getTop5BarChartOptions(data.labels, data.fullDescriptions)
+    });
+}
+
+function updateChartClientProvenances() {
+    const canvasId = 'chartClientProvenances';
+    const emptyEl = document.getElementById('chartClientProvenancesEmpty');
+    const containerEl = document.getElementById('chartClientProvenancesContainer');
+    chartClientProvenances = destroyChartInstance(chartClientProvenances);
+    rebuildChartCanvas(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const data = getClientProvenancesData();
+    if (data.labels.length === 0) {
+        if (emptyEl) emptyEl.classList.add('visible');
+        if (containerEl) containerEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    if (containerEl) containerEl.style.display = '';
+    applyChartScrollWidth(containerEl, data.labels.length, 88);
+    const total = data.values.reduce(function (sum, v) { return sum + v; }, 0);
+    chartClientProvenances = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: data.labels.slice(),
+            datasets: [{
+                label: 'Clients',
+                data: data.values.slice(),
+                backgroundColor: data.colors.slice(),
+                borderColor: data.borderColors.slice(),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            const value = ctx.raw || 0;
+                            const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+                            const unit = value > 1 ? ' clients' : ' client';
+                            return value + unit + ' (' + pct + ' %)';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 0,
+                        font: { size: 11 }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        stepSize: 1,
+                        callback: function (value) {
+                            if (Math.floor(value) !== value) return '';
+                            return value;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 

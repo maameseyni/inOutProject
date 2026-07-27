@@ -590,24 +590,14 @@
                     </div>
                     </div>
                 </div>
-                <div class="charts-grid">
-                    <div class="chart-card">
-                        <h3 class="chart-title">Répartition entrants / sortants</h3>
-                        <p class="chart-subtitle">Part de chaque flux sur la période</p>
-                        <p class="chart-empty" id="chartIncomeExpenseShareEmpty">Aucune donnée pour cette période</p>
-                        <div class="chart-container chart-container--donut" id="chartIncomeExpenseShareContainer">
-                            <canvas id="chartIncomeExpenseShare"></canvas>
-                        </div>
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Entrants par catégorie</h3>
+                    <p class="chart-subtitle">Répartition des revenus par catégorie produit</p>
+                    <p class="chart-empty" id="chartIncomeByCategoryEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartIncomeByCategoryContainer">
+                        <canvas id="chartIncomeByCategory"></canvas>
                     </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Entrants par catégorie</h3>
-                        <p class="chart-subtitle">Répartition des revenus par catégorie produit</p>
-                        <p class="chart-empty" id="chartIncomeByCategoryEmpty">Aucune donnée</p>
-                        <div class="chart-scroll">
-                        <div class="chart-container" id="chartIncomeByCategoryContainer">
-                            <canvas id="chartIncomeByCategory"></canvas>
-                        </div>
-                        </div>
                     </div>
                 </div>
                 <div class="charts-grid">
@@ -672,6 +662,16 @@
                             <canvas id="chartReceivables"></canvas>
                         </div>
                         </div>
+                    </div>
+                </div>
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Provenances des clients</h3>
+                    <p class="chart-subtitle">Nombre de clients par provenance</p>
+                    <p class="chart-empty" id="chartClientProvenancesEmpty">Aucune donnée</p>
+                    <div class="chart-scroll">
+                    <div class="chart-container" id="chartClientProvenancesContainer">
+                        <canvas id="chartClientProvenances"></canvas>
+                    </div>
                     </div>
                 </div>
                 <div class="chart-card chart-card--wide">

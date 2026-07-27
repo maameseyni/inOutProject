@@ -948,6 +948,7 @@
         const data = await apiFetch('/clients/');
         const accountId = getCurrentAccountId();
         persistClientsLocal(accountId, { clients: data.clients || [] });
+        if (typeof refreshAllCharts === 'function') refreshAllCharts();
         await persistOfflineSnapshot();
     }
 

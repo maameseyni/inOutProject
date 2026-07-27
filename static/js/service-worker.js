@@ -1,5 +1,5 @@
-/* KaayPrint PWA v16 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
-const STATIC_CACHE = 'kaayprint-static-v16';
+/* KaayPrint PWA v17 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
+const STATIC_CACHE = 'kaayprint-static-v17';
 
 const PRECACHE_URLS = [
     '/static/css/style.css',
