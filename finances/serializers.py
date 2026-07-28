@@ -57,6 +57,50 @@ def decimal_to_float(value: Decimal | None) -> float | None:
     return float(value)
 
 
+def normalize_category_lines(raw, fallback_category: str = '', total_amount: float | None = None) -> list[dict]:
+    """Normalise [{category, amount}] depuis le payload JS ou le legacy `category`."""
+    lines: list[dict] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get('category') or item.get('name') or '').strip()[:120]
+            amount = decimal_or_none(item.get('amount'))
+            if amount is None:
+                continue
+            amount_f = float(amount)
+            if amount_f < 0:
+                continue
+            if not name and amount_f == 0:
+                continue
+            lines.append({'category': name, 'amount': amount_f})
+
+    if not lines:
+        legacy = str(fallback_category or '').strip()[:120]
+        if legacy:
+            amount_f = float(total_amount) if total_amount is not None else 0.0
+            if amount_f < 0:
+                amount_f = 0.0
+            lines = [{'category': legacy, 'amount': amount_f}]
+
+    return lines
+
+
+def category_summary_from_lines(lines: list[dict]) -> str:
+    names = []
+    seen = set()
+    for line in lines or []:
+        name = str((line or {}).get('category') or '').strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    return ', '.join(names)[:120]
+
+
 def paiement_to_js(paiement) -> dict:
     return {
         'amount': decimal_to_float(paiement.montant),
@@ -78,15 +122,26 @@ def transaction_to_js(transaction: Transaction) -> dict:
     if not client_nom and transaction.client_id:
         client_nom = transaction.client.nom
 
+    remaining = decimal_to_float(transaction.montant_restant)
+    amount = decimal_to_float(transaction.montant) or 0.0
+    ordered_total = amount + (remaining or 0.0)
+    category_lines = normalize_category_lines(
+        transaction.lignes_categories,
+        fallback_category=transaction.categorie_produit or '',
+        total_amount=ordered_total,
+    )
+    category_summary = category_summary_from_lines(category_lines) or (transaction.categorie_produit or '')
+
     data = {
         'id': transaction.id,
         'type': TYPE_MODEL_TO_JS.get(transaction.type, transaction.type),
         'amount': decimal_to_float(transaction.montant),
         'description': transaction.description,
-        'category': transaction.categorie_produit or '',
+        'category': category_summary,
+        'categoryLines': category_lines,
         'date': format_iso_date(transaction.date),
         'payments': payments,
-        'remainingAmount': decimal_to_float(transaction.montant_restant),
+        'remainingAmount': remaining,
         'invoiceClient': client_nom or None,
         'invoiceClientId': transaction.client_id,
         'cree_par_nom': transaction.cree_par_nom or None,
@@ -125,11 +180,23 @@ def transaction_from_js(data: dict) -> dict:
     else:
         payments = [{'montant': montant, 'paye_le': date}]
 
+    ordered_total = float(montant) + float(montant_restant or 0)
+    if tx_type == Transaction.TYPE_ENTRANT:
+        category_lines = normalize_category_lines(
+            data.get('categoryLines'),
+            fallback_category=str(data.get('category') or ''),
+            total_amount=ordered_total,
+        )
+    else:
+        category_lines = []
+    categorie_produit = category_summary_from_lines(category_lines)
+
     return {
         'type': tx_type,
         'montant': montant,
         'description': str(data.get('description') or ''),
-        'categorie_produit': str(data.get('category') or '').strip()[:120],
+        'categorie_produit': categorie_produit,
+        'lignes_categories': category_lines,
         'date': date,
         'montant_restant': montant_restant,
         'nom_client_facture': nom_client,

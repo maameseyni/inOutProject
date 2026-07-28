@@ -97,6 +97,7 @@ def create_transaction(org, user, membre, data: dict) -> dict:
             montant=parsed['montant'],
             description=parsed['description'],
             categorie_produit=parsed['categorie_produit'],
+            lignes_categories=parsed.get('lignes_categories') or [],
             date=parsed['date'],
             montant_restant=parsed['montant_restant'],
             nom_client_facture=nom_client,
@@ -148,6 +149,7 @@ def update_transaction(org, transaction_id: str, data: dict) -> dict:
         tx.montant = parsed['montant']
         tx.description = parsed['description']
         tx.categorie_produit = parsed['categorie_produit']
+        tx.lignes_categories = parsed.get('lignes_categories') or []
         tx.date = parsed['date']
         tx.montant_restant = parsed['montant_restant']
         tx.nom_client_facture = nom_client

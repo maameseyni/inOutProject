@@ -3249,13 +3249,242 @@ body.app-tab-notes header {
 .transactions-layout .income-client-category-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
-    margin-bottom: 20px;
+    grid-template-areas:
+        "client-label category-label"
+        "client-control category-control";
+    column-gap: 14px;
+    row-gap: 8px;
+    margin-bottom: 12px;
+    align-items: start;
+}
+
+/* Multi-catégories : client seul, puis catégories en pleine largeur */
+.transactions-layout .income-client-category-row.is-split {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+        "client-label"
+        "client-control"
+        "category-label"
+        "category-control";
+    column-gap: 0;
+    row-gap: 8px;
+}
+
+.transactions-layout .income-client-category-row.is-split .income-category-label {
+    margin-top: 8px;
+}
+
+.transactions-layout .income-client-category-row.is-split .category-line-row {
+    grid-template-columns: minmax(0, 1.6fr) minmax(120px, 0.6fr) 36px;
+    align-items: center;
+}
+
+.transactions-layout .income-client-label {
+    grid-area: client-label;
+}
+
+.transactions-layout .income-category-label {
+    grid-area: category-label;
+}
+
+.transactions-layout .income-client-control {
+    grid-area: client-control;
+}
+
+.transactions-layout .income-category-lines-group {
+    grid-area: category-control;
 }
 
 .transactions-layout .income-client-category-row > .form-group {
     min-width: 0;
     margin-bottom: 0;
+}
+
+.transactions-layout .income-row-label {
+    display: block;
+    margin: 0;
+    min-height: 1.4em;
+    line-height: 1.4;
+    color: var(--kp-color-label);
+    font-weight: 500;
+}
+
+.transactions-layout .income-category-label.category-lines-head {
+    display: block;
+    position: relative;
+    margin: 0;
+    align-items: unset;
+    justify-content: unset;
+    gap: 0;
+}
+
+.transactions-layout .income-category-label.category-lines-head label {
+    display: block;
+    margin: 0;
+    line-height: inherit;
+    color: inherit;
+    font-weight: inherit;
+}
+
+.transactions-layout .income-category-label .category-lines-hint:not([hidden]) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    line-height: 1.4;
+}
+
+.category-lines-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.category-lines-head label {
+    margin-bottom: 0;
+}
+
+.category-lines-hint {
+    font-size: 0.78em;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.category-lines-hint.is-ok {
+    color: #059669;
+}
+
+.category-lines-hint.is-warn {
+    color: #d97706;
+}
+
+.category-lines-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.category-lines-editor.is-simple {
+    gap: 0;
+}
+
+.category-line-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(72px, 0.7fr) 32px;
+    gap: 8px;
+    align-items: start;
+}
+
+.category-line-row.is-simple {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.category-lines-editor.is-simple .category-line-row .kp-select-trigger,
+.category-lines-editor.is-simple .category-line-row select {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    padding: 0 16px !important;
+    font-size: 1em;
+}
+
+.category-line-row .form-group {
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.category-line-row .kp-select-trigger,
+.category-line-row select,
+.category-line-row input[type="number"] {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    padding: 0 16px !important;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.category-line-row .client-other-input {
+    margin-top: 6px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.category-line-remove {
+    width: 36px;
+    height: 48px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1.2em;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.category-line-remove:hover {
+    color: #c41e5a;
+    background: rgba(196, 30, 90, 0.08);
+}
+
+.category-line-remove[hidden] {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.category-lines-add {
+    display: block;
+    margin: -8px 0 20px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--kp-color-primary);
+    font: inherit;
+    font-size: 0.86em;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+
+.category-lines-add:hover {
+    text-decoration: underline;
+}
+
+.transactions-layout .income-category-lines-group {
+    margin-bottom: 0;
+}
+
+#editCategoryGroup .category-lines-add {
+    margin: 8px 0 0;
+}
+
+.transaction-category-pills {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.transaction-category-pill {
+    display: inline-flex;
+    align-items: center;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transaction-category-more {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: #6b7280;
 }
 
 .transactions-layout .action-card .form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value),
@@ -6094,6 +6323,12 @@ body.app-tab-notes header {
     vertical-align: middle;
 }
 
+.transaction-category:has(.transaction-category-pills) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+
 .transaction-category {
     color: #047857;
     background: rgba(16, 185, 129, 0.1);
@@ -6462,7 +6697,7 @@ body.app-tab-notes header {
     font-size: 0.84em;
     line-height: 1.52;
     color: #3d3d3d;
-    text-align: left;
+    text-align: right;
     word-break: break-word;
 }
 
@@ -7069,7 +7304,17 @@ body.app-tab-notes header {
 
     .transactions-layout .income-client-category-row {
         grid-template-columns: 1fr;
-        gap: 20px;
+        grid-template-areas:
+            "client-label"
+            "client-control"
+            "category-label"
+            "category-control";
+        row-gap: 8px;
+        column-gap: 0;
+    }
+
+    .transactions-layout .income-client-category-row .income-category-label {
+        margin-top: 12px;
     }
 
     .parametres-layout {

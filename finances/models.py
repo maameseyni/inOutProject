@@ -90,6 +90,7 @@ class Transaction(models.Model):
     )
     nom_client_facture = models.CharField(max_length=200, blank=True, default='')
     categorie_produit = models.CharField(max_length=120, blank=True, default='')
+    lignes_categories = models.JSONField(default=list, blank=True)
     client = models.ForeignKey(
         Client,
         on_delete=models.SET_NULL,

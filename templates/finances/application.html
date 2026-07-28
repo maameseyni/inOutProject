@@ -119,23 +119,24 @@
                         <span class="error-message" id="remainingAmountError"></span>
                     </div>
                     <div class="income-client-category-row">
-                        <div class="form-group">
-                            <label for="incomeInvoiceClient">Client (optionnel, sur la facture)</label>
+                        <label for="incomeInvoiceClient" class="income-row-label income-client-label">Client (optionnel, sur la facture)</label>
+                        <div class="income-row-label income-category-label category-lines-head">
+                            <label id="incomeCategoryLinesLabel">Catégorie</label>
+                            <span class="category-lines-hint" id="incomeCategoryLinesHint" hidden></span>
+                        </div>
+                        <div class="form-group income-client-control">
                             <select id="incomeInvoiceClient" class="kp-select-native">
                                 <option value="">— Aucun —</option>
                                 <option value="__new__">+ Ajouter</option>
                             </select>
                             <input type="text" id="incomeInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client" hidden>
                         </div>
-                        <div class="form-group">
-                            <label for="incomeCategory">Catégorie</label>
-                            <select id="incomeCategory" class="kp-select-native">
-                                <option value="">— Non catégorisé —</option>
-                                <option value="__new__">+ Ajouter</option>
-                            </select>
-                            <input type="text" id="incomeCategoryOther" class="client-other-input" maxlength="120" placeholder="Nom de la catégorie" hidden>
+                        <div class="form-group income-category-lines-group">
+                            <div id="incomeCategoryLines" class="category-lines-editor" data-editor="income" aria-label="Répartition par catégorie"></div>
+                            <span class="error-message" id="incomeCategoryLinesError"></span>
                         </div>
                     </div>
+                    <button type="button" class="category-lines-add" id="incomeCategoryLinesAdd">+ Catégorie</button>
                     <div class="form-group">
                         <label for="incomeDescription">Description</label>
                         <textarea id="incomeDescription" placeholder="Ex: Paiement client - Impression flyers" required maxlength="500" rows="4"></textarea>
@@ -1161,12 +1162,13 @@
                     <input type="text" id="editInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du client" hidden>
                 </div>
                 <div class="form-group" id="editCategoryGroup">
-                    <label for="editCategory">Catégorie</label>
-                    <select id="editCategory" class="kp-select-native">
-                        <option value="">— Non catégorisé —</option>
-                        <option value="__new__">+ Ajouter</option>
-                    </select>
-                    <input type="text" id="editCategoryOther" class="client-other-input" maxlength="120" placeholder="Nom de la catégorie" hidden>
+                    <div class="category-lines-head">
+                        <label>Catégorie</label>
+                        <span class="category-lines-hint" id="editCategoryLinesHint" hidden></span>
+                    </div>
+                    <div id="editCategoryLines" class="category-lines-editor" data-editor="edit" aria-label="Répartition par catégorie"></div>
+                    <button type="button" class="category-lines-add" id="editCategoryLinesAdd">+ Catégorie</button>
+                    <span class="error-message" id="editCategoryLinesError"></span>
                 </div>
                 <div class="form-group">
                     <label for="editDescription">Description</label>

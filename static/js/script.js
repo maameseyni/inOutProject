@@ -974,7 +974,27 @@ let clientsCurrentPage = 1;
 const clientsItemsPerPage = 15;
 
 const CLIENT_SELECT_IDS = ['incomeInvoiceClient', 'expenseInvoiceClient', 'editInvoiceClient', 'noteClient'];
-const CATEGORY_SELECT_IDS = ['incomeCategory', 'editCategory', 'noteCategory'];
+const CATEGORY_SELECT_IDS = ['noteCategory'];
+const CATEGORY_LINES_EDITORS = {
+    income: {
+        containerId: 'incomeCategoryLines',
+        hintId: 'incomeCategoryLinesHint',
+        errorId: 'incomeCategoryLinesError',
+        addBtnId: 'incomeCategoryLinesAdd',
+        amountId: 'incomeAmount',
+        remainingId: 'remainingAmount',
+        paymentPartialId: 'paymentPartial'
+    },
+    edit: {
+        containerId: 'editCategoryLines',
+        hintId: 'editCategoryLinesHint',
+        errorId: 'editCategoryLinesError',
+        addBtnId: 'editCategoryLinesAdd',
+        amountId: 'editAmount',
+        remainingId: 'editRemainingAmount',
+        paymentPartialId: null
+    }
+};
 
 const CLIENT_PROVENANCE_OPTIONS = [
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -1709,8 +1729,80 @@ function getCategoryRecord(name) {
     }) || null;
 }
 
+function getTransactionOrderedTotal(transaction) {
+    const paid = parseFloat(transaction && transaction.amount) || 0;
+    const remaining = parseFloat(transaction && transaction.remainingAmount) || 0;
+    return paid + remaining;
+}
+
+function normalizeCategoryLinesList(rawLines, fallbackCategory, orderedTotal) {
+    const lines = [];
+    if (Array.isArray(rawLines)) {
+        rawLines.forEach(function (item) {
+            if (!item || typeof item !== 'object') return;
+            const name = normalizeCategoryName(item.category || item.name || '');
+            const amount = parseFloat(item.amount);
+            if (!Number.isFinite(amount) || amount < 0) return;
+            if (!name && amount === 0) return;
+            lines.push({ category: name, amount: amount });
+        });
+    }
+    if (lines.length) return lines;
+    const legacy = normalizeCategoryName(fallbackCategory || '');
+    if (!legacy) return [];
+    const total = Number.isFinite(orderedTotal) ? Math.max(0, orderedTotal) : 0;
+    return [{ category: legacy, amount: total }];
+}
+
+function categorySummaryFromLines(lines) {
+    const names = [];
+    const seen = {};
+    (lines || []).forEach(function (line) {
+        const name = normalizeCategoryName(line && line.category);
+        if (!name) return;
+        const key = categoryNameKey(name);
+        if (seen[key]) return;
+        seen[key] = true;
+        names.push(name);
+    });
+    return names.join(', ').slice(0, 120);
+}
+
+function getTransactionCategoryLines(transaction) {
+    if (!transaction || transaction.type !== 'income') return [];
+    return normalizeCategoryLinesList(
+        transaction.categoryLines || transaction.lignes_categories,
+        transaction.category || transaction.categorie_produit,
+        getTransactionOrderedTotal(transaction)
+    );
+}
+
 function getTransactionCategory(transaction) {
+    const lines = getTransactionCategoryLines(transaction);
+    if (lines.length) return categorySummaryFromLines(lines);
     return normalizeCategoryName(transaction && (transaction.category || transaction.categorie_produit));
+}
+
+function getTransactionCategoryNames(transaction) {
+    const names = [];
+    const seen = {};
+    getTransactionCategoryLines(transaction).forEach(function (line) {
+        const name = normalizeCategoryName(line.category);
+        if (!name) return;
+        const key = categoryNameKey(name);
+        if (seen[key]) return;
+        seen[key] = true;
+        names.push(name);
+    });
+    return names;
+}
+
+function getTransactionCategoryLineAmount(transaction, categoryName) {
+    const key = categoryNameKey(categoryName);
+    if (!key) return 0;
+    return getTransactionCategoryLines(transaction).reduce(function (sum, line) {
+        return categoryNameKey(line.category) === key ? sum + (parseFloat(line.amount) || 0) : sum;
+    }, 0);
 }
 
 function categoryNameKey(name) {
@@ -1718,11 +1810,17 @@ function categoryNameKey(name) {
 }
 
 function transactionBelongsToCategory(transaction, categoryName) {
-    return !!(
-        transaction &&
-        transaction.type === 'income' &&
-        categoryNameKey(getTransactionCategory(transaction)) === categoryNameKey(categoryName)
-    );
+    if (!transaction || transaction.type !== 'income' || !categoryName) return false;
+    const key = categoryNameKey(categoryName);
+    return getTransactionCategoryLines(transaction).some(function (line) {
+        return categoryNameKey(line.category) === key;
+    });
+}
+
+function getCategoryShareForLine(transaction, lineAmount) {
+    const ordered = getTransactionOrderedTotal(transaction);
+    if (ordered <= 0) return 0;
+    return (parseFloat(lineAmount) || 0) / ordered;
 }
 
 function getCategoryOrderStats(categoryName) {
@@ -1733,12 +1831,15 @@ function getCategoryOrderStats(categoryName) {
 
     transactions.forEach(function (transaction) {
         if (!transactionBelongsToCategory(transaction, categoryName)) return;
+        const lineAmount = getTransactionCategoryLineAmount(transaction, categoryName);
+        if (lineAmount <= 0) return;
         count++;
         const paid = parseFloat(transaction.amount) || 0;
         const remaining = parseFloat(transaction.remainingAmount) || 0;
-        totalPaid += paid;
-        totalRemaining += remaining;
-        totalOrdered += paid + remaining;
+        const share = getCategoryShareForLine(transaction, lineAmount);
+        totalOrdered += lineAmount;
+        totalPaid += paid * share;
+        totalRemaining += remaining * share;
     });
 
     return {
@@ -1852,6 +1953,9 @@ function refreshCategorySelectOptions() {
         fillCategorySelect(sel);
         enhanceSelectField(sel);
     });
+    Object.keys(CATEGORY_LINES_EDITORS).forEach(function (editorKey) {
+        refreshCategoryLinesEditorOptions(editorKey);
+    });
     refreshHistoryFilterSelects();
 }
 
@@ -1924,6 +2028,419 @@ function bindCategorySelectOtherToggle(selectId) {
     });
 }
 
+function getCategoryLinesEditorConfig(editorKey) {
+    return CATEGORY_LINES_EDITORS[editorKey] || null;
+}
+
+function getOrderedTotalFromEditorInputs(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return 0;
+    const amountEl = document.getElementById(cfg.amountId);
+    const remainingEl = document.getElementById(cfg.remainingId);
+    const paid = parseFloat(amountEl && amountEl.value) || 0;
+    let remaining = 0;
+    if (editorKey === 'income') {
+        const partial = document.getElementById(cfg.paymentPartialId);
+        if (partial && partial.checked) {
+            remaining = parseFloat(remainingEl && remainingEl.value) || 0;
+        }
+    } else if (remainingEl && remainingEl.offsetParent !== null) {
+        remaining = parseFloat(remainingEl.value) || 0;
+    } else if (remainingEl && remainingEl.value !== '') {
+        remaining = parseFloat(remainingEl.value) || 0;
+    }
+    return Math.max(0, paid + remaining);
+}
+
+function formatCategoryLinesHintAmount(value) {
+    const n = Math.round((parseFloat(value) || 0) * 100) / 100;
+    if (typeof formatAmount === 'function') {
+        try {
+            return formatAmount(n).replace(/\s*[A-Za-z].*$/, '').trim() || String(n);
+        } catch (e) { /* fallthrough */ }
+    }
+    return String(n);
+}
+
+function isCategoryLinesSplitMode(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return false;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return false;
+    return container.querySelectorAll('.category-line-row').length > 1;
+}
+
+function updateCategoryLinesHint(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const hintEl = document.getElementById(cfg.hintId);
+    if (!hintEl) return;
+    const split = isCategoryLinesSplitMode(editorKey);
+    if (!split) {
+        hintEl.hidden = true;
+        hintEl.textContent = '';
+        hintEl.classList.remove('is-ok', 'is-warn');
+        return;
+    }
+    hintEl.hidden = false;
+    const lines = getCategoryLinesFromEditor(editorKey, { includeEmpty: true });
+    const allocated = lines.reduce(function (sum, line) { return sum + (parseFloat(line.amount) || 0); }, 0);
+    const target = getOrderedTotalFromEditorInputs(editorKey);
+    const hasContent = lines.some(function (line) {
+        return (line.category && line.category.trim()) || (parseFloat(line.amount) || 0) > 0;
+    });
+    hintEl.textContent = 'Réparti ' + formatCategoryLinesHintAmount(allocated) + ' / ' + formatCategoryLinesHintAmount(target);
+    hintEl.classList.remove('is-ok', 'is-warn');
+    if (!hasContent && allocated === 0) return;
+    const diff = Math.abs(allocated - target);
+    if (diff <= 0.01 && target > 0) hintEl.classList.add('is-ok');
+    else if (hasContent) hintEl.classList.add('is-warn');
+}
+
+function getCategoryLinesFromEditor(editorKey, options) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    const includeEmpty = !!(options && options.includeEmpty);
+    if (!cfg) return [];
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return [];
+    const rows = container.querySelectorAll('.category-line-row');
+    const split = rows.length > 1;
+    const orderedTotal = getOrderedTotalFromEditorInputs(editorKey);
+    const lines = [];
+    rows.forEach(function (row) {
+        const select = row.querySelector('select.category-line-select');
+        const amountInput = row.querySelector('input.category-line-amount');
+        if (!select) return;
+        let category = '';
+        if (select.value === '__new__') {
+            const other = row.querySelector('input.category-line-other');
+            category = normalizeCategoryName(other ? other.value : '');
+        } else {
+            category = normalizeCategoryName(select.value || '');
+        }
+        let amount = 0;
+        if (!split) {
+            // Une seule catégorie : le montant = total de la commande
+            amount = category ? orderedTotal : 0;
+        } else if (amountInput) {
+            const amountRaw = amountInput.value;
+            amount = amountRaw === '' || amountRaw == null ? 0 : parseFloat(amountRaw);
+            if (!Number.isFinite(amount)) amount = 0;
+        }
+        if (!includeEmpty) {
+            if (!category && !(amount > 0)) return;
+        }
+        lines.push({
+            category: category,
+            amount: amount
+        });
+    });
+    return lines;
+}
+
+function validateCategoryLinesForSubmit(editorKey, orderedTotal) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    const errorEl = cfg ? document.getElementById(cfg.errorId) : null;
+    const split = isCategoryLinesSplitMode(editorKey);
+    const lines = getCategoryLinesFromEditor(editorKey, { includeEmpty: true });
+    const meaningful = lines.filter(function (line) {
+        return !!(line.category) || (parseFloat(line.amount) || 0) > 0;
+    });
+    if (!meaningful.length) {
+        if (errorEl) errorEl.textContent = '';
+        return { ok: true, lines: [] };
+    }
+
+    // Mode simple : une catégorie sans saisie de montant
+    if (!split) {
+        const category = meaningful[0] && meaningful[0].category;
+        if (!category) {
+            if (errorEl) errorEl.textContent = '';
+            return { ok: true, lines: [] };
+        }
+        const target = Number.isFinite(orderedTotal) ? orderedTotal : getOrderedTotalFromEditorInputs(editorKey);
+        if (errorEl) errorEl.textContent = '';
+        return {
+            ok: true,
+            lines: [{ category: category, amount: Math.max(0, target) }]
+        };
+    }
+
+    for (let i = 0; i < meaningful.length; i++) {
+        if (!meaningful[i].category) {
+            if (errorEl) errorEl.textContent = 'Chaque ligne doit avoir une catégorie.';
+            return { ok: false, lines: meaningful };
+        }
+        if (!(parseFloat(meaningful[i].amount) > 0)) {
+            if (errorEl) errorEl.textContent = 'Chaque catégorie doit avoir un montant.';
+            return { ok: false, lines: meaningful };
+        }
+    }
+    const allocated = meaningful.reduce(function (sum, line) {
+        return sum + (parseFloat(line.amount) || 0);
+    }, 0);
+    const target = Number.isFinite(orderedTotal) ? orderedTotal : getOrderedTotalFromEditorInputs(editorKey);
+    if (target <= 0) {
+        if (errorEl) errorEl.textContent = 'Le total de la commande doit être supérieur à 0.';
+        return { ok: false, lines: meaningful };
+    }
+    if (Math.abs(allocated - target) > 0.01) {
+        if (errorEl) {
+            errorEl.textContent = 'La somme des catégories (' + formatCategoryLinesHintAmount(allocated)
+                + ') doit égaler le total (' + formatCategoryLinesHintAmount(target) + ').';
+        }
+        return { ok: false, lines: meaningful };
+    }
+    if (errorEl) errorEl.textContent = '';
+    return { ok: true, lines: meaningful };
+}
+
+function ensureCategoryLinesSaved(lines) {
+    const list = Array.isArray(lines) ? lines : [];
+    return Promise.all(list.map(function (line) {
+        return ensureCategorySaved(line.category).then(function (saved) {
+            return {
+                category: saved || normalizeCategoryName(line.category),
+                amount: parseFloat(line.amount) || 0
+            };
+        });
+    })).then(function (savedLines) {
+        return savedLines.filter(function (line) {
+            return line.category && line.amount > 0;
+        });
+    });
+}
+
+function fillCategoryLineSelect(selectEl, selectedValue) {
+    fillCategorySelect(selectEl, selectedValue);
+}
+
+function updateCategoryLinesLabel(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const hintEl = document.getElementById(cfg.hintId);
+    const labelEl = (hintEl && hintEl.parentElement && hintEl.parentElement.querySelector('label'))
+        || document.getElementById(cfg.containerId.replace('CategoryLines', 'CategoryLinesLabel'));
+    if (!labelEl) return;
+    labelEl.textContent = isCategoryLinesSplitMode(editorKey) ? 'Catégories' : 'Catégorie';
+}
+
+function applyCategoryLinesModeUI(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return;
+    const split = isCategoryLinesSplitMode(editorKey);
+    container.classList.toggle('is-split', split);
+    container.classList.toggle('is-simple', !split);
+    const rows = container.querySelectorAll('.category-line-row');
+    rows.forEach(function (row) {
+        row.classList.toggle('is-simple', !split);
+        const amountWrap = row.querySelector('.category-line-amount-wrap');
+        const removeBtn = row.querySelector('.category-line-remove');
+        if (amountWrap) amountWrap.hidden = !split;
+        if (removeBtn) removeBtn.hidden = !split;
+    });
+    if (editorKey === 'income') {
+        const rowWrap = container.closest('.income-client-category-row');
+        if (rowWrap) rowWrap.classList.toggle('is-split', split);
+    }
+    updateCategoryLinesLabel(editorKey);
+    updateCategoryLinesHint(editorKey);
+}
+
+function renderCategoryLinesEditor(editorKey, lines) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return;
+    const source = Array.isArray(lines) && lines.length
+        ? lines
+        : [{ category: '', amount: '' }];
+    container.innerHTML = '';
+    source.forEach(function (line, index) {
+        container.appendChild(createCategoryLineRow(editorKey, line, index, source.length));
+    });
+    applyCategoryLinesModeUI(editorKey);
+}
+
+function createCategoryLineRow(editorKey, line, index, totalRows) {
+    const row = document.createElement('div');
+    row.className = 'category-line-row' + (totalRows <= 1 ? ' is-simple' : '');
+    row.dataset.lineIndex = String(index);
+
+    const selectWrap = document.createElement('div');
+    selectWrap.className = 'form-group';
+    const selectId = editorKey + 'CatLine' + index + '_' + Date.now().toString(36);
+    const select = document.createElement('select');
+    select.id = selectId;
+    select.className = 'kp-select-native category-line-select';
+    select.setAttribute('aria-label', 'Catégorie');
+    selectWrap.appendChild(select);
+
+    const other = document.createElement('input');
+    other.type = 'text';
+    other.id = selectId + 'Other';
+    other.className = 'client-other-input category-line-other';
+    other.maxLength = 120;
+    other.placeholder = 'Nom de la catégorie';
+    other.hidden = true;
+    selectWrap.appendChild(other);
+
+    const amountWrap = document.createElement('div');
+    amountWrap.className = 'form-group category-line-amount-wrap';
+    if (totalRows <= 1) amountWrap.hidden = true;
+    const amount = document.createElement('input');
+    amount.type = 'number';
+    amount.className = 'category-line-amount';
+    amount.step = '0.01';
+    amount.min = '0';
+    amount.placeholder = 'Montant';
+    amount.setAttribute('aria-label', 'Montant catégorie');
+    if (line && line.amount !== '' && line.amount != null && Number.isFinite(parseFloat(line.amount))) {
+        amount.value = String(line.amount);
+    }
+    amountWrap.appendChild(amount);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'category-line-remove';
+    removeBtn.title = 'Retirer';
+    removeBtn.setAttribute('aria-label', 'Retirer la catégorie');
+    removeBtn.textContent = '×';
+    if (totalRows <= 1) removeBtn.hidden = true;
+    removeBtn.addEventListener('click', function () {
+        removeCategoryLineRow(editorKey, row);
+    });
+
+    row.appendChild(selectWrap);
+    row.appendChild(amountWrap);
+    row.appendChild(removeBtn);
+
+    fillCategoryLineSelect(select, line && line.category ? line.category : '');
+    enhanceSelectField(select);
+    bindCategorySelectOtherToggle(selectId);
+
+    select.addEventListener('change', function () {
+        updateCategoryLinesHint(editorKey);
+    });
+    other.addEventListener('input', function () {
+        updateCategoryLinesHint(editorKey);
+    });
+    amount.addEventListener('input', function () {
+        updateCategoryLinesHint(editorKey);
+    });
+
+    return row;
+}
+
+function removeCategoryLineRow(editorKey, row) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg || !row) return;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return;
+    const rows = container.querySelectorAll('.category-line-row');
+    if (rows.length <= 1) return;
+    row.remove();
+    applyCategoryLinesModeUI(editorKey);
+}
+
+function addCategoryLineRow(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return;
+    const wasSimple = !isCategoryLinesSplitMode(editorKey);
+    const index = container.querySelectorAll('.category-line-row').length;
+    container.appendChild(createCategoryLineRow(editorKey, { category: '', amount: '' }, index, index + 1));
+    // Passage en mode multi : afficher les montants sur toutes les lignes
+    if (wasSimple) {
+        const firstAmount = container.querySelector('.category-line-row input.category-line-amount');
+        if (firstAmount && !firstAmount.value) {
+            const target = getOrderedTotalFromEditorInputs(editorKey);
+            // Laisse vide pour que l'utilisateur répartisse ; hint indique le total
+            firstAmount.placeholder = target > 0 ? ('ex. ' + formatCategoryLinesHintAmount(target)) : 'Montant';
+        }
+    }
+    applyCategoryLinesModeUI(editorKey);
+}
+
+function refreshCategoryLinesEditorOptions(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (!cfg) return;
+    const container = document.getElementById(cfg.containerId);
+    if (!container) return;
+    container.querySelectorAll('select.category-line-select').forEach(function (select) {
+        let selected = '';
+        if (select.value === '__new__') {
+            const other = document.getElementById(select.id + 'Other');
+            selected = other ? other.value : '';
+        } else {
+            selected = select.value;
+        }
+        fillCategoryLineSelect(select, selected);
+        enhanceSelectField(select);
+    });
+    applyCategoryLinesModeUI(editorKey);
+}
+
+function resetCategoryLinesEditor(editorKey) {
+    const cfg = getCategoryLinesEditorConfig(editorKey);
+    if (cfg) {
+        const errorEl = document.getElementById(cfg.errorId);
+        if (errorEl) errorEl.textContent = '';
+    }
+    renderCategoryLinesEditor(editorKey, [{ category: '', amount: '' }]);
+}
+
+function syncSingleCategoryLineAmount(editorKey) {
+    // Plus utilisé en mode simple (montant = total auto). En mode split, met juste à jour l'indicateur.
+    updateCategoryLinesHint(editorKey);
+}
+
+function bindCategoryLinesEditors() {
+    Object.keys(CATEGORY_LINES_EDITORS).forEach(function (editorKey) {
+        const cfg = CATEGORY_LINES_EDITORS[editorKey];
+        const addBtn = document.getElementById(cfg.addBtnId);
+        if (addBtn && addBtn.dataset.categoryLinesBound !== '1') {
+            addBtn.dataset.categoryLinesBound = '1';
+            addBtn.addEventListener('click', function () {
+                addCategoryLineRow(editorKey);
+            });
+        }
+        const amountEl = document.getElementById(cfg.amountId);
+        if (amountEl && amountEl.dataset.categoryLinesBound !== '1') {
+            amountEl.dataset.categoryLinesBound = '1';
+            amountEl.addEventListener('input', function () {
+                syncSingleCategoryLineAmount(editorKey);
+            });
+        }
+        const remainingEl = document.getElementById(cfg.remainingId);
+        if (remainingEl && remainingEl.dataset.categoryLinesBound !== '1') {
+            remainingEl.dataset.categoryLinesBound = '1';
+            remainingEl.addEventListener('input', function () {
+                syncSingleCategoryLineAmount(editorKey);
+            });
+        }
+        if (cfg.paymentPartialId) {
+            const partial = document.getElementById(cfg.paymentPartialId);
+            const complete = document.getElementById('paymentComplete');
+            [partial, complete].forEach(function (el) {
+                if (!el || el.dataset.categoryLinesBound === '1') return;
+                el.dataset.categoryLinesBound = '1';
+                el.addEventListener('change', function () {
+                    syncSingleCategoryLineAmount(editorKey);
+                });
+            });
+        }
+        const containerEl = document.getElementById(cfg.containerId);
+        if (containerEl && containerEl.dataset.rendered !== '1') {
+            containerEl.dataset.rendered = '1';
+            resetCategoryLinesEditor(editorKey);
+        }
+    });
+}
+
 function deleteCategoryEntry(name) {
     const normalized = normalizeCategoryName(name);
     if (!normalized) return Promise.resolve(false);
@@ -1971,21 +2488,28 @@ function renameCategoryEntry(oldName, newName, description) {
             return transactionBelongsToCategory(transaction, oldNormalized);
         })
         : [];
-    const patch = { category: newNormalized };
 
     return saveCategoriesList(getCurrentAccountId(), next).then(function () {
         return Promise.all(toUpdate.map(function (transaction) {
+            const renamedLines = getTransactionCategoryLines(transaction).map(function (line) {
+                if (categoryNameKey(line.category) !== categoryNameKey(oldNormalized)) return line;
+                return { category: newNormalized, amount: line.amount };
+            });
+            const patch = {
+                categoryLines: renamedLines,
+                category: categorySummaryFromLines(renamedLines)
+            };
             return patchTransactionOnFirestore(transaction.id, patch).then(function () {
                 return true;
             }).catch(function (error) {
                 console.error('Synchronisation catégorie transaction', transaction.id, error);
                 return false;
+            }).then(function (ok) {
+                if (ok) applyTransactionPatchLocal(transaction.id, patch);
+                return ok;
             });
         }));
     }).then(function (results) {
-        toUpdate.forEach(function (transaction) {
-            applyTransactionPatchLocal(transaction.id, patch);
-        });
         if (!useFirebase || !db) {
             persistTransactionsCache();
         } else {
@@ -4888,8 +5412,9 @@ function getHistoryFilterCategoryNames() {
     });
     transactions.forEach(function (t) {
         if (t.type !== 'income') return;
-        const cat = getTransactionCategory(t);
-        if (cat) names[categoryNameKey(cat)] = cat;
+        getTransactionCategoryNames(t).forEach(function (cat) {
+            if (cat) names[categoryNameKey(cat)] = cat;
+        });
     });
     return Object.keys(names).map(function (k) { return names[k]; }).sort(function (a, b) {
         return a.localeCompare(b, 'fr', { sensitivity: 'base' });
@@ -5738,8 +6263,15 @@ function getEntityFilterOrderStats(clientName, categoryName) {
         const rest = parseFloat(t.remainingAmount) || 0;
         if (t.type === 'income') {
             incomeCount++;
-            totalOrdered += paid + rest;
-            totalRemaining += rest;
+            if (categoryName) {
+                const lineAmount = getTransactionCategoryLineAmount(t, categoryName);
+                const share = getCategoryShareForLine(t, lineAmount);
+                totalOrdered += lineAmount;
+                totalRemaining += rest * share;
+            } else {
+                totalOrdered += paid + rest;
+                totalRemaining += rest;
+            }
         } else if (t.type === 'expense') {
             expenseCount++;
             totalExpensed += paid + rest;
@@ -6223,6 +6755,7 @@ function initClientsUI() {
 
     CLIENT_SELECT_IDS.forEach(bindClientSelectOtherToggle);
     CATEGORY_SELECT_IDS.forEach(bindCategorySelectOtherToggle);
+    bindCategoryLinesEditors();
 
     if (unsubscribeClientList) {
         unsubscribeClientList();
@@ -6393,7 +6926,7 @@ function getInvoicePaperCssString() {
         '.invoice-label{color:#777;width:36%;font-size:0.84em;font-weight:600;padding-right:10px;}' +
         '.invoice-value{color:#333;font-size:0.92em;text-align:right;}' +
         '.invoice-row-desc td{padding:8px 0 12px;}' +
-        '.invoice-row-desc .invoice-value{font-size:0.84em;line-height:1.52;color:#3d3d3d;text-align:left;word-break:break-word;}' +
+        '.invoice-row-desc .invoice-value{font-size:0.84em;line-height:1.52;color:#3d3d3d;text-align:right;word-break:break-word;}' +
         '.invoice-row-amount td{padding-top:11px;padding-bottom:5px;border-top:2px solid rgba(67,39,125,0.12);border-bottom:none;}' +
         '.invoice-row-amount .invoice-amount{font-size:1.2em;font-weight:700;color:#43277d;text-align:right;letter-spacing:0.02em;}' +
         '.invoice-row-remaining td{padding-top:5px;padding-bottom:2px;}' +
@@ -7537,9 +8070,22 @@ function getIncomeByCategoryData() {
     getTransactionsForCharts()
         .filter(function (t) { return t.type === 'income'; })
         .forEach(function (t) {
-            const category = getTransactionCategory(t) || 'Non catégorisé';
-            if (!byCategory[category]) byCategory[category] = 0;
-            byCategory[category] += sumPaymentsInChartsPeriod(t, bounds);
+            const paidInPeriod = sumPaymentsInChartsPeriod(t, bounds);
+            if (!(paidInPeriod > 0)) return;
+            const lines = getTransactionCategoryLines(t);
+            if (!lines.length) {
+                byCategory['Non catégorisé'] = (byCategory['Non catégorisé'] || 0) + paidInPeriod;
+                return;
+            }
+            const linesSum = lines.reduce(function (sum, line) {
+                return sum + (parseFloat(line.amount) || 0);
+            }, 0);
+            const basis = linesSum > 0 ? linesSum : 1;
+            lines.forEach(function (line) {
+                const label = normalizeCategoryName(line.category) || 'Non catégorisé';
+                const share = (parseFloat(line.amount) || 0) / basis;
+                byCategory[label] = (byCategory[label] || 0) + paidInPeriod * share;
+            });
         });
     const rows = Object.keys(byCategory)
         .map(function (label) { return { label: label, value: byCategory[label] }; })
@@ -8389,7 +8935,7 @@ function displayTransactions(filter = currentFilter) {
         const animationDelay = index * 0.05;
         const hasRemaining = transaction.remainingAmount && transaction.remainingAmount > 0;
         const clientName = resolveTransactionClientName(transaction);
-        const categoryName = transaction.type === 'income' ? getTransactionCategory(transaction) : '';
+        const categoryNames = transaction.type === 'income' ? getTransactionCategoryNames(transaction) : [];
         const contactLabel = getTransactionContactLabel(transaction);
         const invoiceBtnTitle = transaction.type === 'expense' ? 'Voir la note de paiement' : 'Voir la facture';
         const authorLine = (transaction.cree_par_nom)
@@ -8402,14 +8948,25 @@ function displayTransactions(filter = currentFilter) {
         const pendingMark = transaction._offlinePending
             ? '<span class="tx-pending-sync" title="En attente de synchronisation">⏳ </span>'
             : '';
+        const categoryPills = categoryNames.length
+            ? '<div class="transaction-category"><span class="transaction-client-label">Catégorie\u00A0: </span>'
+                + '<span class="transaction-category-pills">'
+                + categoryNames.slice(0, 2).map(function (name) {
+                    return '<span class="transaction-client-name transaction-category-pill">' + escapeHtml(name) + '</span>';
+                }).join('')
+                + (categoryNames.length > 2
+                    ? '<span class="transaction-category-more">+' + (categoryNames.length - 2) + '</span>'
+                    : '')
+                + '</span></div>'
+            : '';
         
         return `
             <div class="transaction-item ${typeClass}${txLocked ? ' is-edit-locked' : ''}${transaction._offlinePending ? ' is-offline-pending' : ''}" style="animation-delay: ${animationDelay}s">
                 <div class="transaction-info">
                     <div class="transaction-description">${pendingMark}${escapeHtml(transaction.description)}</div>
-                    ${(clientName || categoryName) ? '<div class="transaction-tags">' +
+                    ${(clientName || categoryPills) ? '<div class="transaction-tags">' +
                         (clientName ? '<div class="transaction-client"><span class="transaction-client-label">' + contactLabel + '\u00A0: </span><span class="transaction-client-name">' + escapeHtml(clientName) + '</span></div>' : '') +
-                        (categoryName ? '<div class="transaction-category"><span class="transaction-client-label">Catégorie\u00A0: </span><span class="transaction-client-name">' + escapeHtml(categoryName) + '</span></div>' : '') +
+                        categoryPills +
                     '</div>' : ''}
                     <div class="transaction-date">${formatDate(transaction.date)}</div>
                     ${authorLine}
@@ -8857,23 +9414,36 @@ function generateTransactionId() {
 }
 
 // Ajouter une transaction
-function addTransaction(type, amount, description, date, remainingAmount = null, invoiceClient = null, invoiceClientId = null, category = '') {
+function addTransaction(type, amount, description, date, remainingAmount = null, invoiceClient = null, invoiceClientId = null, category = '', categoryLines = null) {
     const amt = parseFloat(amount);
     const unusualExpenseBenchmark = type === 'expense' ? getUnusualExpenseBenchmark(amt) : null;
     const dateIso = new Date(date).toISOString();
+    const remainingValue = (remainingAmount !== null && remainingAmount !== '')
+        ? parseFloat(remainingAmount)
+        : null;
+    const orderedTotal = amt + (remainingValue || 0);
+    let lines = [];
+    if (type === 'income') {
+        if (Array.isArray(categoryLines)) {
+            lines = normalizeCategoryLinesList(categoryLines, '', orderedTotal);
+        } else {
+            lines = normalizeCategoryLinesList(null, category, orderedTotal);
+        }
+    }
     const transaction = {
         id: generateTransactionId(),
         type,
         amount: amt,
         description: description.trim(),
-        category: type === 'income' ? normalizeCategoryName(category) : '',
+        category: type === 'income' ? categorySummaryFromLines(lines) : '',
+        categoryLines: type === 'income' ? lines : [],
         date: dateIso,
         payments: [{ amount: amt, date: dateIso }]
     };
     
     // Ajouter le montant restant si fourni
-    if (remainingAmount !== null && remainingAmount !== '') {
-        transaction.remainingAmount = parseFloat(remainingAmount);
+    if (remainingValue !== null && !isNaN(remainingValue)) {
+        transaction.remainingAmount = remainingValue;
     }
 
     const clientFields = normalizeInvoiceClientFields(invoiceClient, invoiceClientId);
@@ -8984,12 +9554,19 @@ function openEditModal(id) {
     }
     updateEditInvoiceClientFieldUi(transaction);
     const editCategoryGroup = document.getElementById('editCategoryGroup');
-    const editCategory = document.getElementById('editCategory');
     if (editCategoryGroup) {
         editCategoryGroup.style.display = transaction.type === 'income' ? '' : 'none';
     }
-    if (editCategory) {
-        fillCategorySelect(editCategory, transaction.type === 'income' ? getTransactionCategory(transaction) : '');
+    if (transaction.type === 'income') {
+        const lines = getTransactionCategoryLines(transaction);
+        // Une seule ligne legacy → mode simple (sans montants visibles)
+        if (lines.length <= 1) {
+            renderCategoryLinesEditor('edit', lines.length
+                ? [{ category: lines[0].category, amount: '' }]
+                : [{ category: '', amount: '' }]);
+        } else {
+            renderCategoryLinesEditor('edit', lines);
+        }
     }
     
     // Libellé du montant : "Montant payé à ce jour" pour les deux (entrant et sortant peuvent être partiels)
@@ -9521,7 +10098,7 @@ function closeEditModal() {
     if (editRemainingGroup) editRemainingGroup.style.display = 'none';
     const editCategoryGroup = document.getElementById('editCategoryGroup');
     if (editCategoryGroup) editCategoryGroup.style.display = '';
-    fillCategorySelect(document.getElementById('editCategory'));
+    resetCategoryLinesEditor('edit');
     document.querySelectorAll('#editForm .error-message').forEach(el => el.textContent = '');
     document.querySelectorAll('#editForm input').forEach(el => el.classList.remove('error', 'valid'));
     document.getElementById('editDescriptionCounter').textContent = '0';
@@ -9529,7 +10106,7 @@ function closeEditModal() {
 }
 
 // Modifier une transaction (remainingAmountParam = valeur du champ "Restant à payer", optionnel)
-function updateTransaction(id, amount, description, date, remainingAmountParam = undefined, invoiceClient = undefined, invoiceClientId = undefined, category = undefined) {
+function updateTransaction(id, amount, description, date, remainingAmountParam = undefined, invoiceClient = undefined, invoiceClientId = undefined, category = undefined, categoryLines = undefined) {
     const originalTransaction = transactions.find(t => String(t.id) === String(id));
     if (!originalTransaction) {
         showNotification('Transaction non trouvée', 'error');
@@ -9563,8 +10140,19 @@ function updateTransaction(id, amount, description, date, remainingAmountParam =
         updatedData.invoiceClient = clientFields.invoiceClient;
         updatedData.invoiceClientId = clientFields.invoiceClientId;
     }
-    if (category !== undefined) {
-        updatedData.category = originalTransaction.type === 'income' ? normalizeCategoryName(category) : '';
+    if (originalTransaction.type === 'income' && (categoryLines !== undefined || category !== undefined)) {
+        const orderedTotal = newAmount + (parseFloat(updatedData.remainingAmount) || 0);
+        let lines;
+        if (categoryLines !== undefined) {
+            lines = normalizeCategoryLinesList(categoryLines, '', orderedTotal);
+        } else {
+            lines = normalizeCategoryLinesList(null, category, orderedTotal);
+        }
+        updatedData.categoryLines = lines;
+        updatedData.category = categorySummaryFromLines(lines);
+    } else if (originalTransaction.type !== 'income') {
+        updatedData.category = '';
+        updatedData.categoryLines = [];
     }
     
     if (useFirebase && db) {
@@ -9822,9 +10410,21 @@ function attachEventListeners() {
                 if (remainingAmount) remainingAmount.classList.remove('error');
             }
         }
-        
+
         if (!isAmountValid || !isDescriptionValid || !isDateValid || !isRemainingValid) {
             showNotification('Veuillez corriger les erreurs dans le formulaire', 'error');
+            return;
+        }
+        
+        const paymentType = paymentPartial && paymentPartial.checked ? 'partial' : 'complete';
+        const remaining = paymentType === 'partial' && remainingAmount ? remainingAmount.value : null;
+        const amountToAdd = isDebt ? '0' : amount;
+        const orderedTotal = (parseFloat(amountToAdd) || 0) + (remaining != null && remaining !== '' ? (parseFloat(remaining) || 0) : 0);
+        const linesValidation = validateCategoryLinesForSubmit('income', orderedTotal);
+        if (!linesValidation.ok) {
+            const errMsg = (document.getElementById('incomeCategoryLinesError') || {}).textContent
+                || 'Vérifiez la répartition des catégories.';
+            showNotification(errMsg, 'error');
             return;
         }
         
@@ -9840,20 +10440,16 @@ function attachEventListeners() {
             date = toDateTimeLocalValue(new Date());
         }
         
-        const paymentType = paymentPartial && paymentPartial.checked ? 'partial' : 'complete';
-        const remaining = paymentType === 'partial' && remainingAmount ? remainingAmount.value : null;
-        const amountToAdd = isDebt ? '0' : amount;
-        const category = getCategorySelectionFromControl('incomeCategory');
-        
         const wasNewIncomeClient = wasNewInvoiceClientFromControl('incomeInvoiceClient');
         const incomeInvoiceClientSel = getInvoiceClientSelectionFromControl('incomeInvoiceClient');
         Promise.all([
             resolveInvoiceClientSelectionForTransaction(incomeInvoiceClientSel, 'autre'),
-            ensureCategorySaved(category)
+            ensureCategoryLinesSaved(linesValidation.lines)
         ]).then(function (results) {
             const resolvedClient = results[0];
-            const savedCategory = results[1];
-            addTransaction('income', amountToAdd, description, date, remaining, resolvedClient.name, resolvedClient.id, savedCategory);
+            const savedLines = results[1];
+            const summary = categorySummaryFromLines(savedLines);
+            addTransaction('income', amountToAdd, description, date, remaining, resolvedClient.name, resolvedClient.id, summary, savedLines);
             if (resolvedClient.name) {
                 ensureClientSavedAndSyncTransactions(resolvedClient.name, 'autre').then(function (client) {
                     if (wasNewIncomeClient && client) addClientProfileReminder(client.name);
@@ -9862,7 +10458,7 @@ function attachEventListeners() {
 
             document.getElementById('incomeForm').reset();
             resetClientSelectForm('incomeInvoiceClient');
-            resetCategorySelectForm('incomeCategory');
+            resetCategoryLinesEditor('income');
             setDateTimeLocalValue('incomeDate', new Date(), { dispatch: false });
             if (paymentComplete) paymentComplete.checked = true;
             if (remainingAmountGroup) remainingAmountGroup.style.display = 'none';
@@ -10192,13 +10788,26 @@ function attachEventListeners() {
             const editInvoiceClientSel = getInvoiceClientSelectionFromControl('editInvoiceClient');
             const editingTx = transactions.find(function (t) { return String(t.id) === String(editingTransactionId); });
             const editDefaultProvenance = editingTx && editingTx.type === 'expense' ? 'neant' : 'autre';
-            const editCategory = getCategorySelectionFromControl('editCategory');
+            const remainingNum = remainingValue === '' || remainingValue == null ? 0 : parseFloat(remainingValue);
+            const orderedTotal = (parseFloat(amount) || 0) + (isNaN(remainingNum) ? 0 : remainingNum);
+            let savedLinesPromise = Promise.resolve(undefined);
+            if (editingTx && editingTx.type === 'income') {
+                const linesValidation = validateCategoryLinesForSubmit('edit', orderedTotal);
+                if (!linesValidation.ok) {
+                    const errMsg = (document.getElementById('editCategoryLinesError') || {}).textContent
+                        || 'Vérifiez la répartition des catégories.';
+                    showNotification(errMsg, 'error');
+                    return;
+                }
+                savedLinesPromise = ensureCategoryLinesSaved(linesValidation.lines);
+            }
             Promise.all([
                 resolveInvoiceClientSelectionForTransaction(editInvoiceClientSel, editDefaultProvenance),
-                ensureCategorySaved(editCategory)
+                savedLinesPromise
             ]).then(function (results) {
                 const resolvedClient = results[0];
-                const savedCategory = results[1];
+                const savedLines = results[1];
+                const summary = savedLines ? categorySummaryFromLines(savedLines) : undefined;
                 const result = updateTransaction(
                     editingTransactionId,
                     amount,
@@ -10207,7 +10816,8 @@ function attachEventListeners() {
                     remainingValue,
                     resolvedClient.name,
                     resolvedClient.id,
-                    savedCategory
+                    summary,
+                    savedLines
                 );
                 if (resolvedClient.name) {
                     ensureClientSavedAndSyncTransactions(resolvedClient.name, editDefaultProvenance).then(function (client) {

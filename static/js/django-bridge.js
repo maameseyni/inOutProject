@@ -1197,23 +1197,42 @@
     };
 
     const originalAddTransaction = addTransaction;
-    addTransaction = function (type, amount, description, date, remainingAmount, invoiceClient, invoiceClientId, category) {
+    addTransaction = function (type, amount, description, date, remainingAmount, invoiceClient, invoiceClientId, category, categoryLines) {
         const amt = parseFloat(amount);
         const unusualExpenseBenchmark = type === 'expense' && typeof getUnusualExpenseBenchmark === 'function'
             ? getUnusualExpenseBenchmark(amt)
             : null;
         const dateIso = new Date(date).toISOString();
+        const remainingValue = (remainingAmount !== null && remainingAmount !== '')
+            ? parseFloat(remainingAmount)
+            : null;
+        const orderedTotal = amt + (remainingValue || 0);
+        let lines = [];
+        if (type === 'income') {
+            if (Array.isArray(categoryLines)) {
+                lines = typeof normalizeCategoryLinesList === 'function'
+                    ? normalizeCategoryLinesList(categoryLines, '', orderedTotal)
+                    : categoryLines;
+            } else if (typeof normalizeCategoryLinesList === 'function') {
+                lines = normalizeCategoryLinesList(null, category, orderedTotal);
+            } else if (category) {
+                lines = [{ category: normalizeCategoryName(category), amount: orderedTotal }];
+            }
+        }
         const payload = {
             type: type,
             amount: amt,
             description: String(description || '').trim(),
-            category: type === 'income' ? normalizeCategoryName(category) : '',
+            category: type === 'income'
+                ? (typeof categorySummaryFromLines === 'function' ? categorySummaryFromLines(lines) : normalizeCategoryName(category))
+                : '',
+            categoryLines: type === 'income' ? lines : [],
             date: dateIso,
             payments: [{ amount: amt, date: dateIso }]
         };
 
-        if (remainingAmount !== null && remainingAmount !== '') {
-            payload.remainingAmount = parseFloat(remainingAmount);
+        if (remainingValue !== null && !isNaN(remainingValue)) {
+            payload.remainingAmount = remainingValue;
         }
 
         const clientFields = normalizeInvoiceClientFields(invoiceClient, invoiceClientId);
@@ -1305,7 +1324,7 @@
     window.deleteTransaction = deleteTransaction;
 
     const originalUpdateTransaction = updateTransaction;
-    updateTransaction = function (id, amount, description, date, remainingAmountParam, invoiceClient, invoiceClientId, category) {
+    updateTransaction = function (id, amount, description, date, remainingAmountParam, invoiceClient, invoiceClientId, category, categoryLines) {
         const originalTransaction = transactions.find(function (t) {
             return String(t.id) === String(id);
         });
@@ -1343,8 +1362,23 @@
             updatedData.invoiceClientId = clientFields.invoiceClientId;
         }
 
-        if (category !== undefined) {
-            updatedData.category = originalTransaction.type === 'income' ? normalizeCategoryName(category) : '';
+        if (originalTransaction.type === 'income' && (categoryLines !== undefined || category !== undefined)) {
+            const orderedTotal = newAmount + (parseFloat(updatedData.remainingAmount) || 0);
+            let lines;
+            if (categoryLines !== undefined && typeof normalizeCategoryLinesList === 'function') {
+                lines = normalizeCategoryLinesList(categoryLines, '', orderedTotal);
+            } else if (typeof normalizeCategoryLinesList === 'function') {
+                lines = normalizeCategoryLinesList(null, category, orderedTotal);
+            } else {
+                lines = category ? [{ category: normalizeCategoryName(category), amount: orderedTotal }] : [];
+            }
+            updatedData.categoryLines = lines;
+            updatedData.category = typeof categorySummaryFromLines === 'function'
+                ? categorySummaryFromLines(lines)
+                : normalizeCategoryName(category || '');
+        } else if (originalTransaction.type !== 'income') {
+            updatedData.category = '';
+            updatedData.categoryLines = [];
         }
 
         if (originalTransaction.updatedAt) {
