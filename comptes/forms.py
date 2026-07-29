@@ -7,6 +7,7 @@ from django.utils.text import slugify
 
 from .devises import DEVISE_CHOICES, DEVISE_CHOICES_AVEC_PLACEHOLDER  # noqa: F401
 from .models import MembreOrganisation, Organisation
+from .utils import assurer_abonnement_organisation
 
 User = get_user_model()
 
@@ -237,6 +238,7 @@ class InscriptionForm(forms.Form):
             organisation=organisation,
             role=MembreOrganisation.ROLE_PROPRIETAIRE,
         )
+        assurer_abonnement_organisation(organisation)
         return utilisateur, organisation
 
 
@@ -345,4 +347,5 @@ class CompleterInscriptionGoogleForm(forms.Form):
             organisation=organisation,
             role=MembreOrganisation.ROLE_PROPRIETAIRE,
         )
+        assurer_abonnement_organisation(organisation)
         return organisation

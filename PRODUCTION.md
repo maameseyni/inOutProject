@@ -129,6 +129,32 @@ Conserver les sauvegardes hors du serveur (cloud, disque externe).
 
 ---
 
+## 6bis. Abonnements SaaS (sync des statuts)
+
+Le middleware `SynchroniserAbonnementMiddleware` met à jour l’abonnement de l’orga
+**à chaque requête connectée** (essai expiré → `expire`, période payée dépassée →
+`en_retard`, grâce 3 jours dépassée → `expire`). Pas besoin d’action manuelle
+pour les comptes actifs.
+
+Pour les organisations **inactives** (personne ne se connecte) et un admin propre,
+ajouter un cron quotidien (une seule fois au déploiement) :
+
+```bash
+# Tous les jours à 3h — adapter chemins et utilisateur
+0 3 * * * cd /opt/xaliss && /opt/xaliss/.venv/bin/python manage.py synchroniser_abonnements >> /var/log/xaliss-abo.log 2>&1
+```
+
+Lancement officiel de l’essai 3 mois pour tous les comptes prélaunch :
+
+```bash
+cd /opt/xaliss && /opt/xaliss/.venv/bin/python manage.py activer_lancement_abonnements
+```
+
+Variables `.env` utiles : `XALISS_LANCEMENT_LE`, `XALISS_DUREE_ESSAI_JOURS`,
+`XALISS_JOURS_GRACE_RETARD`.
+
+---
+
 ## 7. Permissions par rôle
 
 | Action | Propriétaire | Admin | Membre |
@@ -153,6 +179,8 @@ Les refus sont appliqués **côté serveur** (API 403) et **côté interface** (
 - [ ] Sauvegarde PostgreSQL testée
 - [ ] Compte admin Django (`createsuperuser`) si besoin
 - [ ] Google OAuth : URI callback en `https://`
+- [ ] Cron `synchroniser_abonnements` (optionnel si middleware suffit pour les actifs)
+- [ ] `XALISS_LANCEMENT_LE` renseigné le jour J + `activer_lancement_abonnements`
 
 ---
 

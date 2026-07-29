@@ -1,5 +1,5 @@
-/* KaayPrint PWA v17 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
-const STATIC_CACHE = 'kaayprint-static-v17';
+/* KaayPrint PWA v18 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
+const STATIC_CACHE = 'kaayprint-static-v18';
 
 const PRECACHE_URLS = [
     '/static/css/style.css',
@@ -34,6 +34,7 @@ function isSensitiveCacheName(name) {
 function isAuthOrPrivatePath(url) {
     return url.pathname.startsWith('/auth/')
         || url.pathname.startsWith('/admin/')
+        || url.pathname.startsWith('/backoffice')
         || url.pathname === '/connexion/'
         || url.pathname === '/deconnexion/'
         || url.pathname === '/inscription/'
@@ -47,17 +48,26 @@ function isStaticAsset(url) {
     return url.pathname.startsWith('/static/');
 }
 
+function networkOnly(request) {
+    return fetch(request);
+}
+
 function staleWhileRevalidate(request, cacheName) {
     return caches.open(cacheName).then(function (cache) {
         return cache.match(request).then(function (cached) {
             const networkFetch = fetch(request).then(function (response) {
                 if (response && response.status === 200) {
-                    cache.put(request, response.clone());
+                    try {
+                        cache.put(request, response.clone());
+                    } catch (e) { /* ignore cache put errors */ }
                 }
                 return response;
             }).catch(function () { return cached; });
             return cached || networkFetch;
         });
+    }).catch(function () {
+        // CacheStorage HS (disque / quota / corruption) → réseau direct
+        return networkOnly(request);
     });
 }
 
@@ -68,7 +78,7 @@ function clearSensitiveCaches() {
                 return caches.delete(key);
             })
         );
-    });
+    }).catch(function () { return undefined; });
 }
 
 function deleteObsoleteCaches() {
@@ -82,13 +92,16 @@ function deleteObsoleteCaches() {
                 return caches.delete(key);
             })
         );
-    });
+    }).catch(function () { return undefined; });
 }
 
 self.addEventListener('install', function (event) {
     event.waitUntil(
         caches.open(STATIC_CACHE).then(function (cache) {
             return cache.addAll(PRECACHE_URLS);
+        }).catch(function () {
+            // Precache optionnel si CacheStorage indisponible
+            return undefined;
         }).then(function () {
             return self.skipWaiting();
         })
@@ -124,7 +137,7 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // Jamais intercepter / cacher : API, shell /app/, auth.
+    // Jamais intercepter / cacher : API, shell /app/, auth, backoffice, admin.
     // Hors ligne : le bridge utilise IndexedDB ; navigation → offline.html uniquement.
     if (sameOrigin && isAuthOrPrivatePath(url)) {
         const isNavigate = event.request.mode === 'navigate'
@@ -132,7 +145,9 @@ self.addEventListener('fetch', function (event) {
         if (isNavigate && (url.pathname === '/app' || url.pathname.indexOf('/app/') === 0)) {
             event.respondWith(
                 fetch(event.request).catch(function () {
-                    return caches.match('/static/offline.html');
+                    return caches.match('/static/offline.html').catch(function () {
+                        return Response.error();
+                    });
                 })
             );
         }
@@ -144,7 +159,9 @@ self.addEventListener('fetch', function (event) {
         || (event.request.headers.get('accept') || '').includes('text/html')) {
         event.respondWith(
             fetch(event.request).catch(function () {
-                return caches.match('/static/offline.html');
+                return caches.match('/static/offline.html').catch(function () {
+                    return Response.error();
+                });
             })
         );
         return;

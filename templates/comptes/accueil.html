@@ -1,0 +1,478 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'partials/pwa_head.html' %}
+    <title>Xaliss — Gestion financière pour votre activité</title>
+    <meta name="description" content="Xaliss, la plateforme SaaS pour suivre vos entrées, sorties et statistiques financières en un seul endroit.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body class="landing">
+    <header class="lp-nav" id="landingNav">
+        <div class="lp-nav-pill">
+            <a class="lp-brand" href="{% url 'accueil' %}">Xaliss</a>
+
+            <button type="button" class="lp-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="landingNavMenu" aria-label="Ouvrir le menu">
+                <span></span><span></span>
+            </button>
+
+            <nav class="lp-nav-menu" id="landingNavMenu" aria-label="Navigation principale">
+                <a href="#fonctionnalites">Fonctionnalités</a>
+                <a href="#tarifs">Tarifs</a>
+                <a href="#contact">Contact</a>
+                <a href="#faq">FAQ</a>
+                <a class="lp-nav-cta" href="{% url 'connexion' %}">Se connecter</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="lp-hero" aria-labelledby="hero-title">
+            <div class="lp-hero-atmosphere" aria-hidden="true">
+                <div class="lp-orb lp-orb-a"></div>
+                <div class="lp-orb lp-orb-b"></div>
+                <div class="lp-orb lp-orb-c"></div>
+                <div class="lp-grid"></div>
+            </div>
+
+            <div class="lp-hero-grid">
+                <div class="lp-hero-top">
+                    <p class="lp-hero-eyebrow">Xaliss · Gestion financière</p>
+                    <h1 class="lp-hero-title" id="hero-title">Pilotez vos flux en un clin d’œil</h1>
+                    <p class="lp-hero-lead">Suivez entrées, sorties et tendances sans tableur. Xaliss centralise votre activité financière.</p>
+                    <ul class="lp-hero-points">
+                        <li>
+                            <span class="lp-hero-point-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            Entrées &amp; sorties en temps réel
+                        </li>
+                        <li>
+                            <span class="lp-hero-point-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M8 19v-8M12 19V9M16 19v-5M20 19V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            Stats lisibles
+                        </li>
+                        <li>
+                            <span class="lp-hero-point-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            Accès mobile &amp; bureau
+                        </li>
+                    </ul>
+                    <div class="lp-hero-cta">
+                        <a class="lp-btn lp-btn-solid lp-btn-lg" href="{% url 'inscription' %}">
+                            Commencer gratuitement
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </a>
+                    </div>
+                    <p class="lp-hero-trust">Essai Pro 3 mois offerts · Sans engagement</p>
+                </div>
+
+                <div class="lp-hero-shot">
+                    <img
+                        src="{% static 'images/image.png' %}"
+                        alt="Tableau de bord Xaliss — statistiques, entrées et sorties"
+                        width="1280"
+                        height="800"
+                        loading="eager"
+                        decoding="async"
+                    >
+                </div>
+            </div>
+        </section>
+
+        <section class="lp-demo" id="demo" aria-label="Démonstration Xaliss">
+            <div class="lp-demo-wrap">
+                <div class="lp-demo-stage" id="demoStage">
+                    <div class="lp-demo-tablet">
+                        <div class="lp-demo-bezel">
+                            <div class="lp-demo-screen">
+                                <video
+                                    id="demoVideo"
+                                    class="lp-demo-video"
+                                    poster="{% static 'images/image.png' %}"
+                                    muted
+                                    loop
+                                    playsinline
+                                    preload="metadata"
+                                >
+                                    <source src="{% static 'videos/xaliss-demo.webm' %}" type="video/webm">
+                                    <source src="{% static 'videos/xaliss-demo.mp4' %}" type="video/mp4">
+                                </video>
+                                <img
+                                    class="lp-demo-fallback"
+                                    src="{% static 'images/image.png' %}"
+                                    alt="Aperçu du tableau de bord Xaliss"
+                                    width="1280"
+                                    height="800"
+                                    loading="lazy"
+                                    decoding="async"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lp-section" id="fonctionnalites" aria-labelledby="features-title">
+            <div class="lp-wrap">
+                <div class="lp-section-head">
+                    <h2 id="features-title">Conçu pour piloter, pas pour compliquer</h2>
+                    <p>Trois piliers pour une vision nette de votre activité financière.</p>
+                </div>
+                <ul class="lp-features">
+                    <li>
+                        <span class="lp-feature-index">01</span>
+                        <h3>Flux en temps réel</h3>
+                        <p>Saisissez entrées et sorties en quelques secondes. Votre historique reste fiable et consultable partout.</p>
+                    </li>
+                    <li>
+                        <span class="lp-feature-index">02</span>
+                        <h3>Statistiques utiles</h3>
+                        <p>Des tendances lisibles pour décider plus vite — sans tableur, sans friction.</p>
+                    </li>
+                    <li>
+                        <span class="lp-feature-index">03</span>
+                        <h3>Toujours avec vous</h3>
+                        <p>Bureau ou mobile : Xaliss s’installe comme une app et reste à portée de main.</p>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="lp-section" id="tarifs" aria-labelledby="pricing-title">
+            <div class="lp-wrap">
+                <div class="lp-section-head lp-section-head-center">
+                    <h2 id="pricing-title">Des tarifs simples</h2>
+                    <p>Commencez avec 3 mois d’essai Pro offerts, puis choisissez la formule adaptée à votre organisation.</p>
+                </div>
+                <div class="lp-pricing">
+                    <article class="lp-price-card">
+                        <h3>Essai</h3>
+                        <p class="lp-price-amount">3&nbsp;mois</p>
+                        <p class="lp-price-note">Offerts</p>
+                        <ul>
+                            <li>Accès au plan Pro</li>
+                            <li>Entrées, sorties &amp; stats</li>
+                            <li>Sans engagement</li>
+                        </ul>
+                        <a class="lp-btn lp-btn-solid" href="{% url 'inscription' %}">Commencer</a>
+                    </article>
+                    <article class="lp-price-card is-featured">
+                        <p class="lp-price-badge">Recommandé</p>
+                        <h3>Pro</h3>
+                        <p class="lp-price-amount">Après essai</p>
+                        <p class="lp-price-note">Abonnement mensuel</p>
+                        <ul>
+                            <li>Gestion financière complète</li>
+                            <li>Espace organisation</li>
+                            <li>Accès multi-appareils</li>
+                        </ul>
+                        <a class="lp-btn lp-btn-solid" href="{% url 'inscription' %}">Choisir Pro</a>
+                    </article>
+                    <article class="lp-price-card">
+                        <h3>Premium</h3>
+                        <p class="lp-price-amount">Sur demande</p>
+                        <p class="lp-price-note">Pour aller plus loin</p>
+                        <ul>
+                            <li>Tout le plan Pro</li>
+                            <li>Options avancées</li>
+                            <li>Accompagnement dédié</li>
+                        </ul>
+                        <a class="lp-btn lp-btn-solid" href="#contact">Nous contacter</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="lp-section lp-section-contact" id="contact" aria-labelledby="contact-title">
+            <div class="lp-wrap">
+                <div class="lp-section-head lp-section-head-center">
+                    <h2 id="contact-title">Contact</h2>
+                    <p>Votre trésorerie mérite des réponses claires. Contactez-nous.</p>
+                </div>
+
+                <div class="lp-contact-layout">
+                    <div class="lp-contact-channels">
+                        <a class="lp-channel lp-channel-wa" href="https://wa.me/{{ contact_whatsapp|default:'221772793927' }}" target="_blank" rel="noopener noreferrer">
+                            <span class="lp-channel-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.95 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.49s1.07 2.89 1.22 3.09c.15.2 2.11 3.22 5.11 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.89.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/><path fill="currentColor" d="M12.04 2C6.58 2 2.15 6.41 2.15 11.85c0 1.94.57 3.74 1.55 5.27L2 22l4.99-1.63a9.86 9.86 0 0 0 5.05 1.36h.01c5.46 0 9.89-4.41 9.89-9.85C21.94 6.41 17.5 2 12.04 2zm0 17.97h-.01a8.13 8.13 0 0 1-4.14-1.13l-.3-.18-3.06.99 1.03-2.98-.2-.31a8.1 8.1 0 0 1-1.24-4.33c0-4.48 3.67-8.13 8.18-8.13 4.5 0 8.17 3.65 8.17 8.13-.01 4.48-3.67 8.12-8.17 8.12z"/></svg>
+                            </span>
+                            <span class="lp-channel-body">
+                                <span class="lp-channel-label">WhatsApp</span>
+                                <strong>+221 77 279 39 27</strong>
+                                <span class="lp-channel-hint">On vous répond vite</span>
+                            </span>
+                            <span class="lp-channel-ext" aria-hidden="true">↗</span>
+                        </a>
+
+                        <a class="lp-channel" href="tel:{{ contact_phone|default:'+221772793927' }}">
+                            <span class="lp-channel-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </span>
+                            <span class="lp-channel-body">
+                                <span class="lp-channel-label">Téléphone</span>
+                                <strong>+221 77 279 39 27</strong>
+                                <span class="lp-channel-hint">Appel direct</span>
+                            </span>
+                        </a>
+
+                        <a class="lp-channel" href="mailto:{{ contact_email|default:'contact@xaliss.com' }}">
+                            <span class="lp-channel-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="2"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </span>
+                            <span class="lp-channel-body">
+                                <span class="lp-channel-label">E-mail</span>
+                                <strong>{{ contact_email|default:'contact@xaliss.com' }}</strong>
+                                <span class="lp-channel-hint">Écrivez-nous</span>
+                            </span>
+                        </a>
+                    </div>
+
+                    <div class="lp-contact-form-card">
+                        <h3>Envoyer un message</h3>
+                        <p>Décrivez votre besoin : nous vous recontacterons.</p>
+                        <form method="post" action="{% url 'contact_landing' %}" class="lp-contact-form" novalidate>
+                            {% csrf_token %}
+                            <div class="lp-form-row">
+                                <label>
+                                    <span>Nom complet *</span>
+                                    <input type="text" name="nom" required maxlength="120" value="{{ contact_form.nom|default:'' }}" autocomplete="name">
+                                </label>
+                                <label>
+                                    <span>E-mail *</span>
+                                    <input type="email" name="email" required maxlength="120" value="{{ contact_form.email|default:'' }}" autocomplete="email">
+                                </label>
+                            </div>
+                            <div class="lp-form-row">
+                                <label>
+                                    <span>Téléphone <em>(facultatif)</em></span>
+                                    <input type="tel" name="telephone" maxlength="40" value="{{ contact_form.telephone|default:'' }}" autocomplete="tel">
+                                </label>
+                                <label>
+                                    <span>Objet</span>
+                                    <input type="text" name="objet" maxlength="120" value="{{ contact_form.objet|default:'' }}" placeholder="Démo, Premium…">
+                                </label>
+                            </div>
+                            <label class="lp-form-full">
+                                <span>Message *</span>
+                                <textarea name="message" required rows="5" maxlength="4000" placeholder="Votre message…">{{ contact_form.message|default:'' }}</textarea>
+                            </label>
+                            <button type="submit" class="lp-btn lp-btn-solid">Envoyer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lp-section" id="faq" aria-labelledby="faq-title">
+            <div class="lp-wrap">
+                <div class="lp-section-head lp-section-head-center">
+                    <h2 id="faq-title">FAQ</h2>
+                    <p>Les réponses aux questions les plus fréquentes sur Xaliss.</p>
+                </div>
+                <div class="lp-faq">
+                    <details class="lp-faq-item">
+                        <summary>Xaliss est-il gratuit&nbsp;?</summary>
+                        <p>Oui au démarrage : vous bénéficiez de 3 mois d’essai Pro offerts. Ensuite, vous choisissez un abonnement adapté à votre organisation.</p>
+                    </details>
+                    <details class="lp-faq-item">
+                        <summary>Puis-je l’utiliser sur mobile&nbsp;?</summary>
+                        <p>Oui. Xaliss fonctionne sur ordinateur et mobile, et peut s’installer comme une application pour un accès rapide.</p>
+                    </details>
+                    <details class="lp-faq-item">
+                        <summary>Mes données sont-elles sécurisées&nbsp;?</summary>
+                        <p>Chaque organisation dispose de son propre espace. L’accès est protégé par authentification, et vos informations restent isolées des autres comptes.</p>
+                    </details>
+                    <details class="lp-faq-item">
+                        <summary>Comment créer un compte&nbsp;?</summary>
+                        <p>Cliquez sur «&nbsp;Se connecter&nbsp;», puis passez à l’onglet Inscription. Vous pouvez aussi vous inscrire avec Google.</p>
+                    </details>
+                    <details class="lp-faq-item">
+                        <summary>Quelle est la différence entre Pro et Premium&nbsp;?</summary>
+                        <p>Pro couvre la gestion financière au quotidien. Premium ajoute des options avancées et un accompagnement dédié — contactez-nous pour en savoir plus.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section class="lp-cta-band">
+            <div class="lp-wrap lp-cta-inner">
+                <h2>Prêt à y voir plus clair&nbsp;?</h2>
+                <p>Rejoignez Xaliss et commencez à suivre vos flux dès aujourd’hui.</p>
+                <div class="lp-hero-cta">
+                    <a class="lp-btn lp-btn-light lp-btn-lg" href="{% url 'inscription' %}">Commencer gratuitement</a>
+                    <a class="lp-btn lp-btn-glass lp-btn-lg" href="{% url 'connexion' %}">Connexion</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="lp-footer">
+        <div class="lp-footer-glow" aria-hidden="true"></div>
+        <div class="lp-wrap lp-footer-wrap">
+            <div class="lp-footer-grid">
+                <div class="lp-footer-brand-col">
+                    <a class="lp-footer-logo" href="{% url 'accueil' %}" aria-label="Xaliss — Accueil">
+                        <img src="{% static 'images/logo.png' %}" alt="" width="48" height="48">
+                        <span>Xaliss</span>
+                    </a>
+                    <p>Gestion financière claire pour les entreprises et indépendants — entrées, sorties et statistiques en un seul endroit.</p>
+                </div>
+
+                <div class="lp-footer-col">
+                    <h3>Liens</h3>
+                    <ul>
+                        <li><a href="{% url 'accueil' %}">Accueil</a></li>
+                        <li><a href="#fonctionnalites">Fonctionnalités</a></li>
+                        <li><a href="#tarifs">Tarifs</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                        <li><a href="{% url 'connexion' %}">Se connecter</a></li>
+                    </ul>
+                </div>
+
+                <div class="lp-footer-col">
+                    <h3>Avantages</h3>
+                    <ul class="lp-footer-coords">
+                        <li>
+                            <span class="lp-coord-label">Essai</span>
+                            <span>3 mois Pro offerts</span>
+                        </li>
+                        <li>
+                            <span class="lp-coord-label">Accès</span>
+                            <span>Ordinateur &amp; mobile</span>
+                        </li>
+                        <li>
+                            <span class="lp-coord-label">Vision</span>
+                            <span>Stats claires en un clin d’œil</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="lp-footer-col">
+                    <h3>Coordonnées</h3>
+                    <ul class="lp-footer-coords">
+                        <li>
+                            <span class="lp-coord-label">Téléphone</span>
+                            <a href="tel:{{ contact_phone|default:'+221772793927' }}">+221 77 279 39 27</a>
+                        </li>
+                        <li>
+                            <span class="lp-coord-label">E-mail</span>
+                            <a href="mailto:{{ contact_email|default:'contact@xaliss.com' }}">{{ contact_email|default:'contact@xaliss.com' }}</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="lp-footer-cta-card">
+                    <h3>On vous répond&nbsp;vite</h3>
+                    <p>Une question, une démo ou un besoin Premium — à vous de choisir.</p>
+                    <div class="lp-footer-cta-actions">
+                        <a class="lp-footer-btn lp-footer-btn-wa" href="https://wa.me/{{ contact_whatsapp|default:'221772793927' }}" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.95 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.49s1.07 2.89 1.22 3.09c.15.2 2.11 3.22 5.11 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.89.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/><path fill="currentColor" d="M12.04 2C6.58 2 2.15 6.41 2.15 11.85c0 1.94.57 3.74 1.55 5.27L2 22l4.99-1.63a9.86 9.86 0 0 0 5.05 1.36h.01c5.46 0 9.89-4.41 9.89-9.85C21.94 6.41 17.5 2 12.04 2zm0 17.97h-.01a8.13 8.13 0 0 1-4.14-1.13l-.3-.18-3.06.99 1.03-2.98-.2-.31a8.1 8.1 0 0 1-1.24-4.33c0-4.48 3.67-8.13 8.18-8.13 4.5 0 8.17 3.65 8.17 8.13-.01 4.48-3.67 8.12-8.17 8.12z"/></svg>
+                            WhatsApp
+                        </a>
+                        <a class="lp-footer-btn lp-footer-btn-ghost" href="{% url 'connexion' %}">Se connecter</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lp-footer-hero-brand">
+                <div class="lp-footer-hero-mark">
+                    <img src="{% static 'images/logo.png' %}" alt="" class="lp-footer-hero-logo">
+                    <p class="lp-footer-hero-name">Xaliss</p>
+                </div>
+                <p class="lp-footer-hero-tag">La trésorerie, enfin limpide.</p>
+            </div>
+
+            <div class="lp-footer-bottom">
+                <p>&copy; {% now "Y" %} Xaliss — Tous droits réservés</p>
+                <div class="lp-footer-legal">
+                    <a href="#faq">FAQ</a>
+                    <a href="#contact">Contact</a>
+                    <a href="{% url 'connexion' %}">Connexion</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    (function () {
+        var nav = document.getElementById('landingNav');
+        var toggle = document.getElementById('navToggle');
+        var menu = document.getElementById('landingNavMenu');
+
+        function onScroll() {
+            nav.classList.toggle('is-scrolled', window.scrollY > 20);
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+
+        toggle.addEventListener('click', function () {
+            var open = !menu.classList.contains('is-open');
+            menu.classList.toggle('is-open', open);
+            document.body.classList.toggle('lp-menu-open', open);
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+        });
+
+        menu.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                menu.classList.remove('is-open');
+                document.body.classList.remove('lp-menu-open');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Ouvrir le menu');
+            });
+        });
+
+        if ('IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) e.target.classList.add('is-in');
+                });
+            }, { threshold: 0.14 });
+            document.querySelectorAll('.lp-section, .lp-cta-band').forEach(function (el) {
+                el.classList.add('lp-reveal');
+                io.observe(el);
+            });
+
+            var demoStage = document.getElementById('demoStage');
+            var demoVideo = document.getElementById('demoVideo');
+            if (demoStage) {
+                var demoIo = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (!e.isIntersecting) {
+                            if (demoVideo) demoVideo.pause();
+                            return;
+                        }
+                        demoStage.classList.add('is-in');
+                        if (demoVideo) {
+                            var play = demoVideo.play();
+                            if (play && play.then) {
+                                play.then(function () {
+                                    demoStage.classList.add('is-playing');
+                                }).catch(function () {
+                                    /* poster / fallback image reste visible */
+                                });
+                            }
+                        }
+                    });
+                }, { threshold: 0.28, rootMargin: '0px 0px -8% 0px' });
+                demoIo.observe(demoStage);
+            }
+        } else {
+            var stage = document.getElementById('demoStage');
+            if (stage) stage.classList.add('is-in');
+        }
+    })();
+    </script>
+    <script src="{% static 'js/pwa.js' %}"></script>
+</body>
+</html>

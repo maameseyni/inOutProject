@@ -1,0 +1,299 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backoffice · Xaliss</title>
+    <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}">
+</head>
+<body class="bo-body">
+    <div class="bo-shell">
+        <header class="bo-header">
+            <div class="bo-header-brand">
+                <img src="{% static 'images/logo.png' %}" alt="Xaliss" class="bo-logo">
+                <div>
+                    <h1>Backoffice</h1>
+                    <p>Vue globale plateforme</p>
+                </div>
+            </div>
+            <nav class="bo-header-nav" aria-label="Raccourcis">
+                <a href="{% url 'admin:index' %}">Admin Django</a>
+                <a href="{% url 'admin:comptes_abonnementorganisation_changelist' %}">Abonnements</a>
+                <a href="{% url 'admin:auth_user_changelist' %}">Users</a>
+                <a href="{% url 'finances:application' %}">App</a>
+                <span class="bo-header-user">{{ request.user.email|default:request.user.get_username }}</span>
+            </nav>
+        </header>
+
+        <section class="bo-intro">
+            <p class="bo-intro-title">Pilotage</p>
+            <p class="bo-intro-sub">Revenu mensuel prévu {{ mrr_formate }} · {{ nb_resultats }} utilisateur{{ nb_resultats|pluralize }}</p>
+        </section>
+
+        <section class="dashboard" aria-label="Indicateurs clés">
+            {% for kpi in kpis %}
+            <div class="stat-card {{ kpi.variant }}">
+                <div class="stat-info">
+                    <h3>{{ kpi.label }}</h3>
+                    <p class="stat-value">{{ kpi.valeur }}</p>
+                    <p class="stat-hint">{{ kpi.hint }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+
+        <section class="bo-card">
+            <h2>Répartition abonnements</h2>
+            <div class="bo-statut-grid">
+                {% for row in par_statut %}
+                <a class="bo-statut-chip" href="?statut={{ row.code }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filtre_plan %}&plan={{ filtre_plan }}{% endif %}{% if non_verifies %}&non_verifies=1{% endif %}#bo-users">
+                    <span class="bo-statut-dot bo-statut-dot--{{ row.code }}"></span>
+                    <span class="bo-statut-meta">
+                        <span class="bo-statut-label">{{ row.label }}</span>
+                        <strong>{{ row.n }}</strong>
+                    </span>
+                    <span class="bo-statut-pct">{{ row.pct }}%</span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="bo-card" id="bo-users">
+            <div class="bo-card-head">
+                <h2>Utilisateurs de la plateforme</h2>
+                <div class="bo-card-head-actions">
+                    <span class="bo-card-meta">
+                        {% if page_obj.paginator.num_pages > 1 %}
+                        {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ nb_resultats }}
+                        {% else %}
+                        {{ nb_resultats }} résultat{{ nb_resultats|pluralize }}
+                        {% endif %}
+                    </span>
+                    <a class="bo-btn-export"
+                       href="{% url 'backoffice_export_excel' %}{% if query_suffix %}?{{ query_suffix }}{% endif %}"
+                       download
+                       title="Exporter en fichier Excel (.xlsx)">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        .xlsx
+                    </a>
+                </div>
+            </div>
+
+            <form class="bo-filters" id="bo-filters-form" method="get" action="{% url 'backoffice' %}">
+                <div class="bo-filter-group">
+                    <label for="bo-q">Recherche</label>
+                    <input id="bo-q" type="search" name="q" value="{{ q }}" placeholder="e-mail, nom, organisation…">
+                </div>
+                <div class="bo-filter-group">
+                    <label for="bo-statut">Statut abo</label>
+                    <select id="bo-statut" name="statut" class="kp-select-native" aria-label="Filtrer par statut d'abonnement">
+                        <option value="">Tous</option>
+                        {% for code, label in statuts_choices %}
+                        <option value="{{ code }}"{% if filtre_statut == code %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="bo-filter-group">
+                    <label for="bo-plan">Plan</label>
+                    <select id="bo-plan" name="plan" class="kp-select-native" aria-label="Filtrer par plan">
+                        <option value="">Tous</option>
+                        {% for plan in plans_choices %}
+                        <option value="{{ plan.code }}"{% if filtre_plan == plan.code %} selected{% endif %}>{{ plan.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="bo-filter-group bo-filter-group--check">
+                    <span class="bo-filter-spacer" aria-hidden="true">Filtre</span>
+                    <label class="bo-check">
+                        <input type="checkbox" name="non_verifies" value="1"{% if non_verifies %} checked{% endif %}>
+                        <span>Non vérifiés</span>
+                    </label>
+                </div>
+                <div class="bo-filter-actions">
+                    <span class="bo-filter-spacer" aria-hidden="true">Action</span>
+                    <div class="bo-filter-actions-row">
+                        <button type="submit" class="bo-btn-primary">Filtrer</button>
+                        {% if q or filtre_statut or filtre_plan or non_verifies %}
+                        <a class="bo-btn-clear" href="{% url 'backoffice' %}#bo-users">Effacer</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+
+            <div class="bo-table-wrap">
+                <table class="bo-table bo-table--users">
+                    <thead>
+                        <tr>
+                            <th>Utilisateur</th>
+                            <th>Organisation</th>
+                            <th>Plan / statut</th>
+                            <th>Échéance</th>
+                            <th>Téléphone</th>
+                            <th>Dernier paiement</th>
+                            <th>E-mail</th>
+                            <th>Actif</th>
+                            <th>Connexion</th>
+                            <th>Inscrit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in lignes %}
+                        <tr class="{% if not row.actif %}is-inactive{% endif %}">
+                            <td>
+                                <div class="bo-user-cell">
+                                    <a href="{{ row.admin_user_url }}" class="bo-user-email">{{ row.email }}</a>
+                                    {% if row.nom %}<span class="bo-user-name">{{ row.nom }}</span>{% endif %}
+                                    {% if row.role %}<span class="bo-user-role">{{ row.role }}</span>{% endif %}
+                                    {% if not row.nom and not row.role %}<span class="bo-user-name">—</span>{% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if row.organisation %}
+                                <a href="{{ row.admin_org_url }}">{{ row.organisation.nom|default:row.organisation.slug }}</a>
+                                {% else %}
+                                <span class="bo-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="bo-td-plan">
+                                {% if row.statut %}
+                                <a href="{{ row.admin_abo_url }}" class="bo-plan-inline">{{ row.plan }}&nbsp;/&nbsp;{% if row.statut == 'prelaunch' %}{{ row.statut_label }}{% else %}<span class="bo-badge is-{{ row.statut }}">{{ row.statut_label }}</span>{% endif %}</a>
+                                {% else %}
+                                <span class="bo-muted">Sans abo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.echeance %}
+                                <div class="bo-echeance">
+                                    <span>{{ row.echeance|date:"d/m/Y" }}</span>
+                                    <span class="bo-echeance-hint{% if row.echeance_label == 'dépassée' %} is-late{% endif %}">{{ row.echeance_label }}</span>
+                                </div>
+                                {% else %}
+                                <span class="bo-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.telephone %}
+                                <a class="bo-tel" href="tel:{{ row.telephone }}">{{ row.telephone }}</a>
+                                {% else %}
+                                <span class="bo-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.paiement_montant %}
+                                <div class="bo-paiement">
+                                    <span>{{ row.paiement_montant }}</span>
+                                    <span class="bo-paiement-hint">{{ row.paiement_date }}</span>
+                                </div>
+                                {% else %}
+                                <span class="bo-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.email_verifie %}
+                                <span class="bo-tag is-ok">Vérifié</span>
+                                {% else %}
+                                <span class="bo-tag">Non vérifié</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.actif %}
+                                <span class="bo-tag is-ok">Actif</span>
+                                {% else %}
+                                <span class="bo-tag is-danger">Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.login_relatif == 'jamais' %}
+                                <span class="bo-muted">jamais</span>
+                                {% else %}
+                                {{ row.login_relatif }}
+                                {% endif %}
+                            </td>
+                            <td>{{ row.inscrit_relatif }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="bo-empty">Aucun utilisateur pour ces filtres.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="bo-pagination" aria-label="Pagination du tableau">
+                {% if page_obj.has_previous %}
+                <a class="bo-pagination-btn" href="?{% if query_suffix %}{{ query_suffix }}&{% endif %}page={{ page_obj.previous_page_number }}#bo-users">Précédent</a>
+                {% else %}
+                <span class="bo-pagination-btn is-disabled" aria-disabled="true">Précédent</span>
+                {% endif %}
+
+                <div class="bo-pagination-pages">
+                    {% if page_numbers.0 > 1 %}
+                    <a class="bo-page-num" href="?{% if query_suffix %}{{ query_suffix }}&{% endif %}page=1#bo-users">1</a>
+                    {% if page_numbers.0 > 2 %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                    {% endif %}
+
+                    {% for num in page_numbers %}
+                    {% if num == page_obj.number %}
+                    <span class="bo-page-num is-current" aria-current="page">{{ num }}</span>
+                    {% else %}
+                    <a class="bo-page-num" href="?{% if query_suffix %}{{ query_suffix }}&{% endif %}page={{ num }}#bo-users">{{ num }}</a>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_numbers|last < page_obj.paginator.num_pages %}
+                    {% if page_numbers|last < page_obj.paginator.num_pages|add:"-1" %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                    <a class="bo-page-num" href="?{% if query_suffix %}{{ query_suffix }}&{% endif %}page={{ page_obj.paginator.num_pages }}#bo-users">{{ page_obj.paginator.num_pages }}</a>
+                    {% endif %}
+                </div>
+
+                <span class="bo-pagination-info">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+
+                {% if page_obj.has_next %}
+                <a class="bo-pagination-btn" href="?{% if query_suffix %}{{ query_suffix }}&{% endif %}page={{ page_obj.next_page_number }}#bo-users">Suivant</a>
+                {% else %}
+                <span class="bo-pagination-btn is-disabled" aria-disabled="true">Suivant</span>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </section>
+    </div>
+    <script src="{% static 'js/kp-select.js' %}"></script>
+    <script>
+        (function () {
+            if (typeof window.initKpSelectFields === 'function') {
+                window.initKpSelectFields();
+            }
+            var form = document.getElementById('bo-filters-form');
+            if (!form) return;
+
+            function applyFilters() {
+                var params = new URLSearchParams();
+                Array.from(new FormData(form).entries()).forEach(function (entry) {
+                    var key = entry[0];
+                    var value = String(entry[1] == null ? '' : entry[1]).trim();
+                    if (value !== '') params.append(key, value);
+                });
+                var qs = params.toString();
+                window.location.assign(form.action + (qs ? '?' + qs : '') + '#bo-users');
+            }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                applyFilters();
+            });
+            ['bo-statut', 'bo-plan'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', applyFilters);
+            });
+            var nonVerifies = form.querySelector('input[name="non_verifies"]');
+            if (nonVerifies) nonVerifies.addEventListener('change', applyFilters);
+        })();
+    </script>
+</body>
+</html>

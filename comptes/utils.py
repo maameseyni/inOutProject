@@ -4,9 +4,14 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.text import slugify
 
-from .models import MembreOrganisation, Organisation, ProfilUtilisateur
+from .models import AbonnementOrganisation, MembreOrganisation, Organisation, ProfilUtilisateur
 
 User = get_user_model()
+
+
+def assurer_abonnement_organisation(organisation):
+    """Garantit qu'une organisation a un abonnement SaaS (idempotent)."""
+    return AbonnementOrganisation.creer_pour_organisation(organisation)
 
 
 def normaliser_email(email: str) -> str:
@@ -65,19 +70,46 @@ def synchroniser_email_allauth(utilisateur, email: str, *, verified: bool = True
         existing.verified = verified or existing.verified
         existing.primary = True
         existing.save(update_fields=['email', 'verified', 'primary'])
-    else:
+        return
+
+    if verified:
+        # Contrainte unique_verified_email : un seul verified=True par adresse.
+        EmailAddress.objects.filter(email__iexact=email, verified=True).exclude(
+            user=utilisateur,
+        ).update(verified=False)
+
+    try:
         EmailAddress.objects.create(
             user=utilisateur,
             email=email,
             verified=verified,
             primary=True,
         )
+    except Exception:
+        row = EmailAddress.objects.filter(email__iexact=email).first()
+        if row is None:
+            return
+        if row.user_id != utilisateur.pk:
+            # Autre compte porte déjà la ligne : on ne force pas le transfert ici.
+            return
+        row.verified = verified or row.verified
+        row.primary = True
+        row.save(update_fields=['verified', 'primary'])
 
 
 def connecter_utilisateur(request, user):
     """Connexion session — backend requis avec plusieurs AUTHENTICATION_BACKENDS."""
     backend = getattr(user, 'backend', None) or settings.AUTHENTICATION_BACKENDS[0]
     auth.login(request, user, backend=backend)
+    # Répare les comptes confirmés avant sync allauth (EmailAddress manquant).
+    if user.is_active and (user.email or user.username or '').strip():
+        try:
+            from allauth.account.models import EmailAddress
+        except Exception:
+            return
+        email = normaliser_email(user.email or user.username)
+        if email and not EmailAddress.objects.filter(user=user, email__iexact=email).exists():
+            synchroniser_email_allauth(user, email, verified=True)
 
 
 def _slug_organisation_unique(nom: str) -> str:
@@ -107,6 +139,7 @@ def provisionner_organisation_si_absente(utilisateur):
         organisation=organisation,
         role=MembreOrganisation.ROLE_PROPRIETAIRE,
     )
+    assurer_abonnement_organisation(organisation)
     return True
 
 

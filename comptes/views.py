@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import (
@@ -7,8 +8,10 @@ from django.contrib.auth.views import (
     PasswordResetDoneView,
     PasswordResetView,
 )
+from django.core.mail import EmailMessage
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.views.decorators.http import require_POST
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
@@ -29,6 +32,7 @@ from .tokens import changement_email_token, confirmation_email_token
 from .utils import (
     assurer_espace_utilisateur,
     connecter_utilisateur,
+    synchroniser_email_allauth,
     utilisateur_a_organisation,
 )
 from finances.services import utilisateur as user_service
@@ -77,7 +81,86 @@ def _message_inscription_invalide(signup_form):
 def accueil(request):
     if request.user.is_authenticated:
         return _redirect_vers_app()
-    return redirect('connexion')
+    return render(
+        request,
+        'comptes/accueil.html',
+        {
+            'contact_email': settings.LANDING_CONTACT_EMAIL,
+            'contact_phone': settings.LANDING_CONTACT_PHONE,
+            'contact_whatsapp': settings.LANDING_WHATSAPP,
+            'contact_horaires': settings.LANDING_HORAIRES,
+            'contact_form': {
+                'nom': '',
+                'email': '',
+                'telephone': '',
+                'objet': '',
+                'message': '',
+            },
+        },
+    )
+
+
+@require_POST
+def contact_landing(request):
+    if request.user.is_authenticated:
+        return _redirect_vers_app()
+
+    if limited(request, group='landing_contact', rate='5/m', key='ip'):
+        flash_429(request)
+        return redirect(f"{reverse('accueil')}#contact")
+
+    nom = (request.POST.get('nom') or '').strip()
+    email = (request.POST.get('email') or '').strip()
+    telephone = (request.POST.get('telephone') or '').strip()
+    objet = (request.POST.get('objet') or '').strip() or 'Contact Xaliss'
+    message = (request.POST.get('message') or '').strip()
+
+    form_data = {
+        'nom': nom,
+        'email': email,
+        'telephone': telephone,
+        'objet': objet,
+        'message': message,
+    }
+
+    if not nom or not email or not message:
+        messages.error(request, 'Merci de renseigner le nom, l’e-mail et le message.')
+        return render(
+            request,
+            'comptes/accueil.html',
+            {
+                'contact_email': settings.LANDING_CONTACT_EMAIL,
+                'contact_phone': settings.LANDING_CONTACT_PHONE,
+                'contact_whatsapp': settings.LANDING_WHATSAPP,
+                'contact_horaires': settings.LANDING_HORAIRES,
+                'contact_form': form_data,
+                'contact_form_error': True,
+            },
+        )
+
+    destinataire = settings.LANDING_CONTACT_EMAIL or settings.DEFAULT_FROM_EMAIL
+    corps = (
+        f'Nom : {nom}\n'
+        f'E-mail : {email}\n'
+        f'Téléphone : {telephone or "—"}\n'
+        f'Objet : {objet}\n\n'
+        f'{message}\n'
+    )
+    try:
+        mail = EmailMessage(
+            subject=f'[Xaliss Contact] {objet}',
+            body=corps,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[destinataire],
+            reply_to=[email],
+        )
+        mail.send(fail_silently=False)
+    except Exception:
+        messages.error(request, 'L’envoi a échoué. Réessayez ou contactez-nous via WhatsApp.')
+        return redirect(f"{reverse('accueil')}#contact")
+
+    messages.success(request, 'Message envoyé. Nous vous répondons rapidement.')
+    return redirect(f"{reverse('accueil')}#contact")
 
 
 def _redirect_apres_connexion(request):
@@ -204,6 +287,12 @@ def confirmer_email(request, uidb64, token):
     if not utilisateur.is_active:
         utilisateur.is_active = True
         utilisateur.save(update_fields=['is_active'])
+
+    synchroniser_email_allauth(
+        utilisateur,
+        utilisateur.email or utilisateur.username,
+        verified=True,
+    )
 
     request.session.pop('email_confirmation_pending', None)
     connecter_utilisateur(request, utilisateur)

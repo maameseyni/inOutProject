@@ -318,13 +318,17 @@
     color: #047857;
 }
 
-.kp-select-menu::-webkit-scrollbar {
-    width: 6px;
+.kp-select-menu,
+.kp-select-menu-list {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge legacy */
 }
 
-.kp-select-menu::-webkit-scrollbar-thumb {
-    background: #c4b8d9;
-    border-radius: 6px;
+.kp-select-menu::-webkit-scrollbar,
+.kp-select-menu-list::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
 .auth-page .kp-select-wrap {

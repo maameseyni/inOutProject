@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import MembreOrganisation, Organisation
+from .models import (
+    AbonnementOrganisation,
+    MembreOrganisation,
+    Organisation,
+    PaiementAbonnement,
+    PlanAbonnement,
+)
 
 
 class MembreOrganisationInline(admin.TabularInline):
@@ -19,11 +25,32 @@ class MembreOrganisationInline(admin.TabularInline):
         return obj.get_nom_affichage() if obj.pk else '—'
 
 
+class AbonnementOrganisationInline(admin.StackedInline):
+    model = AbonnementOrganisation
+    extra = 0
+    max_num = 1
+    can_delete = False
+    autocomplete_fields = ('plan',)
+    fields = (
+        'plan',
+        'statut',
+        'essai_debut',
+        'essai_fin',
+        'periode_debut',
+        'periode_fin',
+        'renouvellement_auto',
+        'lancement_applique_le',
+        'fournisseur',
+        'id_externe',
+    )
+    readonly_fields = ('lancement_applique_le',)
+
+
 @admin.register(Organisation)
 class OrganisationAdmin(admin.ModelAdmin):
     list_display = ('nom', 'slug', 'telephone', 'email', 'cree_le')
     search_fields = ('nom', 'slug', 'telephone', 'email')
-    inlines = [MembreOrganisationInline]
+    inlines = [AbonnementOrganisationInline, MembreOrganisationInline]
 
 
 @admin.register(MembreOrganisation)
@@ -51,3 +78,51 @@ class MembreOrganisationAdmin(admin.ModelAdmin):
     @admin.display(description='ID organisation', ordering='organisation_id')
     def id_organisation(self, obj):
         return obj.organisation_id
+
+
+@admin.register(PlanAbonnement)
+class PlanAbonnementAdmin(admin.ModelAdmin):
+    list_display = ('code', 'nom', 'prix_mensuel', 'devise', 'actif', 'ordre')
+    list_filter = ('actif', 'code')
+    search_fields = ('code', 'nom')
+    ordering = ('ordre', 'code')
+
+
+@admin.register(AbonnementOrganisation)
+class AbonnementOrganisationAdmin(admin.ModelAdmin):
+    list_display = (
+        'organisation',
+        'plan',
+        'statut',
+        'essai_debut',
+        'essai_fin',
+        'periode_fin',
+        'lancement_applique_le',
+        'renouvellement_auto',
+    )
+    list_filter = ('statut', 'plan', 'renouvellement_auto')
+    search_fields = ('organisation__nom', 'organisation__slug', 'id_externe')
+    autocomplete_fields = ('organisation', 'plan')
+    readonly_fields = ('cree_le', 'modifie_le', 'lancement_applique_le')
+
+
+@admin.register(PaiementAbonnement)
+class PaiementAbonnementAdmin(admin.ModelAdmin):
+    list_display = (
+        'organisation',
+        'montant',
+        'devise',
+        'statut',
+        'methode',
+        'reference_externe',
+        'paye_le',
+        'cree_le',
+    )
+    list_filter = ('statut', 'devise', 'methode')
+    search_fields = (
+        'organisation__nom',
+        'organisation__slug',
+        'reference_externe',
+    )
+    autocomplete_fields = ('organisation', 'abonnement')
+    readonly_fields = ('cree_le', 'modifie_le')

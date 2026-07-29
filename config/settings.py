@@ -86,6 +86,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'comptes.middleware.SynchroniserAbonnementMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -180,10 +181,14 @@ STORAGES = {
 
 LOGIN_URL = 'connexion'
 LOGIN_REDIRECT_URL = 'finances:application'
-LOGOUT_REDIRECT_URL = 'connexion'
+LOGOUT_REDIRECT_URL = 'accueil'
 
 # E-mail : SMTP si EMAIL_HOST est renseigné (même en DEBUG), sinon console en DEBUG.
 DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@xaliss.local')
+LANDING_CONTACT_EMAIL = os.environ.get('LANDING_CONTACT_EMAIL', 'contact@xaliss.com').strip()
+LANDING_WHATSAPP = os.environ.get('LANDING_WHATSAPP', '221772793927').strip()
+LANDING_CONTACT_PHONE = os.environ.get('LANDING_CONTACT_PHONE', '+221772793927').strip()
+LANDING_HORAIRES = os.environ.get('LANDING_HORAIRES', 'Lun – Ven · 9h – 18h').strip()
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '').strip()
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587') or '587')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
@@ -206,6 +211,19 @@ else:
     )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ——— Abonnements SaaS (Organisation) ———
+# None / vide = prélaunch (essai non daté). Date ISO au lancement, ex. 2026-09-01
+XALISS_LANCEMENT_LE = (os.environ.get('XALISS_LANCEMENT_LE') or '').strip() or None
+XALISS_DUREE_ESSAI_JOURS = int(os.environ.get('XALISS_DUREE_ESSAI_JOURS', '90'))
+# Jours d'accès après periode_fin quand statut = en_retard
+XALISS_JOURS_GRACE_RETARD = int(os.environ.get('XALISS_JOURS_GRACE_RETARD', '3'))
+
+# Backoffice ops (/backoffice/) — e-mails autorisés (séparés par des virgules)
+BACKOFFICE_ALLOWED_EMAILS = _env_list(
+    'BACKOFFICE_ALLOWED_EMAILS',
+    'imamelhadji.msk@gmail.com',
+)
 
 # Cache local pour le rate limiting (1 process). En multi-workers, préférer Redis.
 CACHES = {
