@@ -6,15 +6,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'partials/pwa_head.html' %}
     <title>{% block title %}Xaliss{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
     <link rel="stylesheet" href="{% static 'css/auth.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="auth-page"{% block body_attrs %}{% endblock %}>
+    {% url 'accueil' as nav_prefix %}
+    {% include 'partials/landing_nav.html' with nav_prefix=nav_prefix %}
     <div class="auth-card{% block auth_card_class %}{% endblock %}">
         {% include 'partials/django_messages_data.html' %}
         {% block content %}{% endblock %}
     </div>
+    <script>
+    (function () {
+        var nav = document.getElementById('landingNav');
+        var toggle = document.getElementById('navToggle');
+        var menu = document.getElementById('landingNavMenu');
+        if (!nav || !toggle || !menu) return;
+
+        function onScroll() {
+            nav.classList.toggle('is-scrolled', window.scrollY > 20);
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+
+        toggle.addEventListener('click', function () {
+            var open = !menu.classList.contains('is-open');
+            menu.classList.toggle('is-open', open);
+            document.body.classList.toggle('lp-menu-open', open);
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+        });
+
+        menu.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                menu.classList.remove('is-open');
+                document.body.classList.remove('lp-menu-open');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Ouvrir le menu');
+            });
+        });
+    })();
+    </script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/auth.js' %}"></script>

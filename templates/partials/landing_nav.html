@@ -1,0 +1,17 @@
+<header class="lp-nav" id="landingNav">
+    <div class="lp-nav-pill">
+        <a class="lp-brand" href="{% url 'accueil' %}">Xaliss</a>
+
+        <button type="button" class="lp-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="landingNavMenu" aria-label="Ouvrir le menu">
+            <span></span><span></span>
+        </button>
+
+        <nav class="lp-nav-menu" id="landingNavMenu" aria-label="Navigation principale">
+            <a href="{{ nav_prefix|default:'' }}#fonctionnalites">Fonctionnalités</a>
+            <a href="{{ nav_prefix|default:'' }}#tarifs">Tarifs</a>
+            <a href="{{ nav_prefix|default:'' }}#contact">Contact</a>
+            <a href="{{ nav_prefix|default:'' }}#faq">FAQ</a>
+            <a class="lp-nav-cta" href="{% url 'connexion' %}">Se connecter</a>
+        </nav>
+    </div>
+</header>

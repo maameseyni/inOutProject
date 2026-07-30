@@ -19,11 +19,20 @@
     --auth-shadow-btn: 0 4px 14px rgba(67, 39, 125, 0.32);
     --auth-focus-ring: 0 0 0 3px rgba(67, 39, 125, 0.12);
 
+    /* Tokens menu landing (lp-nav) */
+    --lp-primary: #43277d;
+    --lp-primary-mid: #5a3a9e;
+    --lp-primary-deep: #2a174f;
+    --lp-white: #ffffff;
+    --lp-display: 'Unbounded', 'Outfit', sans-serif;
+    --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --lp-nav-h: 108px;
+
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: calc(var(--lp-nav-h) + 0.75rem) 20px 20px;
     background-color: var(--auth-primary);
     background-image: url('../images/fond.png');
     background-position: center center;
@@ -34,6 +43,111 @@
     color: var(--auth-text);
 }
 
+.auth-page .lp-nav,
+.auth-page .lp-nav * {
+    box-sizing: border-box;
+}
+
+.auth-page .lp-nav a {
+    text-decoration: none;
+}
+
+/* Menu inversé — même rendu / dégradés que la landing */
+.auth-page .lp-nav-pill {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, transparent 42%),
+        linear-gradient(135deg, #ffffff 0%, #ebe3f6 42%, #d4c6ea 100%);
+    border: 1px solid rgba(67, 39, 125, 0.16);
+    box-shadow:
+        0 10px 28px rgba(14, 10, 24, 0.14),
+        0 4px 12px rgba(14, 10, 24, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -1px 0 rgba(67, 39, 125, 0.12);
+}
+
+.auth-page .lp-nav-pill::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 45%);
+    opacity: 0.9;
+}
+
+.auth-page .lp-nav.is-scrolled .lp-nav-pill {
+    border-color: rgba(67, 39, 125, 0.2);
+    box-shadow:
+        0 12px 32px rgba(14, 10, 24, 0.16),
+        0 4px 14px rgba(14, 10, 24, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        inset 0 -1px 0 rgba(67, 39, 125, 0.14);
+}
+
+.auth-page .lp-brand {
+    color: var(--lp-primary) !important;
+    -webkit-text-fill-color: var(--lp-primary);
+}
+
+.auth-page .lp-nav-menu > a {
+    color: rgba(67, 39, 125, 0.78);
+}
+
+.auth-page .lp-nav-menu > a:hover {
+    color: var(--lp-primary);
+    background: rgba(67, 39, 125, 0.08);
+}
+
+.auth-page .lp-nav-cta {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, transparent 42%),
+        linear-gradient(135deg, #4d2d8f 0%, #43277d 42%, #2f1a5c 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 4px 12px rgba(67, 39, 125, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
+}
+
+.auth-page .lp-nav-cta:hover {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.18) 0%, transparent 42%),
+        linear-gradient(135deg, #5a3a9e 0%, #43277d 42%, #2a174f 100%) !important;
+    color: #ffffff !important;
+    box-shadow:
+        0 6px 16px rgba(67, 39, 125, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
+}
+
+.auth-page .lp-nav-toggle {
+    background: rgba(67, 39, 125, 0.08);
+}
+
+.auth-page .lp-nav-toggle:hover {
+    background: rgba(67, 39, 125, 0.14);
+}
+
+.auth-page .lp-nav-toggle span {
+    background: var(--lp-primary);
+}
+
+@media (max-width: 720px) {
+    .auth-page .lp-nav-menu {
+        background:
+            linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, transparent 42%),
+            linear-gradient(160deg, #ffffff 0%, #ebe3f6 45%, #d4c6ea 100%);
+        border: 1px solid rgba(67, 39, 125, 0.14);
+        box-shadow:
+            0 10px 24px rgba(14, 10, 24, 0.16),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .auth-page .lp-nav-menu > a {
+        color: var(--lp-primary);
+    }
+
+    .auth-page .lp-nav-menu > a:hover {
+        background: rgba(67, 39, 125, 0.08);
+    }
+}
+
 .auth-card {
     background: var(--auth-surface);
     border-radius: var(--auth-radius-card);
@@ -42,6 +156,7 @@
     width: 100%;
     border: 1px solid rgba(67, 39, 125, 0.1);
     box-shadow: var(--auth-shadow-card);
+    margin-top: -5.5rem;
 }
 
 .auth-panel[data-panel="connexion"] > form,
@@ -662,6 +777,14 @@
 
     .auth-forgot-link {
         white-space: normal;
+    }
+}
+
+@media (max-width: 720px) {
+    .auth-page {
+        --lp-nav-h: 88px;
+        align-items: flex-start;
+        padding-top: calc(var(--lp-nav-h) + 1rem);
     }
 }
 

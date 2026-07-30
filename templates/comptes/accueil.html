@@ -13,23 +13,8 @@
     <link rel="stylesheet" href="{% static 'css/landing.css' %}">
 </head>
 <body class="landing">
-    <header class="lp-nav" id="landingNav">
-        <div class="lp-nav-pill">
-            <a class="lp-brand" href="{% url 'accueil' %}">Xaliss</a>
-
-            <button type="button" class="lp-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="landingNavMenu" aria-label="Ouvrir le menu">
-                <span></span><span></span>
-            </button>
-
-            <nav class="lp-nav-menu" id="landingNavMenu" aria-label="Navigation principale">
-                <a href="#fonctionnalites">Fonctionnalités</a>
-                <a href="#tarifs">Tarifs</a>
-                <a href="#contact">Contact</a>
-                <a href="#faq">FAQ</a>
-                <a class="lp-nav-cta" href="{% url 'connexion' %}">Se connecter</a>
-            </nav>
-        </div>
-    </header>
+    <div class="lp-page-grid" aria-hidden="true"></div>
+    {% include 'partials/landing_nav.html' %}
 
     <main>
         <section class="lp-hero" aria-labelledby="hero-title">
@@ -37,7 +22,6 @@
                 <div class="lp-orb lp-orb-a"></div>
                 <div class="lp-orb lp-orb-b"></div>
                 <div class="lp-orb lp-orb-c"></div>
-                <div class="lp-grid"></div>
             </div>
 
             <div class="lp-hero-grid">
@@ -92,103 +76,157 @@
                 <div class="lp-demo-stage" id="demoStage">
                     <div class="lp-demo-tablet">
                         <div class="lp-demo-bezel">
+                            <span class="lp-demo-cam" aria-hidden="true"></span>
                             <div class="lp-demo-screen">
-                                <video
-                                    id="demoVideo"
-                                    class="lp-demo-video"
-                                    poster="{% static 'images/image.png' %}"
-                                    muted
-                                    loop
-                                    playsinline
-                                    preload="metadata"
-                                >
-                                    <source src="{% static 'videos/xaliss-demo.webm' %}" type="video/webm">
-                                    <source src="{% static 'videos/xaliss-demo.mp4' %}" type="video/mp4">
-                                </video>
-                                <img
-                                    class="lp-demo-fallback"
-                                    src="{% static 'images/image.png' %}"
-                                    alt="Aperçu du tableau de bord Xaliss"
-                                    width="1280"
-                                    height="800"
-                                    loading="lazy"
-                                    decoding="async"
-                                >
+                                <p class="lp-demo-placeholder">Vidéo de présentation à venir</p>
                             </div>
+                            <span class="lp-demo-home" aria-hidden="true"></span>
                         </div>
                     </div>
+                </div>
+                <div class="lp-demo-caption">
+                    <p class="lp-demo-caption-title">Xaliss, ton flux sous contrôle</p>
+                    <p class="lp-demo-caption-text">Voyez en quelques secondes comment votre trésorerie devient claire, mesurable et simple à piloter.</p>
                 </div>
             </div>
         </section>
 
-        <section class="lp-section" id="fonctionnalites" aria-labelledby="features-title">
+        <section class="lp-section lp-section-features" id="fonctionnalites" aria-labelledby="features-title">
             <div class="lp-wrap">
                 <div class="lp-section-head">
+                    <p class="lp-section-eyebrow">Fonctionnalités</p>
                     <h2 id="features-title">Conçu pour piloter, pas pour compliquer</h2>
-                    <p>Trois piliers pour une vision nette de votre activité financière.</p>
+                    <p>Tout ce qu’il faut pour suivre l’argent, les clients et l’activité — sans tableur.</p>
                 </div>
                 <ul class="lp-features">
                     <li>
-                        <span class="lp-feature-index">01</span>
-                        <h3>Flux en temps réel</h3>
-                        <p>Saisissez entrées et sorties en quelques secondes. Votre historique reste fiable et consultable partout.</p>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Transactions</span>
+                        </div>
+                        <h3>Entrées &amp; sorties</h3>
+                        <p>Enregistrez chaque mouvement en quelques secondes. Gérez aussi les paiements partiels et les restes à encaisser.</p>
                     </li>
                     <li>
-                        <span class="lp-feature-index">02</span>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="3" stroke="currentColor" stroke-width="2"/><path d="M22 21v-2a3.5 3.5 0 0 0-2.5-3.35M16.5 4.15a3 3 0 0 1 0 5.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Relation</span>
+                        </div>
+                        <h3>Clients &amp; prestataires</h3>
+                        <p>Centralisez fiches, téléphone, provenance et historique. Filtrez vos transactions par personne en un clic.</p>
+                    </li>
+                    <li>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="19" cy="12" r="2" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="17" r="2" stroke="currentColor" stroke-width="2"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Organisation</span>
+                        </div>
+                        <h3>Catégories</h3>
+                        <p>Classez vos produits et dépenses. Répartissez une transaction sur une ou plusieurs catégories et analysez-les ensuite.</p>
+                    </li>
+                    <li>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M8 19v-8M12 19V9M16 19v-5M20 19V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Pilotage</span>
+                        </div>
                         <h3>Statistiques utiles</h3>
-                        <p>Des tendances lisibles pour décider plus vite — sans tableur, sans friction.</p>
+                        <p>Recettes, totaux, bénéfice, créances et graphiques lisibles — par jour, période ou catégorie.</p>
                     </li>
                     <li>
-                        <span class="lp-feature-index">03</span>
-                        <h3>Toujours avec vous</h3>
-                        <p>Bureau ou mobile : Xaliss s’installe comme une app et reste à portée de main.</p>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M8 4h8a2 2 0 0 1 2 2v14l-6-3-6 3V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Mémo</span>
+                        </div>
+                        <h3>Notes &amp; rappels</h3>
+                        <p>Gardez vos notes d’équipe, épinglez l’essentiel et programmez des rappels (app + e-mail) liés à un client ou une catégorie.</p>
+                    </li>
+                    <li>
+                        <div class="lp-feature-top">
+                            <span class="lp-feature-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12M8 11l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="lp-feature-index">Partage</span>
+                        </div>
+                        <h3>Exports &amp; factures</h3>
+                        <p>Exportez en PDF ou Excel. Générez, téléchargez et partagez factures ou notes de paiement en un instant.</p>
                     </li>
                 </ul>
             </div>
         </section>
 
-        <section class="lp-section" id="tarifs" aria-labelledby="pricing-title">
+        <section class="lp-section lp-section-pricing" id="tarifs" aria-labelledby="pricing-title">
             <div class="lp-wrap">
                 <div class="lp-section-head lp-section-head-center">
-                    <h2 id="pricing-title">Des tarifs simples</h2>
-                    <p>Commencez avec 3 mois d’essai Pro offerts, puis choisissez la formule adaptée à votre organisation.</p>
+                    <p class="lp-section-eyebrow">Tarifs</p>
+                    <h2 id="pricing-title">Des tarifs simples, sans surprise</h2>
+                    <p>3&nbsp;mois d’essai Pro offerts. Ensuite, choisissez la formule adaptée à votre organisation.</p>
                 </div>
                 <div class="lp-pricing">
                     <article class="lp-price-card">
-                        <h3>Essai</h3>
-                        <p class="lp-price-amount">3&nbsp;mois</p>
-                        <p class="lp-price-note">Offerts</p>
+                        <header class="lp-price-head">
+                            <h3>Essai</h3>
+                            <p class="lp-price-tag">Pour démarrer</p>
+                        </header>
+                        <div class="lp-price-body">
+                            <p class="lp-price-amount">3&nbsp;mois</p>
+                            <p class="lp-price-note">Pro offert · sans engagement</p>
+                        </div>
                         <ul>
-                            <li>Accès au plan Pro</li>
-                            <li>Entrées, sorties &amp; stats</li>
-                            <li>Sans engagement</li>
+                            <li>Accès complet au plan Pro</li>
+                            <li>Entrées, sorties &amp; statistiques</li>
+                            <li>Clients, catégories &amp; notes</li>
+                            <li>Exports &amp; factures</li>
                         </ul>
-                        <a class="lp-btn lp-btn-solid" href="{% url 'inscription' %}">Commencer</a>
+                        <a class="lp-btn lp-price-btn" href="{% url 'inscription' %}">Commencer gratuitement</a>
                     </article>
+
                     <article class="lp-price-card is-featured">
                         <p class="lp-price-badge">Recommandé</p>
-                        <h3>Pro</h3>
-                        <p class="lp-price-amount">Après essai</p>
-                        <p class="lp-price-note">Abonnement mensuel</p>
+                        <header class="lp-price-head">
+                            <h3>Pro</h3>
+                            <p class="lp-price-tag">Après l’essai</p>
+                        </header>
+                        <div class="lp-price-body">
+                            <p class="lp-price-amount">Mensuel</p>
+                            <p class="lp-price-note">Abonnement organisation</p>
+                        </div>
                         <ul>
                             <li>Gestion financière complète</li>
-                            <li>Espace organisation</li>
-                            <li>Accès multi-appareils</li>
+                            <li>Espace multi-membres</li>
+                            <li>Exports PDF &amp; Excel</li>
+                            <li>Accès bureau &amp; mobile</li>
                         </ul>
-                        <a class="lp-btn lp-btn-solid" href="{% url 'inscription' %}">Choisir Pro</a>
+                        <a class="lp-btn lp-price-btn" href="{% url 'inscription' %}">Choisir Pro</a>
                     </article>
+
                     <article class="lp-price-card">
-                        <h3>Premium</h3>
-                        <p class="lp-price-amount">Sur demande</p>
-                        <p class="lp-price-note">Pour aller plus loin</p>
+                        <header class="lp-price-head">
+                            <h3>Premium</h3>
+                            <p class="lp-price-tag">Sur mesure</p>
+                        </header>
+                        <div class="lp-price-body">
+                            <p class="lp-price-amount">Sur devis</p>
+                            <p class="lp-price-note">Pour aller plus loin</p>
+                        </div>
                         <ul>
                             <li>Tout le plan Pro</li>
                             <li>Options avancées</li>
                             <li>Accompagnement dédié</li>
+                            <li>Priorité support</li>
                         </ul>
-                        <a class="lp-btn lp-btn-solid" href="#contact">Nous contacter</a>
+                        <a class="lp-btn lp-price-btn" href="#contact">Nous contacter</a>
                     </article>
                 </div>
+                <p class="lp-pricing-foot">Essai gratuit 3&nbsp;mois · Aucun engagement · Vos données restent privées</p>
             </div>
         </section>
 
@@ -196,7 +234,7 @@
             <div class="lp-wrap">
                 <div class="lp-section-head lp-section-head-center">
                     <h2 id="contact-title">Contact</h2>
-                    <p>Votre trésorerie mérite des réponses claires. Contactez-nous.</p>
+                    <p>Une question&nbsp;? Écrivez-nous, on vous répond clairement.</p>
                 </div>
 
                 <div class="lp-contact-layout">
@@ -234,11 +272,22 @@
                                 <span class="lp-channel-hint">Écrivez-nous</span>
                             </span>
                         </a>
+
+                        <div class="lp-channel lp-channel-info">
+                            <span class="lp-channel-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </span>
+                            <span class="lp-channel-body">
+                                <span class="lp-channel-label">Assistance</span>
+                                <strong>24h/24 · 7j/7</strong>
+                                <span class="lp-channel-hint">Toujours joignable</span>
+                            </span>
+                        </div>
                     </div>
 
                     <div class="lp-contact-form-card">
                         <h3>Envoyer un message</h3>
-                        <p>Décrivez votre besoin : nous vous recontacterons.</p>
+                        <p>Question sur l’essai, Premium ou l’utilisation de Xaliss&nbsp;? On vous répond.</p>
                         <form method="post" action="{% url 'contact_landing' %}" class="lp-contact-form" novalidate>
                             {% csrf_token %}
                             <div class="lp-form-row">
@@ -258,12 +307,12 @@
                                 </label>
                                 <label>
                                     <span>Objet</span>
-                                    <input type="text" name="objet" maxlength="120" value="{{ contact_form.objet|default:'' }}" placeholder="Démo, Premium…">
+                                    <input type="text" name="objet" maxlength="120" value="{{ contact_form.objet|default:'' }}" placeholder="Essai, Premium, aide…">
                                 </label>
                             </div>
                             <label class="lp-form-full">
                                 <span>Message *</span>
-                                <textarea name="message" required rows="5" maxlength="4000" placeholder="Votre message…">{{ contact_form.message|default:'' }}</textarea>
+                                <textarea name="message" required rows="5" maxlength="4000" placeholder="Expliquez votre question en quelques lignes…">{{ contact_form.message|default:'' }}</textarea>
                             </label>
                             <button type="submit" class="lp-btn lp-btn-solid">Envoyer</button>
                         </form>
@@ -433,41 +482,105 @@
         });
 
         if ('IntersectionObserver' in window) {
+            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             var io = new IntersectionObserver(function (entries) {
                 entries.forEach(function (e) {
-                    if (e.isIntersecting) e.target.classList.add('is-in');
+                    if (!e.isIntersecting) return;
+                    e.target.classList.add('is-in');
+                    io.unobserve(e.target);
                 });
-            }, { threshold: 0.14 });
-            document.querySelectorAll('.lp-section, .lp-cta-band').forEach(function (el) {
-                el.classList.add('lp-reveal');
-                io.observe(el);
-            });
+            }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+            function observeReveal(nodes) {
+                Array.prototype.forEach.call(nodes, function (el) {
+                    if (reduceMotion) {
+                        el.classList.add('is-in');
+                        return;
+                    }
+                    el.classList.add('lp-reveal');
+                    io.observe(el);
+                });
+            }
+
+            function revealSequence(container, itemSelector, stepMs) {
+                if (!container) return;
+                var items = container.querySelectorAll(itemSelector);
+                if (!items.length) return;
+
+                Array.prototype.forEach.call(items, function (el) {
+                    el.classList.add('lp-reveal');
+                    if (reduceMotion) el.classList.add('is-in');
+                });
+                if (reduceMotion) return;
+
+                var seqIo = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (!e.isIntersecting) return;
+                        Array.prototype.forEach.call(items, function (el, i) {
+                            window.setTimeout(function () {
+                                el.classList.add('is-in');
+                            }, i * stepMs);
+                        });
+                        seqIo.unobserve(container);
+                    });
+                }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
+                seqIo.observe(container);
+            }
+
+            observeReveal(document.querySelectorAll('.lp-demo-caption'));
+            observeReveal(document.querySelectorAll('.lp-section .lp-section-head'));
+            revealSequence(document.querySelector('.lp-features'), ':scope > li', 180);
+            revealSequence(document.querySelector('.lp-pricing'), '.lp-price-card', 160);
+            revealSequence(document.querySelector('.lp-faq'), '.lp-faq-item', 120);
+            observeReveal(document.querySelectorAll('.lp-cta-band .lp-cta-inner'));
+
+            (function () {
+                var channelsWrap = document.querySelector('.lp-contact-channels');
+                var formCard = document.querySelector('.lp-contact-form-card');
+                if (channelsWrap) {
+                    channelsWrap.classList.add('lp-reveal');
+                    if (reduceMotion) channelsWrap.classList.add('is-in');
+                    else io.observe(channelsWrap);
+                }
+                if (formCard) {
+                    formCard.classList.add('lp-reveal');
+                    if (reduceMotion) {
+                        formCard.classList.add('is-in');
+                        return;
+                    }
+                    if (!channelsWrap) {
+                        io.observe(formCard);
+                        return;
+                    }
+                    var formIo = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (e) {
+                            if (!e.isIntersecting) return;
+                            window.setTimeout(function () {
+                                formCard.classList.add('is-in');
+                            }, 180);
+                            formIo.unobserve(channelsWrap);
+                        });
+                    }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
+                    formIo.observe(channelsWrap);
+                }
+            })();
 
             var demoStage = document.getElementById('demoStage');
-            var demoVideo = document.getElementById('demoVideo');
             if (demoStage) {
                 var demoIo = new IntersectionObserver(function (entries) {
                     entries.forEach(function (e) {
-                        if (!e.isIntersecting) {
-                            if (demoVideo) demoVideo.pause();
-                            return;
-                        }
-                        demoStage.classList.add('is-in');
-                        if (demoVideo) {
-                            var play = demoVideo.play();
-                            if (play && play.then) {
-                                play.then(function () {
-                                    demoStage.classList.add('is-playing');
-                                }).catch(function () {
-                                    /* poster / fallback image reste visible */
-                                });
-                            }
+                        if (e.isIntersecting) {
+                            demoStage.classList.add('is-in');
+                            demoIo.unobserve(demoStage);
                         }
                     });
                 }, { threshold: 0.28, rootMargin: '0px 0px -8% 0px' });
                 demoIo.observe(demoStage);
             }
         } else {
+            document.querySelectorAll('.lp-demo-caption, .lp-section-head, .lp-features > li, .lp-price-card, .lp-contact-channels, .lp-contact-form-card, .lp-faq-item, .lp-cta-inner').forEach(function (el) {
+                el.classList.add('is-in');
+            });
             var stage = document.getElementById('demoStage');
             if (stage) stage.classList.add('is-in');
         }
