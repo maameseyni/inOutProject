@@ -3,6 +3,7 @@ from decimal import Decimal
 from functools import wraps
 from io import BytesIO
 from urllib.parse import urlencode
+import json
 
 from allauth.account.models import EmailAddress
 from django.conf import settings
@@ -10,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch, Q, Sum
-from django.db.models.functions import Lower
+from django.db.models.functions import Lower, TruncMonth
 from django.http import FileResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
@@ -51,6 +52,130 @@ def backoffice_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped
+
+
+def _debut_mois_local(dt=None):
+    dt = timezone.localtime(dt or timezone.now())
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _liste_mois(nb=12):
+    """Liste des premiers jours de mois (local), du plus ancien au plus récent."""
+    d = _debut_mois_local()
+    mois = []
+    for _ in range(nb):
+        mois.append(d)
+        d = (d - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return list(reversed(mois))
+
+
+def _label_mois(d):
+    mois_fr = (
+        'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+        'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+    )
+    return f'{mois_fr[d.month - 1]} {d.year % 100:02d}'
+
+
+def _compter_par_mois(queryset, date_field, mois_list):
+    """Compte les enregistrements groupés par mois pour une plage donnée."""
+    if not mois_list:
+        return []
+    debut = mois_list[0]
+    fin = mois_list[-1]
+    # Fin exclusive : 1er jour du mois suivant le dernier
+    if fin.month == 12:
+        fin_ex = fin.replace(year=fin.year + 1, month=1)
+    else:
+        fin_ex = fin.replace(month=fin.month + 1)
+
+    filtre = {f'{date_field}__gte': debut, f'{date_field}__lt': fin_ex}
+    rows = (
+        queryset.filter(**filtre)
+        .annotate(m=TruncMonth(date_field))
+        .values('m')
+        .annotate(n=Count('id'))
+    )
+    by_key = {}
+    for row in rows:
+        m = row['m']
+        if m is None:
+            continue
+        if timezone.is_aware(m):
+            m = timezone.localtime(m)
+        key = (m.year, m.month)
+        by_key[key] = int(row['n'] or 0)
+
+    return [by_key.get((d.year, d.month), 0) for d in mois_list]
+
+
+def _sommer_par_mois(queryset, date_field, amount_field, mois_list):
+    if not mois_list:
+        return []
+    debut = mois_list[0]
+    fin = mois_list[-1]
+    if fin.month == 12:
+        fin_ex = fin.replace(year=fin.year + 1, month=1)
+    else:
+        fin_ex = fin.replace(month=fin.month + 1)
+
+    filtre = {f'{date_field}__gte': debut, f'{date_field}__lt': fin_ex}
+    rows = (
+        queryset.filter(**filtre)
+        .annotate(m=TruncMonth(date_field))
+        .values('m')
+        .annotate(total=Sum(amount_field))
+    )
+    by_key = {}
+    for row in rows:
+        m = row['m']
+        if m is None:
+            continue
+        if timezone.is_aware(m):
+            m = timezone.localtime(m)
+        key = (m.year, m.month)
+        val = row['total'] or Decimal('0')
+        by_key[key] = float(val)
+
+    return [by_key.get((d.year, d.month), 0.0) for d in mois_list]
+
+
+def _graphiques_plateforme(nb_mois=12):
+    """Séries pour les graphiques backoffice (12 mois glissants)."""
+    mois_list = _liste_mois(nb_mois)
+    labels = [_label_mois(d) for d in mois_list]
+
+    inscrits_mois = _compter_par_mois(User.objects.all(), 'date_joined', mois_list)
+    orgs_mois = _compter_par_mois(Organisation.objects.all(), 'cree_le', mois_list)
+
+    paiements_ok = PaiementAbonnement.objects.filter(
+        statut=PaiementAbonnement.STATUT_REUSSI,
+        paye_le__isnull=False,
+    )
+    revenus_mois = _sommer_par_mois(paiements_ok, 'paye_le', 'montant', mois_list)
+
+    base_avant = User.objects.filter(date_joined__lt=mois_list[0]).count()
+    cumul = base_avant
+    inscrits_cumul = []
+    for n in inscrits_mois:
+        cumul += n
+        inscrits_cumul.append(cumul)
+
+    # Connexions : utilisateurs dont last_login tombe dans le mois (approximation)
+    connectes_mois = _compter_par_mois(
+        User.objects.exclude(last_login__isnull=True),
+        'last_login',
+        mois_list,
+    )
+
+    return {
+        'labels': labels,
+        'inscrits_mois': inscrits_mois,
+        'inscrits_cumul': inscrits_cumul,
+        'orgs_mois': orgs_mois,
+        'revenus_mois': revenus_mois,
+        'connectes_mois': connectes_mois,
+    }
 
 
 def _format_montant(valeur, devise='XOF'):
@@ -230,7 +355,7 @@ def _lignes_utilisateurs(users, emails_verifies, maintenant, user_ids_verifies=N
     return lignes
 
 
-def _query_params(q, filtre_statut, filtre_plan, non_verifies, page=None):
+def _query_params(q, filtre_statut, filtre_plan, non_verifies, page=None, vue_complete=False):
     params = {}
     if q:
         params['q'] = q
@@ -240,7 +365,9 @@ def _query_params(q, filtre_statut, filtre_plan, non_verifies, page=None):
         params['plan'] = filtre_plan
     if non_verifies:
         params['non_verifies'] = '1'
-    if page and int(page) > 1:
+    if vue_complete:
+        params['all'] = '1'
+    elif page and int(page) > 1:
         params['page'] = page
     return params
 
@@ -362,7 +489,11 @@ def backoffice_dashboard(request):
         {
             'label': 'Entreprises',
             'valeur': Organisation.objects.count(),
-            'hint': f'{sans_org} sans entreprise' if sans_org else 'toutes reliées',
+            'hint': (
+                f'{sans_org} compte{"s" if sans_org > 1 else ""} sans organisation'
+                if sans_org
+                else '0 compte sans organisation'
+            ),
             'variant': 'remaining' if sans_org else 'balance',
         },
         {
@@ -412,23 +543,40 @@ def backoffice_dashboard(request):
         q, filtre_statut, filtre_plan, non_verifies,
     )
 
-    paginator = Paginator(users_list, 5)
-    page = paginator.get_page(request.GET.get('page') or 1)
-    lignes = _lignes_utilisateurs(
-        page.object_list,
-        emails_verifies,
-        maintenant,
-        user_ids_verifies=user_ids_verifies,
-    )
+    vue_complete = request.GET.get('all') in ('1', 'true', 'on')
+    nb_resultats = users_list.count() if hasattr(users_list, 'count') else len(users_list)
 
-    current = page.number
-    total_pages = paginator.num_pages
-    window_start = max(1, current - 2)
-    window_end = min(total_pages, current + 2)
-    page_numbers = list(range(window_start, window_end + 1))
+    if vue_complete:
+        page = None
+        page_numbers = []
+        lignes = _lignes_utilisateurs(
+            users_list,
+            emails_verifies,
+            maintenant,
+            user_ids_verifies=user_ids_verifies,
+        )
+    else:
+        paginator = Paginator(users_list, 5)
+        page = paginator.get_page(request.GET.get('page') or 1)
+        lignes = _lignes_utilisateurs(
+            page.object_list,
+            emails_verifies,
+            maintenant,
+            user_ids_verifies=user_ids_verifies,
+        )
+        current = page.number
+        total_pages = paginator.num_pages
+        window_start = max(1, current - 2)
+        window_end = min(total_pages, current + 2)
+        page_numbers = list(range(window_start, window_end + 1))
+        nb_resultats = paginator.count
 
     query_suffix = urlencode(
-        _query_params(q, filtre_statut, filtre_plan, non_verifies)
+        _query_params(q, filtre_statut, filtre_plan, non_verifies, vue_complete=vue_complete)
+    )
+    # Liens pagination : sans all=
+    query_suffix_pages = urlencode(
+        _query_params(q, filtre_statut, filtre_plan, non_verifies, vue_complete=False)
     )
 
     total_abo = sum(par_statut.values()) or 1
@@ -437,11 +585,13 @@ def backoffice_dashboard(request):
         'lignes': lignes,
         'page_obj': page,
         'page_numbers': page_numbers,
+        'vue_complete': vue_complete,
         'q': q,
         'filtre_statut': filtre_statut,
         'filtre_plan': filtre_plan,
         'non_verifies': non_verifies,
         'query_suffix': query_suffix,
+        'query_suffix_pages': query_suffix_pages,
         'statuts_choices': AbonnementOrganisation.STATUT_CHOICES,
         'plans_choices': PlanAbonnement.objects.order_by('ordre', 'code'),
         'par_statut': [
@@ -454,8 +604,19 @@ def backoffice_dashboard(request):
             for code, label in AbonnementOrganisation.STATUT_CHOICES
         ],
         'mrr_formate': _format_montant(mrr),
-        'nb_resultats': paginator.count,
+        'nb_resultats': nb_resultats,
         'maintenant': maintenant,
+        'charts_json': json.dumps(
+            {
+                **_graphiques_plateforme(12),
+                'statuts': {
+                    'labels': [label for _code, label in AbonnementOrganisation.STATUT_CHOICES],
+                    'values': [par_statut[code] for code, _label in AbonnementOrganisation.STATUT_CHOICES],
+                    'codes': [code for code, _label in AbonnementOrganisation.STATUT_CHOICES],
+                },
+            },
+            ensure_ascii=False,
+        ),
     }
     return render(request, 'backoffice/dashboard.html', context)
 

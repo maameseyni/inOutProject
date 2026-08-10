@@ -8,16 +8,19 @@ from django.contrib.auth.views import (
     PasswordResetDoneView,
     PasswordResetView,
 )
-from django.core.mail import EmailMessage
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+import logging
 
 from .emails import (
     confirmation_email_envoyee_aujourdhui,
     envoyer_confirmation_email,
+    envoyer_message_contact_landing,
     marquer_mot_de_passe_email_envoye,
     quota_mot_de_passe_atteint,
 )
@@ -38,6 +41,7 @@ from .utils import (
 from finances.services import utilisateur as user_service
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _redirect_vers_app(onglet=None):
@@ -109,11 +113,11 @@ def contact_landing(request):
         flash_429(request)
         return redirect(f"{reverse('accueil')}#contact")
 
-    nom = (request.POST.get('nom') or '').strip()
-    email = (request.POST.get('email') or '').strip()
-    telephone = (request.POST.get('telephone') or '').strip()
-    objet = (request.POST.get('objet') or '').strip() or 'Contact Xaliss'
-    message = (request.POST.get('message') or '').strip()
+    nom = (request.POST.get('nom') or '').strip()[:120]
+    email = (request.POST.get('email') or '').strip()[:120]
+    telephone = (request.POST.get('telephone') or '').strip()[:40]
+    objet = (request.POST.get('objet') or '').strip()[:120] or 'Contact Xaliss'
+    message = (request.POST.get('message') or '').strip()[:4000]
 
     form_data = {
         'nom': nom,
@@ -123,13 +127,13 @@ def contact_landing(request):
         'message': message,
     }
 
-    if not nom or not email or not message:
-        messages.error(request, 'Merci de renseigner le nom, l’e-mail et le message.')
+    def _render_form_error(msg):
+        messages.error(request, msg)
         return render(
             request,
             'comptes/accueil.html',
             {
-                'contact_email': settings.LANDING_CONTACT_EMAIL,
+                'contact_email': settings.LANDING_CONTACT_EMAIL or 'contact@xaliss.com',
                 'contact_phone': settings.LANDING_CONTACT_PHONE,
                 'contact_whatsapp': settings.LANDING_WHATSAPP,
                 'contact_horaires': settings.LANDING_HORAIRES,
@@ -138,28 +142,41 @@ def contact_landing(request):
             },
         )
 
-    destinataire = settings.LANDING_CONTACT_EMAIL or settings.DEFAULT_FROM_EMAIL
-    corps = (
-        f'Nom : {nom}\n'
-        f'E-mail : {email}\n'
-        f'Téléphone : {telephone or "—"}\n'
-        f'Objet : {objet}\n\n'
-        f'{message}\n'
-    )
+    if not nom or not email or not message:
+        return _render_form_error('Merci de renseigner le nom, l’e-mail et le message.')
+
     try:
-        mail = EmailMessage(
-            subject=f'[Xaliss Contact] {objet}',
-            body=corps,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[destinataire],
-            reply_to=[email],
+        validate_email(email)
+    except ValidationError:
+        return _render_form_error('L’adresse e-mail saisie n’est pas valide.')
+
+    try:
+        envoyer_message_contact_landing(
+            nom=nom,
+            email=email,
+            telephone=telephone,
+            objet=objet,
+            message=message,
         )
-        mail.send(fail_silently=False)
-    except Exception:
-        messages.error(request, 'L’envoi a échoué. Réessayez ou contactez-nous via WhatsApp.')
+    except Exception as exc:
+        logger.exception('Échec envoi contact landing vers %s', settings.LANDING_CONTACT_EMAIL)
+        err = str(exc).lower()
+        if 'user unknown' in err or 'recipient address rejected' in err:
+            messages.error(
+                request,
+                'L’envoi a échoué : la boîte '
+                f'{settings.LANDING_CONTACT_EMAIL} n’existe pas encore chez l’hébergeur e-mail. '
+                'Créez cette adresse (ou un alias) dans le panneau mail, '
+                'ou définissez LANDING_CONTACT_EMAIL vers une boîte existante.',
+            )
+        else:
+            messages.error(
+                request,
+                'L’envoi a échoué. Réessayez dans un instant ou écrivez à contact@xaliss.com.',
+            )
         return redirect(f"{reverse('accueil')}#contact")
 
-    messages.success(request, 'Message envoyé. Nous vous répondons rapidement.')
+    messages.success(request, 'Message envoyé. Nous vous répondons rapidement sur votre e-mail.')
     return redirect(f"{reverse('accueil')}#contact")
 
 
@@ -229,8 +246,9 @@ def authentification(request):
             if login_form.is_valid():
                 utilisateur = login_form.get_user()
                 remember = login_form.cleaned_data.get('remember_me')
-                request.session.set_expiry(1209600 if remember else 0)
                 connecter_utilisateur(request, utilisateur)
+                # Après login (cycle/flush session) : 14 j si coché, sinon fin à la fermeture du navigateur.
+                request.session.set_expiry(1209600 if remember else 0)
                 messages.success(request, 'Connexion réussie.')
                 return _redirect_apres_connexion(request)
             messages.error(request, _message_connexion_invalide(login_form))

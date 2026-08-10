@@ -1318,7 +1318,14 @@
             </div>
             <div class="notifications-modal-toolbar">
                 <span class="notifications-modal-count" id="notificationsModalCount">0 notification</span>
-                <button type="button" class="clients-btn notifications-mark-read-btn" id="notificationsMarkReadBtn">Marquer comme lu</button>
+                <div class="notifications-modal-actions">
+                    <button type="button" class="clients-btn notifications-mark-read-btn" id="notificationsMarkReadBtn">Marquer tous comme lu</button>
+                    <button type="button" class="delete-btn notifications-delete-all-btn" id="notificationsDeleteAllBtn" title="Supprimer toutes les notifications" aria-label="Supprimer toutes les notifications">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <p class="list-empty-state notifications-empty" id="notificationsEmpty">Aucune notification pour le moment.</p>
             <div class="notifications-list" id="notificationsList" aria-label="Liste des notifications"></div>

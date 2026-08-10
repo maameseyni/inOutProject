@@ -14,6 +14,7 @@
 </head>
 <body class="landing">
     <div class="lp-page-grid" aria-hidden="true"></div>
+    {% include 'partials/django_messages_data.html' %}
     {% include 'partials/landing_nav.html' %}
 
     <main>
@@ -58,15 +59,250 @@
                     <p class="lp-hero-trust">Essai Pro 3 mois offerts · Sans engagement</p>
                 </div>
 
-                <div class="lp-hero-shot">
-                    <img
-                        src="{% static 'images/image.png' %}"
-                        alt="Tableau de bord Xaliss — statistiques, entrées et sorties"
-                        width="1280"
-                        height="800"
-                        loading="eager"
-                        decoding="async"
-                    >
+                <div class="lp-hero-visual">
+                    <div class="lp-app-window" id="lpLive" aria-label="Aperçu live de l’application Xaliss — Statistiques">
+                        <div class="lp-app-body">
+                            <div class="lp-app-shell">
+                                <aside class="lp-app-sidebar is-collapsed" aria-hidden="true">
+                                    <div class="lp-app-sidebar-panel">
+                                        <button type="button" class="lp-sidebar-toggle" tabindex="-1" title="Ouvrir le menu" aria-label="Menu replié">
+                                            <svg class="lp-sidebar-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            <span>Ouvrir</span>
+                                        </button>
+                                        <nav class="lp-app-sidebar-nav">
+                                            <div class="lp-sidebar-profile">
+                                                <span class="lp-sidebar-profile-icon" aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" fill="none"><path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>
+                                                </span>
+                                                <span>Demo Xaliss</span>
+                                            </div>
+                                            <button type="button" class="lp-main-tab" tabindex="-1">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span>Transactions</span>
+                                            </button>
+                                            <button type="button" class="lp-main-tab is-active" tabindex="-1">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 17V9M13 17V5M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span>Statistiques</span>
+                                            </button>
+                                            <button type="button" class="lp-main-tab" tabindex="-1">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span>Notes</span>
+                                            </button>
+                                            <button type="button" class="lp-main-tab" tabindex="-1">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span>Paramètres</span>
+                                            </button>
+                                        </nav>
+                                        <div class="lp-app-sidebar-footer">
+                                            <button type="button" class="lp-sidebar-logout" tabindex="-1">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span>Déconnexion</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </aside>
+
+                                <div class="lp-app-main">
+                                    <div class="lp-app-container">
+                                        <header class="lp-app-header">
+                                            <img src="{% static 'images/logo.png' %}" alt="Xaliss" class="lp-app-logo" width="240" height="80">
+                                            <button type="button" class="app-notifications-btn has-new-notification lp-app-notif" tabindex="-1" title="2 notifications" aria-label="2 notifications">
+                                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                <span class="notifications-count">2</span>
+                                            </button>
+                                        </header>
+
+                                        <div class="lp-app-stats">
+                                            <div class="dashboard">
+                                                <div class="stat-card balance">
+                                                    <div class="stat-info">
+                                                        <h3 id="lpStatBalanceTitle">Recette actuelle</h3>
+                                                        <p class="stat-value"><span id="lpStatBalance" data-count="0">0</span>&nbsp;<span class="js-currency-label">FCFA</span></p>
+                                                        <p class="stat-hint" id="lpStatBalanceHint">—</p>
+                                                    </div>
+                                                </div>
+                                                <div class="stat-card income">
+                                                    <div class="stat-info">
+                                                        <h3>Total entrants</h3>
+                                                        <p class="stat-value"><span id="lpStatIncome" data-count="0">0</span>&nbsp;<span class="js-currency-label">FCFA</span></p>
+                                                        <p class="stat-hint" id="lpStatIncomeHint">—</p>
+                                                    </div>
+                                                </div>
+                                                <div class="stat-card expense">
+                                                    <div class="stat-info">
+                                                        <h3>Total sortants</h3>
+                                                        <p class="stat-value"><span id="lpStatExpense" data-count="0">0</span>&nbsp;<span class="js-currency-label">FCFA</span></p>
+                                                        <p class="stat-hint" id="lpStatExpenseHint">—</p>
+                                                    </div>
+                                                </div>
+                                                <div class="stat-card remaining">
+                                                    <div class="stat-info">
+                                                        <h3>Restes à encaisser</h3>
+                                                        <p class="stat-value"><span id="lpStatRemaining" data-count="0">0</span>&nbsp;<span class="js-currency-label">FCFA</span></p>
+                                                        <p class="stat-hint" id="lpStatRemainingHint">—</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="stats-benefits">
+                                                <div class="benefit-card benefit-period" id="lpStatsFilterCard" data-filter-mode="day">
+                                                    <div class="stats-filter-header">
+                                                        <div class="stats-filter-heading">
+                                                            <h3>
+                                                                <svg class="icon-inline" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M22 3H2v2.18l6.5 8.59V21h7v-7.23L22 5.18V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                                Filtrer
+                                                            </h3>
+                                                            <p class="benefit-period-hint">Appliqué aux totaux, au bénéfice et aux graphiques</p>
+                                                        </div>
+                                                        <div class="stats-filter-mode" role="tablist" aria-label="Mode de filtre">
+                                                            <button type="button" class="stats-filter-mode-btn is-active" data-filter-mode="day" aria-selected="true">Jour</button>
+                                                            <button type="button" class="stats-filter-mode-btn" data-filter-mode="range" aria-selected="false">Période</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="stats-filter-panel is-active" id="lpFilterDayBlock" role="tabpanel">
+                                                        <div class="benefit-controls benefit-controls-row stats-filter-day-row">
+                                                            <div class="benefit-input-wrap">
+                                                                <label for="lpFilterDay">Jour</label>
+                                                                <input type="date" id="lpFilterDay" class="date-input" value="2026-08-09">
+                                                            </div>
+                                                            <button type="button" class="clear-benefit-btn" id="lpFilterClearDay" title="Effacer le filtre">Effacer</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="stats-filter-panel" id="lpFilterRangeBlock" role="tabpanel" hidden>
+                                                        <div class="benefit-controls period benefit-controls-row">
+                                                            <div class="benefit-input-wrap">
+                                                                <label for="lpFilterFrom">Du</label>
+                                                                <input type="date" id="lpFilterFrom" class="date-input" value="2026-08-09">
+                                                            </div>
+                                                            <div class="benefit-input-wrap">
+                                                                <label for="lpFilterTo">Au</label>
+                                                                <input type="date" id="lpFilterTo" class="date-input" value="2026-08-09">
+                                                            </div>
+                                                            <button type="button" class="clear-benefit-btn" id="lpFilterClearRange" title="Effacer les filtres">Effacer</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="stats-period-presets" role="group" aria-label="Périodes rapides">
+                                                        <button type="button" class="period-preset-btn is-active" data-period-preset="today">Aujourd’hui</button>
+                                                        <button type="button" class="period-preset-btn" data-period-preset="month">Ce mois</button>
+                                                        <button type="button" class="period-preset-btn" data-period-preset="quarter">Ce trimestre</button>
+                                                        <button type="button" class="period-preset-btn" data-period-preset="year">Cette année</button>
+                                                        <button type="button" class="period-preset-btn" data-period-preset="all">Tout</button>
+                                                    </div>
+                                                    <p class="charts-filter-period-label" id="lpChartsFilterPeriodLabel">Aujourd’hui · 9 août 2026</p>
+                                                </div>
+                                                <div class="benefit-card benefit-main">
+                                                    <h3>
+                                                        <svg class="icon-inline" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                        Bénéfice
+                                                    </h3>
+                                                    <p class="benefit-period-hint">Entrants − sortants sur la période filtrée</p>
+                                                    <div class="benefit-result">
+                                                        <p class="benefit-value"><span id="lpBenefitValue" data-count="0">0</span>&nbsp;<span class="js-currency-label">FCFA</span></p>
+                                                        <span class="benefit-margin-pill" id="lpBenefitMargin">—</span>
+                                                    </div>
+                                                    <div class="benefit-insights">
+                                                        <div class="benefit-insight">
+                                                            <span class="benefit-insight-label">Nombre d’encaissements</span>
+                                                            <span class="benefit-insight-value" id="lpBenefitCount">—</span>
+                                                        </div>
+                                                        <div class="benefit-insight">
+                                                            <span class="benefit-insight-label">Plus gros entrant</span>
+                                                            <span class="benefit-insight-value" id="lpBenefitTop">—</span>
+                                                        </div>
+                                                    </div>
+                                                    <p class="benefit-breakdown" id="lpBenefitBreakdown">—</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="charts-section">
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Entrants vs Sortants par mois</h3>
+                                                    <p class="chart-subtitle">Comparaison des revenus et dépenses par mois</p>
+                                                    <div class="chart-container">
+                                                        <canvas id="lpChartIncomeVsExpense" aria-hidden="true"></canvas>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Entrants par catégorie</h3>
+                                                    <p class="chart-subtitle">Ce qui a rapporté le plus d’argent</p>
+                                                    <div class="chart-container">
+                                                        <canvas id="lpChartIncomeByCategory" aria-hidden="true"></canvas>
+                                                    </div>
+                                                </div>
+                                                <div class="charts-grid">
+                                                    <div class="chart-card">
+                                                        <h3 class="chart-title">Top 5 sortants</h3>
+                                                        <p class="chart-subtitle">Les 5 plus grosses dépenses (encaissements de la période)</p>
+                                                        <div class="chart-container">
+                                                            <canvas id="lpChartTopExpense" aria-hidden="true"></canvas>
+                                                        </div>
+                                                    </div>
+                                                    <div class="chart-card">
+                                                        <h3 class="chart-title">Top 5 entrants</h3>
+                                                        <p class="chart-subtitle">Les 5 plus gros revenus (encaissements de la période)</p>
+                                                        <div class="chart-container">
+                                                            <canvas id="lpChartTopIncome" aria-hidden="true"></canvas>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Évolution de la recette</h3>
+                                                    <p class="chart-subtitle">Solde cumulé au fil du temps</p>
+                                                    <div class="chart-scroll">
+                                                        <div class="chart-container" id="lpChartBalanceContainer">
+                                                            <canvas id="lpChartBalance" aria-hidden="true"></canvas>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Bénéfice par mois</h3>
+                                                    <p class="chart-subtitle">Entrants − sortants par mois</p>
+                                                    <div class="chart-container">
+                                                        <canvas id="lpChartBenefit" aria-hidden="true"></canvas>
+                                                    </div>
+                                                </div>
+                                                <div class="charts-grid">
+                                                    <div class="chart-card">
+                                                        <h3 class="chart-title">Top clients</h3>
+                                                        <p class="chart-subtitle">Clients qui ont le plus rapporté sur la période</p>
+                                                        <div class="chart-container">
+                                                            <canvas id="lpChartTopClients" aria-hidden="true"></canvas>
+                                                        </div>
+                                                    </div>
+                                                    <div class="chart-card">
+                                                        <h3 class="chart-title">Créances clients</h3>
+                                                        <p class="chart-subtitle">Restes à encaisser par client</p>
+                                                        <div class="chart-container">
+                                                            <canvas id="lpChartReceivables" aria-hidden="true"></canvas>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Provenances des clients</h3>
+                                                    <p class="chart-subtitle">Nombre de clients par provenance</p>
+                                                    <div class="chart-container">
+                                                        <canvas id="lpChartProvenances" aria-hidden="true"></canvas>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-card chart-card--wide">
+                                                    <h3 class="chart-title">Activité par jour de la semaine</h3>
+                                                    <p class="chart-subtitle">Volume des encaissements selon le jour</p>
+                                                    <div class="chart-container">
+                                                        <canvas id="lpChartWeekday" aria-hidden="true"></canvas>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -312,7 +548,7 @@
                             </div>
                             <label class="lp-form-full">
                                 <span>Message *</span>
-                                <textarea name="message" required rows="5" maxlength="4000" placeholder="Expliquez votre question en quelques lignes…">{{ contact_form.message|default:'' }}</textarea>
+                                <textarea name="message" required rows="4" maxlength="4000" placeholder="Expliquez votre question en quelques lignes…">{{ contact_form.message|default:'' }}</textarea>
                             </label>
                             <button type="submit" class="lp-btn lp-btn-solid">Envoyer</button>
                         </form>
@@ -321,137 +557,68 @@
             </div>
         </section>
 
-        <section class="lp-section" id="faq" aria-labelledby="faq-title">
+        <section class="lp-section lp-section-faq" id="faq" aria-labelledby="faq-title">
             <div class="lp-wrap">
                 <div class="lp-section-head lp-section-head-center">
-                    <h2 id="faq-title">FAQ</h2>
-                    <p>Les réponses aux questions les plus fréquentes sur Xaliss.</p>
+                    <p class="lp-section-eyebrow">FAQ</p>
+                    <h2 id="faq-title">Questions fréquentes</h2>
+                    <p>Tout ce qu’il faut savoir pour démarrer sereinement avec Xaliss.</p>
                 </div>
                 <div class="lp-faq">
                     <details class="lp-faq-item">
-                        <summary>Xaliss est-il gratuit&nbsp;?</summary>
-                        <p>Oui au démarrage : vous bénéficiez de 3 mois d’essai Pro offerts. Ensuite, vous choisissez un abonnement adapté à votre organisation.</p>
+                        <summary>
+                            <span class="lp-faq-index">01</span>
+                            <span class="lp-faq-q">Xaliss est-il gratuit&nbsp;?</span>
+                        </summary>
+                        <div class="lp-faq-a">
+                            <p>Oui au démarrage&nbsp;: vous avez 3&nbsp;mois d’essai Pro offerts, sans engagement. Ensuite, vous choisissez la formule qui vous convient.</p>
+                        </div>
                     </details>
                     <details class="lp-faq-item">
-                        <summary>Puis-je l’utiliser sur mobile&nbsp;?</summary>
-                        <p>Oui. Xaliss fonctionne sur ordinateur et mobile, et peut s’installer comme une application pour un accès rapide.</p>
+                        <summary>
+                            <span class="lp-faq-index">02</span>
+                            <span class="lp-faq-q">Puis-je l’utiliser sur mobile&nbsp;?</span>
+                        </summary>
+                        <div class="lp-faq-a">
+                            <p>Oui. Xaliss fonctionne sur ordinateur et téléphone, et peut s’installer comme une application pour un accès plus rapide.</p>
+                        </div>
                     </details>
                     <details class="lp-faq-item">
-                        <summary>Mes données sont-elles sécurisées&nbsp;?</summary>
-                        <p>Chaque organisation dispose de son propre espace. L’accès est protégé par authentification, et vos informations restent isolées des autres comptes.</p>
+                        <summary>
+                            <span class="lp-faq-index">03</span>
+                            <span class="lp-faq-q">Mes données sont-elles sécurisées&nbsp;?</span>
+                        </summary>
+                        <div class="lp-faq-a">
+                            <p>Oui. Votre compte est protégé par authentification, et vos données restent privées — isolées des autres utilisateurs.</p>
+                        </div>
                     </details>
                     <details class="lp-faq-item">
-                        <summary>Comment créer un compte&nbsp;?</summary>
-                        <p>Cliquez sur «&nbsp;Se connecter&nbsp;», puis passez à l’onglet Inscription. Vous pouvez aussi vous inscrire avec Google.</p>
+                        <summary>
+                            <span class="lp-faq-index">04</span>
+                            <span class="lp-faq-q">Comment créer un compte&nbsp;?</span>
+                        </summary>
+                        <div class="lp-faq-a">
+                            <p>Cliquez sur «&nbsp;Se connecter&nbsp;», puis ouvrez l’onglet Inscription. Vous pouvez aussi vous inscrire avec Google en quelques secondes.</p>
+                        </div>
                     </details>
                     <details class="lp-faq-item">
-                        <summary>Quelle est la différence entre Pro et Premium&nbsp;?</summary>
-                        <p>Pro couvre la gestion financière au quotidien. Premium ajoute des options avancées et un accompagnement dédié — contactez-nous pour en savoir plus.</p>
+                        <summary>
+                            <span class="lp-faq-index">05</span>
+                            <span class="lp-faq-q">Quelle est la différence entre Pro et Premium&nbsp;?</span>
+                        </summary>
+                        <div class="lp-faq-a">
+                            <p>Pro couvre la gestion financière au quotidien (flux, stats, clients, exports). Premium ajoute des options avancées et un accompagnement dédié — contactez-nous pour en parler.</p>
+                        </div>
                     </details>
                 </div>
-            </div>
-        </section>
-
-        <section class="lp-cta-band">
-            <div class="lp-wrap lp-cta-inner">
-                <h2>Prêt à y voir plus clair&nbsp;?</h2>
-                <p>Rejoignez Xaliss et commencez à suivre vos flux dès aujourd’hui.</p>
-                <div class="lp-hero-cta">
-                    <a class="lp-btn lp-btn-light lp-btn-lg" href="{% url 'inscription' %}">Commencer gratuitement</a>
-                    <a class="lp-btn lp-btn-glass lp-btn-lg" href="{% url 'connexion' %}">Connexion</a>
-                </div>
+                <p class="lp-faq-foot">Une autre question&nbsp;? <a href="#contact">Écrivez-nous</a></p>
             </div>
         </section>
     </main>
 
-    <footer class="lp-footer">
-        <div class="lp-footer-glow" aria-hidden="true"></div>
-        <div class="lp-wrap lp-footer-wrap">
-            <div class="lp-footer-grid">
-                <div class="lp-footer-brand-col">
-                    <a class="lp-footer-logo" href="{% url 'accueil' %}" aria-label="Xaliss — Accueil">
-                        <img src="{% static 'images/logo.png' %}" alt="" width="48" height="48">
-                        <span>Xaliss</span>
-                    </a>
-                    <p>Gestion financière claire pour les entreprises et indépendants — entrées, sorties et statistiques en un seul endroit.</p>
-                </div>
+    {% include 'partials/landing_footer.html' %}
 
-                <div class="lp-footer-col">
-                    <h3>Liens</h3>
-                    <ul>
-                        <li><a href="{% url 'accueil' %}">Accueil</a></li>
-                        <li><a href="#fonctionnalites">Fonctionnalités</a></li>
-                        <li><a href="#tarifs">Tarifs</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                        <li><a href="#faq">FAQ</a></li>
-                        <li><a href="{% url 'connexion' %}">Se connecter</a></li>
-                    </ul>
-                </div>
-
-                <div class="lp-footer-col">
-                    <h3>Avantages</h3>
-                    <ul class="lp-footer-coords">
-                        <li>
-                            <span class="lp-coord-label">Essai</span>
-                            <span>3 mois Pro offerts</span>
-                        </li>
-                        <li>
-                            <span class="lp-coord-label">Accès</span>
-                            <span>Ordinateur &amp; mobile</span>
-                        </li>
-                        <li>
-                            <span class="lp-coord-label">Vision</span>
-                            <span>Stats claires en un clin d’œil</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="lp-footer-col">
-                    <h3>Coordonnées</h3>
-                    <ul class="lp-footer-coords">
-                        <li>
-                            <span class="lp-coord-label">Téléphone</span>
-                            <a href="tel:{{ contact_phone|default:'+221772793927' }}">+221 77 279 39 27</a>
-                        </li>
-                        <li>
-                            <span class="lp-coord-label">E-mail</span>
-                            <a href="mailto:{{ contact_email|default:'contact@xaliss.com' }}">{{ contact_email|default:'contact@xaliss.com' }}</a>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="lp-footer-cta-card">
-                    <h3>On vous répond&nbsp;vite</h3>
-                    <p>Une question, une démo ou un besoin Premium — à vous de choisir.</p>
-                    <div class="lp-footer-cta-actions">
-                        <a class="lp-footer-btn lp-footer-btn-wa" href="https://wa.me/{{ contact_whatsapp|default:'221772793927' }}" target="_blank" rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.95 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.49s1.07 2.89 1.22 3.09c.15.2 2.11 3.22 5.11 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.89.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/><path fill="currentColor" d="M12.04 2C6.58 2 2.15 6.41 2.15 11.85c0 1.94.57 3.74 1.55 5.27L2 22l4.99-1.63a9.86 9.86 0 0 0 5.05 1.36h.01c5.46 0 9.89-4.41 9.89-9.85C21.94 6.41 17.5 2 12.04 2zm0 17.97h-.01a8.13 8.13 0 0 1-4.14-1.13l-.3-.18-3.06.99 1.03-2.98-.2-.31a8.1 8.1 0 0 1-1.24-4.33c0-4.48 3.67-8.13 8.18-8.13 4.5 0 8.17 3.65 8.17 8.13-.01 4.48-3.67 8.12-8.17 8.12z"/></svg>
-                            WhatsApp
-                        </a>
-                        <a class="lp-footer-btn lp-footer-btn-ghost" href="{% url 'connexion' %}">Se connecter</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lp-footer-hero-brand">
-                <div class="lp-footer-hero-mark">
-                    <img src="{% static 'images/logo.png' %}" alt="" class="lp-footer-hero-logo">
-                    <p class="lp-footer-hero-name">Xaliss</p>
-                </div>
-                <p class="lp-footer-hero-tag">La trésorerie, enfin limpide.</p>
-            </div>
-
-            <div class="lp-footer-bottom">
-                <p>&copy; {% now "Y" %} Xaliss — Tous droits réservés</p>
-                <div class="lp-footer-legal">
-                    <a href="#faq">FAQ</a>
-                    <a href="#contact">Contact</a>
-                    <a href="{% url 'connexion' %}">Connexion</a>
-                </div>
-            </div>
-        </div>
-    </footer>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
     (function () {
         var nav = document.getElementById('landingNav');
@@ -519,6 +686,10 @@
                         Array.prototype.forEach.call(items, function (el, i) {
                             window.setTimeout(function () {
                                 el.classList.add('is-in');
+                                window.setTimeout(function () {
+                                    el.style.transition = 'none';
+                                    el.style.willChange = 'auto';
+                                }, 700);
                             }, i * stepMs);
                         });
                         seqIo.unobserve(container);
@@ -532,7 +703,7 @@
             revealSequence(document.querySelector('.lp-features'), ':scope > li', 180);
             revealSequence(document.querySelector('.lp-pricing'), '.lp-price-card', 160);
             revealSequence(document.querySelector('.lp-faq'), '.lp-faq-item', 120);
-            observeReveal(document.querySelectorAll('.lp-cta-band .lp-cta-inner'));
+            observeReveal(document.querySelectorAll('.lp-faq-foot'));
 
             (function () {
                 var channelsWrap = document.querySelector('.lp-contact-channels');
@@ -578,14 +749,936 @@
                 demoIo.observe(demoStage);
             }
         } else {
-            document.querySelectorAll('.lp-demo-caption, .lp-section-head, .lp-features > li, .lp-price-card, .lp-contact-channels, .lp-contact-form-card, .lp-faq-item, .lp-cta-inner').forEach(function (el) {
+            document.querySelectorAll('.lp-demo-caption, .lp-section-head, .lp-features > li, .lp-price-card, .lp-contact-channels, .lp-contact-form-card, .lp-faq-item, .lp-faq-foot').forEach(function (el) {
                 el.classList.add('is-in');
             });
             var stage = document.getElementById('demoStage');
             if (stage) stage.classList.add('is-in');
         }
+
+        document.querySelectorAll('.lp-faq-item').forEach(function (item) {
+            item.addEventListener('toggle', function () {
+                if (!item.open) return;
+                document.querySelectorAll('.lp-faq-item').forEach(function (other) {
+                    if (other !== item) other.open = false;
+                });
+            });
+        });
+
+        /* Clone live page Statistiques — filtres interactifs + charts */
+        (function initLiveTreasury() {
+            var root = document.getElementById('lpLive');
+            if (!root) return;
+
+            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var chartMap = {};
+            var lastPreset = 'today';
+            var countsAnimatedOnce = false;
+
+            /* "Aujourd'hui" figé pour la démo (cohérent partout) */
+            var DEMO_TODAY = new Date(2026, 7, 9);
+            var MONTH_NAMES = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+            var MONTH_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+            var WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            var colorE = '#10b981';
+            var colorEF = 'rgba(16, 185, 129, 0.78)';
+            var colorS = '#ef4444';
+            var colorSF = 'rgba(239, 68, 68, 0.78)';
+            var colorAmber = 'rgba(245, 158, 11, 0.78)';
+            var colorAmberB = '#f59e0b';
+            var palette = [
+                'rgba(67, 39, 125, 0.78)',
+                'rgba(16, 185, 129, 0.78)',
+                'rgba(59, 130, 246, 0.78)',
+                'rgba(245, 158, 11, 0.78)',
+                'rgba(236, 72, 153, 0.78)',
+                'rgba(20, 184, 166, 0.78)'
+            ];
+            var paletteBorder = ['#43277d', '#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#14b8a6'];
+
+            /* Données démo (entrants / sortants) — mars → août 2026 */
+            var DEMO_TX = [
+                { type: 'income', date: '2026-03-08', amount: 180000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-03-15', amount: 150000, category: 'Chaussures', label: 'Vente produits', client: 'Boutique Central', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-03-22', amount: 90000, category: 'Accessoires', label: 'Acompte reçu', client: 'M. Touré', provenance: 'Réseaux sociaux' },
+                { type: 'expense', date: '2026-03-05', amount: 180000, label: 'Loyer' },
+                { type: 'expense', date: '2026-03-18', amount: 45000, label: 'Transport' },
+                { type: 'income', date: '2026-04-04', amount: 220000, category: 'Vêtements', label: 'Prestation client', client: 'Horizon SARL', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-04-12', amount: 170000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-04-26', amount: 120000, category: 'Chaussures', label: 'Règlement facture', client: 'Café du coin', provenance: 'Passage boutique' },
+                { type: 'expense', date: '2026-04-02', amount: 95000, label: 'Achats / stock' },
+                { type: 'expense', date: '2026-04-20', amount: 52000, label: 'Publicité' },
+                { type: 'income', date: '2026-05-06', amount: 200000, category: 'Sacs', label: 'Vente boutique', client: 'Boutique Central', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-05-14', amount: 160000, category: 'Vêtements', label: 'Prestation client', client: 'Horizon SARL', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-05-28', amount: 120000, category: 'Accessoires', label: 'Vente produits', client: 'Mme Ba', provenance: 'Réseaux sociaux' },
+                { type: 'expense', date: '2026-05-01', amount: 180000, label: 'Loyer' },
+                { type: 'expense', date: '2026-05-19', amount: 38000, label: 'Fournitures' },
+                { type: 'income', date: '2026-06-03', amount: 250000, category: 'Chaussures', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-06-11', amount: 190000, category: 'Sacs', label: 'Règlement facture', client: 'Boutique Central', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-06-20', amount: 180000, category: 'Vêtements', label: 'Prestation client', client: 'Horizon SARL', provenance: 'Autre' },
+                { type: 'expense', date: '2026-06-05', amount: 110000, label: 'Achats / stock' },
+                { type: 'expense', date: '2026-06-22', amount: 48000, label: 'Transport' },
+                { type: 'income', date: '2026-07-02', amount: 140000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-07-08', amount: 110000, category: 'Accessoires', label: 'Acompte reçu', client: 'M. Touré', provenance: 'Réseaux sociaux' },
+                { type: 'income', date: '2026-07-12', amount: 175000, category: 'Chaussures', label: 'Vente produits', client: 'Café du coin', provenance: 'Passage boutique' },
+                { type: 'income', date: '2026-07-16', amount: 95000, category: 'Autres', label: 'Règlement facture', client: 'Mme Ba', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-07-20', amount: 210000, category: 'Vêtements', label: 'Prestation client', client: 'Horizon SARL', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-07-24', amount: 130000, category: 'Sacs', label: 'Vente boutique', client: 'Boutique Central', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-07-28', amount: 155000, category: 'Chaussures', label: 'Vente produits', client: 'Client Amina', provenance: 'Bouche-à-oreille' },
+                { type: 'expense', date: '2026-07-01', amount: 180000, label: 'Loyer' },
+                { type: 'expense', date: '2026-07-10', amount: 72000, label: 'Achats / stock' },
+                { type: 'expense', date: '2026-07-18', amount: 32000, label: 'Publicité' },
+                { type: 'expense', date: '2026-07-26', amount: 28000, label: 'Fournitures' },
+                { type: 'income', date: '2026-08-01', amount: 185000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-08-03', amount: 150000, category: 'Vêtements', label: 'Prestation client', client: 'Horizon SARL', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-08-05', amount: 120000, category: 'Chaussures', label: 'Vente produits', client: 'Boutique Central', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-08-07', amount: 98000, category: 'Accessoires', label: 'Acompte reçu', client: 'M. Touré', provenance: 'Réseaux sociaux' },
+                { type: 'income', date: '2026-08-09', amount: 240000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-08-09', amount: 85000, category: 'Vêtements', label: 'Règlement facture', client: 'Café du coin', provenance: 'Passage boutique' },
+                { type: 'income', date: '2026-08-11', amount: 160000, category: 'Chaussures', label: 'Vente produits', client: 'Boutique Central', provenance: 'Bouche-à-oreille' },
+                { type: 'income', date: '2026-08-15', amount: 135000, category: 'Autres', label: 'Prestation client', client: 'Horizon SARL', provenance: 'Autre' },
+                { type: 'income', date: '2026-08-20', amount: 190000, category: 'Sacs', label: 'Vente boutique', client: 'Client Amina', provenance: 'WhatsApp' },
+                { type: 'income', date: '2026-08-25', amount: 145000, category: 'Vêtements', label: 'Vente produits', client: 'Mme Ba', provenance: 'Réseaux sociaux' },
+                { type: 'expense', date: '2026-08-01', amount: 180000, label: 'Loyer' },
+                { type: 'expense', date: '2026-08-06', amount: 88000, label: 'Achats / stock' },
+                { type: 'expense', date: '2026-08-09', amount: 42000, label: 'Transport' },
+                { type: 'expense', date: '2026-08-14', amount: 35000, label: 'Publicité' },
+                { type: 'expense', date: '2026-08-22', amount: 25000, label: 'Fournitures' }
+            ];
+
+            var DEMO_RECEIVABLES = [
+                { client: 'Client en attente', amount: 85000 },
+                { client: 'M. Sow', amount: 45000 },
+                { client: 'Boutique Nord', amount: 35000 },
+                { client: 'Mme Ba', amount: 20000 }
+            ];
+
+            var dayEl = document.getElementById('lpFilterDay');
+            var fromEl = document.getElementById('lpFilterFrom');
+            var toEl = document.getElementById('lpFilterTo');
+            var labelEl = document.getElementById('lpChartsFilterPeriodLabel');
+            var filterCard = document.getElementById('lpStatsFilterCard');
+            var dayBlock = document.getElementById('lpFilterDayBlock');
+            var rangeBlock = document.getElementById('lpFilterRangeBlock');
+
+            function formatFcfa(n) {
+                return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+            }
+
+            function toIso(d) {
+                return d.getFullYear() + '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(d.getDate()).padStart(2, '0');
+            }
+
+            function parseIso(s) {
+                if (!s) return null;
+                var p = s.split('-');
+                if (p.length !== 3) return null;
+                var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+                return Number.isNaN(d.getTime()) ? null : d;
+            }
+
+            function formatLongDate(iso) {
+                var d = parseIso(iso);
+                if (!d) return '';
+                return d.getDate() + ' ' + MONTH_FR[d.getMonth()] + ' ' + d.getFullYear();
+            }
+
+            function formatShortDay(iso) {
+                var d = parseIso(iso);
+                if (!d) return '';
+                return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+            }
+
+            function animateCount(el, target, duration) {
+                if (!el) return;
+                if (reduceMotion) {
+                    el.textContent = formatFcfa(target);
+                    return;
+                }
+                var start = parseInt(String(el.textContent).replace(/\s/g, ''), 10) || 0;
+                var t0 = null;
+                function frame(ts) {
+                    if (t0 == null) t0 = ts;
+                    var p = Math.min(1, (ts - t0) / duration);
+                    var eased = 1 - Math.pow(1 - p, 3);
+                    el.textContent = formatFcfa(start + (target - start) * eased);
+                    if (p < 1) requestAnimationFrame(frame);
+                    else el.textContent = formatFcfa(target);
+                }
+                requestAnimationFrame(frame);
+            }
+
+            function setCount(el, value, animate) {
+                if (!el) return;
+                el.setAttribute('data-count', String(value));
+                if (animate) animateCount(el, value, countsAnimatedOnce ? 700 : 1400);
+                else el.textContent = formatFcfa(value);
+            }
+
+            function axisTick(value) {
+                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                if (value >= 1000) return Math.round(value / 1000) + 'k';
+                return value;
+            }
+
+            function formatAxisK(value) {
+                var n = Number(value);
+                if (!Number.isFinite(n)) return '';
+                var abs = Math.abs(n);
+                if (abs >= 1000) {
+                    var k = n / 1000;
+                    var rounded = Math.abs(k) >= 100 ? Math.round(k) : Math.round(k * 10) / 10;
+                    return String(rounded).replace(/\.0$/, '') + 'k';
+                }
+                return String(Math.round(n));
+            }
+
+            function commonScales(beginAtZero) {
+                return {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 0,
+                            color: '#666',
+                            font: { size: 10, family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }
+                        },
+                        grid: { color: 'rgba(67, 39, 125, 0.06)' }
+                    },
+                    y: {
+                        beginAtZero: !!beginAtZero,
+                        ticks: {
+                            color: '#666',
+                            font: { size: 10, family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+                            callback: axisTick
+                        },
+                        grid: { color: 'rgba(67, 39, 125, 0.06)' }
+                    }
+                };
+            }
+
+            function legendTop() {
+                return {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        font: { size: 11, family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+                        color: '#666'
+                    }
+                };
+            }
+
+            function animOpts() {
+                if (reduceMotion) return false;
+                return { duration: countsAnimatedOnce ? 550 : 1200, easing: 'easeOutQuart' };
+            }
+
+            function upsertChart(canvasId, config) {
+                if (typeof Chart === 'undefined') return null;
+                var canvas = document.getElementById(canvasId);
+                if (!canvas) return null;
+                if (chartMap[canvasId]) {
+                    chartMap[canvasId].destroy();
+                    chartMap[canvasId] = null;
+                }
+                chartMap[canvasId] = new Chart(canvas, config);
+                return chartMap[canvasId];
+            }
+
+            function getFilterMode() {
+                return (filterCard && filterCard.getAttribute('data-filter-mode') === 'range') ? 'range' : 'day';
+            }
+
+            function getBounds() {
+                var periodFrom = (fromEl && fromEl.value) || '';
+                var periodTo = (toEl && toEl.value) || '';
+                var from = periodFrom ? parseIso(periodFrom) : null;
+                if (from) from.setHours(0, 0, 0, 0);
+                var to = periodTo ? parseIso(periodTo) : null;
+                if (to) to.setHours(23, 59, 59, 999);
+                return { from: from, to: to, periodFrom: periodFrom, periodTo: periodTo };
+            }
+
+            function inBounds(iso, bounds) {
+                var d = parseIso(iso);
+                if (!d) return false;
+                d.setHours(12, 0, 0, 0);
+                if (bounds.from && d < bounds.from) return false;
+                if (bounds.to && d > bounds.to) return false;
+                return true;
+            }
+
+            function listInPeriod() {
+                var bounds = getBounds();
+                return DEMO_TX.filter(function (t) { return inBounds(t.date, bounds); });
+            }
+
+            function setFilterMode(mode, silent) {
+                var next = mode === 'range' ? 'range' : 'day';
+                if (filterCard) filterCard.setAttribute('data-filter-mode', next);
+                var isDay = next === 'day';
+                if (dayBlock) {
+                    dayBlock.classList.toggle('is-active', isDay);
+                    if (isDay) dayBlock.removeAttribute('hidden');
+                    else dayBlock.setAttribute('hidden', '');
+                }
+                if (rangeBlock) {
+                    rangeBlock.classList.toggle('is-active', !isDay);
+                    if (isDay) rangeBlock.setAttribute('hidden', '');
+                    else rangeBlock.removeAttribute('hidden');
+                }
+                root.querySelectorAll('.stats-filter-mode-btn').forEach(function (btn) {
+                    var on = btn.getAttribute('data-filter-mode') === next;
+                    btn.classList.toggle('is-active', on);
+                    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                if (isDay && dayEl && fromEl && toEl) {
+                    var day = dayEl.value || '';
+                    if (fromEl.value && toEl.value && fromEl.value === toEl.value) {
+                        dayEl.value = fromEl.value;
+                    }
+                    day = dayEl.value || '';
+                    fromEl.value = day;
+                    toEl.value = day;
+                }
+                if (!silent) refreshAll(true);
+            }
+
+            function applyPreset(preset) {
+                lastPreset = preset || 'all';
+                var todayStr = toIso(DEMO_TODAY);
+                if (preset === 'today') {
+                    if (dayEl) dayEl.value = todayStr;
+                    if (fromEl) fromEl.value = todayStr;
+                    if (toEl) toEl.value = todayStr;
+                    setFilterMode('day', true);
+                } else if (preset === 'month') {
+                    var mFrom = new Date(DEMO_TODAY.getFullYear(), DEMO_TODAY.getMonth(), 1);
+                    if (fromEl) fromEl.value = toIso(mFrom);
+                    if (toEl) toEl.value = todayStr;
+                    setFilterMode('range', true);
+                } else if (preset === 'quarter') {
+                    var q = Math.floor(DEMO_TODAY.getMonth() / 3) * 3;
+                    var qFrom = new Date(DEMO_TODAY.getFullYear(), q, 1);
+                    if (fromEl) fromEl.value = toIso(qFrom);
+                    if (toEl) toEl.value = todayStr;
+                    setFilterMode('range', true);
+                } else if (preset === 'year') {
+                    var yFrom = new Date(DEMO_TODAY.getFullYear(), 0, 1);
+                    if (fromEl) fromEl.value = toIso(yFrom);
+                    if (toEl) toEl.value = todayStr;
+                    setFilterMode('range', true);
+                } else {
+                    if (dayEl) dayEl.value = '';
+                    if (fromEl) fromEl.value = '';
+                    if (toEl) toEl.value = '';
+                    lastPreset = 'all';
+                }
+                syncPresetButtons();
+                refreshAll(true);
+            }
+
+            function syncPresetButtons() {
+                var from = (fromEl && fromEl.value) || '';
+                var to = (toEl && toEl.value) || '';
+                var todayStr = toIso(DEMO_TODAY);
+                var active = '';
+                if (!from && !to) {
+                    active = 'all';
+                    lastPreset = 'all';
+                } else if (from && to && from === to && from === todayStr) {
+                    active = 'today';
+                    lastPreset = 'today';
+                } else if (to === todayStr) {
+                    var monthStart = toIso(new Date(DEMO_TODAY.getFullYear(), DEMO_TODAY.getMonth(), 1));
+                    var quarterStart = toIso(new Date(DEMO_TODAY.getFullYear(), Math.floor(DEMO_TODAY.getMonth() / 3) * 3, 1));
+                    var yearStart = toIso(new Date(DEMO_TODAY.getFullYear(), 0, 1));
+                    if (from === monthStart && from === quarterStart) {
+                        active = lastPreset === 'quarter' ? 'quarter' : 'month';
+                    } else if (from === monthStart) active = 'month';
+                    else if (from === quarterStart) active = 'quarter';
+                    else if (from === yearStart) active = 'year';
+                    else active = '';
+                    if (active) lastPreset = active;
+                }
+                root.querySelectorAll('.period-preset-btn').forEach(function (btn) {
+                    btn.classList.toggle('is-active', btn.getAttribute('data-period-preset') === active);
+                });
+            }
+
+            function updatePeriodLabel() {
+                if (!labelEl) return;
+                var bounds = getBounds();
+                var from = bounds.periodFrom;
+                var to = bounds.periodTo;
+                if (!from && !to) {
+                    labelEl.textContent = 'Toutes les données';
+                    return;
+                }
+                if (from && to && from === to) {
+                    labelEl.textContent = 'Jour du ' + formatLongDate(from);
+                    return;
+                }
+                if (from && to) {
+                    labelEl.textContent = 'Du ' + formatLongDate(from) + ' au ' + formatLongDate(to);
+                    return;
+                }
+                if (from) labelEl.textContent = 'À partir du ' + formatLongDate(from);
+                else labelEl.textContent = 'Jusqu’au ' + formatLongDate(to);
+            }
+
+            function topN(mapObj, n) {
+                return Object.keys(mapObj)
+                    .map(function (k) { return { key: k, value: mapObj[k] }; })
+                    .sort(function (a, b) { return b.value - a.value; })
+                    .slice(0, n);
+            }
+
+            function yBounds(values) {
+                if (!values.length) return { min: 0, max: 100, beginAtZero: true };
+                var min = Math.min.apply(null, values);
+                var max = Math.max.apply(null, values);
+                var hasNeg = min < 0;
+                var yMin = hasNeg ? min - Math.max(Math.abs(min) * 0.06, 500) : 0;
+                var yMax = max + Math.max((max - yMin) * 0.06, hasNeg ? 500 : 0);
+                if (yMax <= yMin) yMax = yMin + (Math.abs(yMin) * 0.1 || 1000);
+                return { min: Math.round(yMin), max: Math.round(yMax), beginAtZero: !hasNeg };
+            }
+
+            function refreshAll(animate) {
+                var list = listInPeriod();
+                var incomes = list.filter(function (t) { return t.type === 'income'; });
+                var expenses = list.filter(function (t) { return t.type === 'expense'; });
+                var incomeTotal = incomes.reduce(function (s, t) { return s + t.amount; }, 0);
+                var expenseTotal = expenses.reduce(function (s, t) { return s + t.amount; }, 0);
+                var balance = incomeTotal - expenseTotal;
+                var remainingTotal = DEMO_RECEIVABLES.reduce(function (s, r) { return s + r.amount; }, 0);
+                var margin = incomeTotal > 0 ? Math.round((balance / incomeTotal) * 100) : null;
+                var topIncome = incomes.reduce(function (m, t) { return Math.max(m, t.amount); }, 0);
+
+                var filtered = !!(getBounds().periodFrom || getBounds().periodTo);
+                var titleEl = document.getElementById('lpStatBalanceTitle');
+                if (titleEl) titleEl.textContent = filtered ? 'Recette filtrée' : 'Recette actuelle';
+
+                setCount(document.getElementById('lpStatBalance'), balance, animate);
+                setCount(document.getElementById('lpStatIncome'), incomeTotal, animate);
+                setCount(document.getElementById('lpStatExpense'), expenseTotal, animate);
+                setCount(document.getElementById('lpStatRemaining'), remainingTotal, animate);
+                setCount(document.getElementById('lpBenefitValue'), balance, animate);
+
+                var balHint = document.getElementById('lpStatBalanceHint');
+                if (balHint) {
+                    balHint.innerHTML = incomeTotal > 0
+                        ? ('Soit ' + Math.round((balance / incomeTotal) * 100) + '&nbsp;% des entrants')
+                        : 'Aucun entrant sur la période';
+                }
+                var incHint = document.getElementById('lpStatIncomeHint');
+                if (incHint) {
+                    incHint.textContent = incomes.length + (incomes.length === 1 ? ' encaissement' : ' encaissements');
+                }
+                var expHint = document.getElementById('lpStatExpenseHint');
+                if (expHint) {
+                    expHint.textContent = expenses.length + (expenses.length === 1 ? ' dépense' : ' dépenses');
+                }
+                var remHint = document.getElementById('lpStatRemainingHint');
+                if (remHint) {
+                    remHint.textContent = DEMO_RECEIVABLES.length + ' clients en attente';
+                }
+
+                var marginEl = document.getElementById('lpBenefitMargin');
+                if (marginEl) {
+                    marginEl.textContent = margin == null ? '—' : ('Marge ' + margin + ' %');
+                }
+                var countEl = document.getElementById('lpBenefitCount');
+                if (countEl) countEl.textContent = String(incomes.length);
+                var topEl = document.getElementById('lpBenefitTop');
+                if (topEl) {
+                    topEl.innerHTML = topIncome > 0
+                        ? (formatFcfa(topIncome) + '&nbsp;FCFA')
+                        : '—';
+                }
+                var breakEl = document.getElementById('lpBenefitBreakdown');
+                if (breakEl) {
+                    breakEl.innerHTML = 'Entrants ' + formatFcfa(incomeTotal) +
+                        ' − Sortants ' + formatFcfa(expenseTotal);
+                }
+
+                updatePeriodLabel();
+                if (typeof Chart !== 'undefined') renderCharts(list, incomes, expenses);
+                countsAnimatedOnce = true;
+            }
+
+            function renderCharts(list, incomes, expenses) {
+                var anim = animOpts();
+
+                /* Entrants vs Sortants + Bénéfice par mois */
+                var byMonth = {};
+                list.forEach(function (t) {
+                    var key = t.date.slice(0, 7);
+                    if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0 };
+                    if (t.type === 'income') byMonth[key].income += t.amount;
+                    else byMonth[key].expense += t.amount;
+                });
+                var monthKeys = Object.keys(byMonth).sort();
+                var monthLabels = monthKeys.map(function (k) {
+                    var p = k.split('-');
+                    return MONTH_NAMES[parseInt(p[1], 10) - 1] + ' ' + p[0];
+                });
+                var entrants = monthKeys.map(function (k) { return byMonth[k].income; });
+                var sortants = monthKeys.map(function (k) { return byMonth[k].expense; });
+                var benefits = monthKeys.map(function (k) { return byMonth[k].income - byMonth[k].expense; });
+
+                upsertChart('lpChartIncomeVsExpense', {
+                    type: 'bar',
+                    data: {
+                        labels: monthLabels.length ? monthLabels : ['—'],
+                        datasets: [
+                            { label: 'Entrants', data: entrants.length ? entrants : [0], backgroundColor: colorEF, borderColor: colorE, borderWidth: 1 },
+                            { label: 'Sortants', data: sortants.length ? sortants : [0], backgroundColor: colorSF, borderColor: colorS, borderWidth: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: {
+                            legend: legendTop(),
+                            tooltip: {
+                                callbacks: {
+                                    label: function (ctx) {
+                                        return ctx.dataset.label + ' : ' + formatFcfa(ctx.raw) + ' FCFA';
+                                    }
+                                }
+                            }
+                        },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Catégories */
+                var catMap = {};
+                incomes.forEach(function (t) {
+                    var c = t.category || 'Autres';
+                    catMap[c] = (catMap[c] || 0) + t.amount;
+                });
+                var cats = topN(catMap, 6);
+                upsertChart('lpChartIncomeByCategory', {
+                    type: 'bar',
+                    data: {
+                        labels: cats.length ? cats.map(function (c) { return c.key; }) : ['—'],
+                        datasets: [{
+                            label: 'Entrants',
+                            data: cats.length ? cats.map(function (c) { return c.value; }) : [0],
+                            backgroundColor: palette.slice(0, Math.max(cats.length, 1)),
+                            borderColor: paletteBorder.slice(0, Math.max(cats.length, 1)),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Top dépenses / revenus par label */
+                var expMap = {};
+                expenses.forEach(function (t) {
+                    expMap[t.label] = (expMap[t.label] || 0) + t.amount;
+                });
+                var topExp = topN(expMap, 5);
+                upsertChart('lpChartTopExpense', {
+                    type: 'bar',
+                    data: {
+                        labels: topExp.length ? topExp.map(function (c) { return c.key; }) : ['—'],
+                        datasets: [{
+                            label: 'Sortants',
+                            data: topExp.length ? topExp.map(function (c) { return c.value; }) : [0],
+                            backgroundColor: colorSF,
+                            borderColor: colorS,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                var incLabelMap = {};
+                incomes.forEach(function (t) {
+                    incLabelMap[t.label] = (incLabelMap[t.label] || 0) + t.amount;
+                });
+                var topInc = topN(incLabelMap, 5);
+                upsertChart('lpChartTopIncome', {
+                    type: 'bar',
+                    data: {
+                        labels: topInc.length ? topInc.map(function (c) { return c.key; }) : ['—'],
+                        datasets: [{
+                            label: 'Entrants',
+                            data: topInc.length ? topInc.map(function (c) { return c.value; }) : [0],
+                            backgroundColor: colorEF,
+                            borderColor: colorE,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Évolution recette cumulée */
+                var byDay = {};
+                list.forEach(function (t) {
+                    if (!byDay[t.date]) byDay[t.date] = { income: 0, expense: 0 };
+                    if (t.type === 'income') byDay[t.date].income += t.amount;
+                    else byDay[t.date].expense += t.amount;
+                });
+                var dayKeys = Object.keys(byDay).sort();
+                var balLabels = dayKeys.map(formatShortDay);
+                var cumul = 0;
+                var balData = dayKeys.map(function (k) {
+                    cumul += byDay[k].income - byDay[k].expense;
+                    return cumul;
+                });
+                if (!balData.length) {
+                    balLabels = ['—'];
+                    balData = [0];
+                }
+                var balContainer = document.getElementById('lpChartBalanceContainer');
+                if (balContainer) {
+                    var scrollParent = balContainer.closest('.chart-scroll') || balContainer.parentElement;
+                    var viewportW = scrollParent ? scrollParent.clientWidth : 0;
+                    var contentW = balLabels.length * 40;
+                    if (contentW > viewportW && balLabels[0] !== '—') {
+                        balContainer.style.minWidth = contentW + 'px';
+                        balContainer.style.width = contentW + 'px';
+                    } else {
+                        balContainer.style.minWidth = '';
+                        balContainer.style.width = '';
+                    }
+                }
+                var yb = yBounds(balData);
+                upsertChart('lpChartBalance', {
+                    type: 'line',
+                    data: {
+                        labels: balLabels,
+                        datasets: [{
+                            label: 'Recette (FCFA)',
+                            data: balData,
+                            borderColor: '#43277d',
+                            backgroundColor: 'rgba(67, 39, 125, 0.1)',
+                            borderWidth: 2,
+                            fill: { target: 'origin', above: 'rgba(67, 39, 125, 0.1)' },
+                            tension: 0.2,
+                            clip: true,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            pointHitRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { boxWidth: 12, padding: 14, font: { size: 12 } }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'nearest',
+                                intersect: false,
+                                callbacks: {
+                                    label: function (ctx) {
+                                        return ctx.dataset.label + ': ' + formatFcfa(ctx.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    autoSkip: balLabels.length > 14,
+                                    maxRotation: 0,
+                                    minRotation: 0,
+                                    font: { size: 9 },
+                                    padding: 2
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                min: yb.min,
+                                max: yb.max,
+                                beginAtZero: yb.beginAtZero,
+                                grace: 0,
+                                bounds: 'ticks',
+                                ticks: {
+                                    callback: function (value) {
+                                        if (yb.beginAtZero && value < 0) return '';
+                                        return formatAxisK(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                upsertChart('lpChartBenefit', {
+                    type: 'bar',
+                    data: {
+                        labels: monthLabels.length ? monthLabels : ['—'],
+                        datasets: [{
+                            label: 'Bénéfice',
+                            data: benefits.length ? benefits : [0],
+                            backgroundColor: (benefits.length ? benefits : [0]).map(function (b) {
+                                return b >= 0 ? colorEF : colorSF;
+                            }),
+                            borderColor: (benefits.length ? benefits : [0]).map(function (b) {
+                                return b >= 0 ? colorE : colorS;
+                            }),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Top clients */
+                var clientMap = {};
+                incomes.forEach(function (t) {
+                    if (!t.client) return;
+                    clientMap[t.client] = (clientMap[t.client] || 0) + t.amount;
+                });
+                var topClients = topN(clientMap, 5);
+                upsertChart('lpChartTopClients', {
+                    type: 'bar',
+                    data: {
+                        labels: topClients.length ? topClients.map(function (c) { return c.key; }) : ['—'],
+                        datasets: [{
+                            label: 'Encaissé',
+                            data: topClients.length ? topClients.map(function (c) { return c.value; }) : [0],
+                            backgroundColor: colorEF,
+                            borderColor: colorE,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                upsertChart('lpChartReceivables', {
+                    type: 'bar',
+                    data: {
+                        labels: DEMO_RECEIVABLES.map(function (r) { return r.client; }),
+                        datasets: [{
+                            label: 'Reste',
+                            data: DEMO_RECEIVABLES.map(function (r) { return r.amount; }),
+                            backgroundColor: colorAmber,
+                            borderColor: colorAmberB,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Provenances (nb clients uniques) */
+                var provClients = {};
+                incomes.forEach(function (t) {
+                    if (!t.provenance || !t.client) return;
+                    if (!provClients[t.provenance]) provClients[t.provenance] = {};
+                    provClients[t.provenance][t.client] = true;
+                });
+                var provList = Object.keys(provClients).map(function (p) {
+                    return { key: p, value: Object.keys(provClients[p]).length };
+                }).sort(function (a, b) { return b.value - a.value; });
+                upsertChart('lpChartProvenances', {
+                    type: 'bar',
+                    data: {
+                        labels: provList.length ? provList.map(function (c) { return c.key; }) : ['—'],
+                        datasets: [{
+                            label: 'Clients',
+                            data: provList.length ? provList.map(function (c) { return c.value; }) : [0],
+                            backgroundColor: palette.slice(0, Math.max(provList.length, 1)),
+                            borderColor: paletteBorder.slice(0, Math.max(provList.length, 1)),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: { legend: { display: false } },
+                        scales: commonScales(true)
+                    }
+                });
+
+                /* Activité par jour de semaine */
+                var wdInc = [0, 0, 0, 0, 0, 0, 0];
+                var wdExp = [0, 0, 0, 0, 0, 0, 0];
+                list.forEach(function (t) {
+                    var d = parseIso(t.date);
+                    if (!d) return;
+                    var i = d.getDay();
+                    if (t.type === 'income') wdInc[i] += t.amount;
+                    else wdExp[i] += t.amount;
+                });
+                /* Lun → Dim */
+                var order = [1, 2, 3, 4, 5, 6, 0];
+                upsertChart('lpChartWeekday', {
+                    type: 'bar',
+                    data: {
+                        labels: order.map(function (i) { return WEEKDAYS[i]; }),
+                        datasets: [
+                            {
+                                label: 'Entrants',
+                                data: order.map(function (i) { return wdInc[i]; }),
+                                backgroundColor: colorEF,
+                                borderColor: colorE,
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Sortants',
+                                data: order.map(function (i) { return wdExp[i]; }),
+                                backgroundColor: colorSF,
+                                borderColor: colorS,
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: anim,
+                        plugins: {
+                            legend: legendTop(),
+                            tooltip: {
+                                callbacks: {
+                                    label: function (ctx) {
+                                        return ctx.dataset.label + ' : ' + formatFcfa(ctx.raw) + ' FCFA';
+                                    }
+                                }
+                            }
+                        },
+                        scales: commonScales(true)
+                    }
+                });
+            }
+
+            function wireFilters() {
+                root.querySelectorAll('.stats-filter-mode-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        setFilterMode(btn.getAttribute('data-filter-mode') || 'day', false);
+                    });
+                });
+                root.querySelectorAll('.period-preset-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        applyPreset(btn.getAttribute('data-period-preset') || 'all');
+                    });
+                });
+                if (dayEl) {
+                    dayEl.addEventListener('change', function () {
+                        lastPreset = '';
+                        if (fromEl) fromEl.value = dayEl.value || '';
+                        if (toEl) toEl.value = dayEl.value || '';
+                        syncPresetButtons();
+                        refreshAll(true);
+                    });
+                }
+                function onRangeChange() {
+                    lastPreset = '';
+                    if (getFilterMode() === 'day' && dayEl && fromEl && toEl && fromEl.value === toEl.value) {
+                        dayEl.value = fromEl.value || '';
+                    }
+                    syncPresetButtons();
+                    refreshAll(true);
+                }
+                if (fromEl) fromEl.addEventListener('change', onRangeChange);
+                if (toEl) toEl.addEventListener('change', onRangeChange);
+
+                function clearPeriod() {
+                    if (dayEl) dayEl.value = '';
+                    if (fromEl) fromEl.value = '';
+                    if (toEl) toEl.value = '';
+                    lastPreset = 'all';
+                    syncPresetButtons();
+                    refreshAll(true);
+                }
+                var clearDay = document.getElementById('lpFilterClearDay');
+                var clearRange = document.getElementById('lpFilterClearRange');
+                if (clearDay) clearDay.addEventListener('click', clearPeriod);
+                if (clearRange) clearRange.addEventListener('click', clearPeriod);
+            }
+
+            wireFilters();
+
+            var started = false;
+            function startAll() {
+                if (started) return;
+                started = true;
+                root.classList.add('is-live');
+                /* défaut : Aujourd’hui (démo 9 août 2026) */
+                if (dayEl) dayEl.value = toIso(DEMO_TODAY);
+                if (fromEl) fromEl.value = toIso(DEMO_TODAY);
+                if (toEl) toEl.value = toIso(DEMO_TODAY);
+                setFilterMode('day', true);
+                syncPresetButtons();
+                window.setTimeout(function () {
+                    refreshAll(true);
+                }, reduceMotion ? 0 : 220);
+            }
+
+            if ('IntersectionObserver' in window) {
+                var liveIo = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (!e.isIntersecting) return;
+                        startAll();
+                        liveIo.unobserve(root);
+                    });
+                }, { threshold: 0.15 });
+                liveIo.observe(root);
+            } else {
+                startAll();
+            }
+        })();
     })();
     </script>
+    <script src="{% static 'js/xaliss-flash.js' %}"></script>
     <script src="{% static 'js/pwa.js' %}"></script>
 </body>
 </html>

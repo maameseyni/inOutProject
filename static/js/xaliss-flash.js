@@ -420,8 +420,18 @@
     global.xalissIsNotificationSystemIdIgnored = isSystemIdIgnored;
     global.xalissMarkNotificationSystemIdsIgnored = markSystemIdsIgnored;
     global.xalissClearNotifications = function () {
-        // Rétrocompat : « vider » = marquer comme lu (conserve l’historique).
-        global.xalissMarkNotificationsRead();
+        var list = readNotificationHistory();
+        var removedIds = [];
+        list.forEach(function (item) {
+            if (item && item.systemId) removedIds.push(item.systemId);
+        });
+        if (removedIds.length) markSystemIdsIgnored(removedIds);
+        writeNotificationHistory([]);
+        if (typeof global.xalissNotificationsRemoteDeleteAll === 'function') {
+            global.xalissNotificationsRemoteDeleteAll();
+        } else if (typeof global.xalissNotificationsRemoteClear === 'function') {
+            global.xalissNotificationsRemoteClear();
+        }
     };
     global.xalissMarkNotificationsRead = function () {
         var list = readNotificationHistory();
@@ -434,8 +444,6 @@
         writeNotificationHistory(next);
         if (typeof global.xalissNotificationsRemoteMarkRead === 'function') {
             global.xalissNotificationsRemoteMarkRead();
-        } else if (typeof global.xalissNotificationsRemoteClear === 'function') {
-            global.xalissNotificationsRemoteClear();
         }
     };
     global.xalissRemoveNotificationsBySystemIdPrefix = function (prefix) {

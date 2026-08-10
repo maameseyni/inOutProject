@@ -1093,8 +1093,13 @@
     };
 
     window.xalissNotificationsRemoteClear = function () {
-        // Rétrocompat : DELETE marque désormais tout comme lu côté API.
-        window.xalissNotificationsRemoteMarkRead();
+        window.xalissNotificationsRemoteDeleteAll();
+    };
+
+    window.xalissNotificationsRemoteDeleteAll = function () {
+        enqueueNotifRemote(function () {
+            return apiFetchNetwork('/notifications/?all=1', { method: 'DELETE' });
+        });
     };
 
     window.xalissNotificationsRemoteMarkRead = function () {

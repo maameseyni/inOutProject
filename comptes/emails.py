@@ -66,6 +66,7 @@ def envoyer_mail(
     message: str,
     destinataires: list[str],
     html_message: str | None = None,
+    reply_to: list[str] | None = None,
 ) -> None:
     """Envoi texte (+ HTML) — même canal SMTP que confirmation / mot de passe oublié."""
     destinataires = [str(e or '').strip() for e in destinataires if str(e or '').strip()]
@@ -80,6 +81,10 @@ def envoyer_mail(
     )
     if html_message:
         email.attach_alternative(html_message, 'text/html')
+    if reply_to:
+        replies = [str(e or '').strip() for e in reply_to if str(e or '').strip()]
+        if replies:
+            email.reply_to = replies
     email.send(fail_silently=False)
 
 
@@ -208,3 +213,33 @@ def envoyer_rappel_note_email(note, utilisateur) -> None:
     ) or None
 
     envoyer_mail(subject, message, [email], html_message=html_message)
+
+
+def envoyer_message_contact_landing(
+    *,
+    nom: str,
+    email: str,
+    telephone: str,
+    objet: str,
+    message: str,
+) -> None:
+    """Transmet un message du formulaire landing vers contact@xaliss.com (ou LANDING_CONTACT_EMAIL)."""
+    destinataire = (getattr(settings, 'LANDING_CONTACT_EMAIL', '') or '').strip()
+    if not destinataire:
+        destinataire = 'contact@xaliss.com'
+
+    sujet = f'[Xaliss Contact] {objet}'.strip()
+    corps = (
+        f'Nouveau message depuis le formulaire de contact Xaliss.\n\n'
+        f'Nom : {nom}\n'
+        f'E-mail : {email}\n'
+        f'Téléphone : {telephone or "—"}\n'
+        f'Objet : {objet}\n\n'
+        f'Message :\n{message}\n'
+    )
+    envoyer_mail(
+        sujet,
+        corps,
+        [destinataire],
+        reply_to=[email],
+    )

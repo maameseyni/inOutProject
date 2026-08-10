@@ -1,0 +1,48 @@
+<footer class="lp-footer">
+    <div class="lp-wrap lp-footer-wrap">
+        <div class="lp-footer-grid">
+            <div class="lp-footer-card">
+                <h3 class="lp-footer-heading">Xaliss</h3>
+                <ul class="lp-footer-list">
+                    <li><a href="{% url 'accueil' %}">Accueil</a></li>
+                    <li><a href="{% url 'connexion' %}">Se connecter</a></li>
+                    <li><a href="{% url 'inscription' %}">Commencer</a></li>
+                </ul>
+            </div>
+
+            <div class="lp-footer-card">
+                <h3 class="lp-footer-heading">Navigation</h3>
+                <ul class="lp-footer-list">
+                    <li><a href="{{ nav_prefix|default:'' }}#fonctionnalites">Fonctionnalités</a></li>
+                    <li><a href="{{ nav_prefix|default:'' }}#tarifs">Tarifs</a></li>
+                    <li><a href="{{ nav_prefix|default:'' }}#faq">FAQ</a></li>
+                    <li><a href="{{ nav_prefix|default:'' }}#contact">Contact</a></li>
+                </ul>
+            </div>
+
+            <div class="lp-footer-card">
+                <h3 class="lp-footer-heading">Contact</h3>
+                <ul class="lp-footer-list">
+                    <li>
+                        <a href="https://wa.me/{{ contact_whatsapp|default:'221772793927' }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                    </li>
+                    <li>
+                        <a href="tel:{{ contact_phone|default:'+221772793927' }}">+221 77 279 39 27</a>
+                    </li>
+                    <li>
+                        <a href="mailto:{{ contact_email|default:'contact@xaliss.com' }}">{{ contact_email|default:'contact@xaliss.com' }}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="lp-footer-bottom">
+            <p>&copy; {% now "Y" %} Xaliss — Tous droits réservés</p>
+            <div class="lp-footer-legal">
+                <a href="{{ nav_prefix|default:'' }}#faq">FAQ</a>
+                <a href="{{ nav_prefix|default:'' }}#contact">Contact</a>
+                <a href="{% url 'inscription' %}">Commencer</a>
+            </div>
+        </div>
+    </div>
+</footer>

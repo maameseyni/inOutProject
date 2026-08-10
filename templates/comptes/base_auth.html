@@ -17,10 +17,13 @@
 <body class="auth-page"{% block body_attrs %}{% endblock %}>
     {% url 'accueil' as nav_prefix %}
     {% include 'partials/landing_nav.html' with nav_prefix=nav_prefix %}
-    <div class="auth-card{% block auth_card_class %}{% endblock %}">
-        {% include 'partials/django_messages_data.html' %}
-        {% block content %}{% endblock %}
+    <div class="auth-main">
+        <div class="auth-card{% block auth_card_class %}{% endblock %}">
+            {% include 'partials/django_messages_data.html' %}
+            {% block content %}{% endblock %}
+        </div>
     </div>
+    {% include 'partials/landing_footer.html' with nav_prefix=nav_prefix %}
     <script>
     (function () {
         var nav = document.getElementById('landingNav');

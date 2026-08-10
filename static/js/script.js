@@ -395,6 +395,7 @@ function renderNotificationsModal() {
     const countEl = document.getElementById('notificationsModalCount');
     const markReadBtn = document.getElementById('notificationsMarkReadBtn')
         || document.getElementById('notificationsClearBtn');
+    const deleteAllBtn = document.getElementById('notificationsDeleteAllBtn');
     if (!listEl) return;
     const notifications = getNotificationHistory();
     const count = notifications.length;
@@ -404,6 +405,7 @@ function renderNotificationsModal() {
     if (countEl) countEl.textContent = count + ' notification' + (count !== 1 ? 's' : '');
     if (emptyEl) emptyEl.hidden = count > 0;
     if (markReadBtn) markReadBtn.disabled = unread === 0;
+    if (deleteAllBtn) deleteAllBtn.disabled = count === 0;
     if (!count) {
         listEl.innerHTML = '';
         return;
@@ -471,6 +473,7 @@ function initNotificationsUI() {
     const modal = document.getElementById('notificationsModal');
     const markReadBtn = document.getElementById('notificationsMarkReadBtn')
         || document.getElementById('notificationsClearBtn');
+    const deleteAllBtn = document.getElementById('notificationsDeleteAllBtn');
     if (btn) btn.addEventListener('click', openNotificationsModal);
     if (modal) {
         modal.addEventListener('click', function (e) {
@@ -481,12 +484,29 @@ function initNotificationsUI() {
         markReadBtn.addEventListener('click', function () {
             if (typeof window.xalissMarkNotificationsRead === 'function') {
                 window.xalissMarkNotificationsRead();
-            } else if (typeof window.xalissClearNotifications === 'function') {
-                window.xalissClearNotifications();
             }
             clearNotificationsAttention();
             renderNotificationsModal();
             updateNotificationsBadge();
+        });
+    }
+    if (deleteAllBtn) {
+        deleteAllBtn.addEventListener('click', function () {
+            if (getNotificationHistory().length === 0) return;
+            showDeleteConfirm({
+                title: 'Supprimer les notifications',
+                message: 'Êtes-vous sûr de vouloir supprimer toutes les notifications ?',
+                detail: 'Cette action est irréversible.',
+                confirmLabel: 'Tout supprimer',
+                onConfirm: function () {
+                    if (typeof window.xalissClearNotifications === 'function') {
+                        window.xalissClearNotifications();
+                    }
+                    clearNotificationsAttention();
+                    renderNotificationsModal();
+                    updateNotificationsBadge();
+                }
+            });
         });
     }
     window.addEventListener('xaliss:notifications-updated', function () {

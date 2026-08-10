@@ -185,7 +185,10 @@ LOGOUT_REDIRECT_URL = 'accueil'
 
 # E-mail : SMTP si EMAIL_HOST est renseigné (même en DEBUG), sinon console en DEBUG.
 DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@xaliss.local')
-LANDING_CONTACT_EMAIL = os.environ.get('LANDING_CONTACT_EMAIL', 'contact@xaliss.com').strip()
+# Formulaire landing + mailto → boîte support (vide dans .env = défaut contact@xaliss.com)
+LANDING_CONTACT_EMAIL = (
+    os.environ.get('LANDING_CONTACT_EMAIL', 'contact@xaliss.com') or 'contact@xaliss.com'
+).strip() or 'contact@xaliss.com'
 LANDING_WHATSAPP = os.environ.get('LANDING_WHATSAPP', '221772793927').strip()
 LANDING_CONTACT_PHONE = os.environ.get('LANDING_CONTACT_PHONE', '+221772793927').strip()
 LANDING_HORAIRES = os.environ.get('LANDING_HORAIRES', 'Lun – Ven · 9h – 18h').strip()

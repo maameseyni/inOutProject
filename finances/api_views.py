@@ -266,7 +266,11 @@ def notifications_list_create_clear(request):
         return JsonResponse(notif_service.list_notifications(org, user))
 
     if request.method == 'DELETE':
-        # Conservé pour compat : marque tout comme lu (ne vide plus la liste).
+        # ?all=1 : suppression définitive de toutes les notifications
+        if str(request.GET.get('all') or '') in ('1', 'true', 'yes'):
+            deleted = notif_service.clear_notifications(org, user)
+            return JsonResponse({'succes': True, 'deleted': deleted})
+        # Par défaut (compat) : marque tout comme lu (conserve l’historique).
         marked = notif_service.mark_notifications_read(org, user)
         return JsonResponse({'succes': True, 'marked': marked})
 

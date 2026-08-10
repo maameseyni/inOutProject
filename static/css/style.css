@@ -4387,24 +4387,82 @@ body.app-tab-notes header {
     font-size: 0.88em;
 }
 
+.notifications-modal-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.notifications-delete-all-btn.delete-btn,
+.notifications-delete-all-btn {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--kp-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--kp-color-primary);
+    background: #fff;
+    box-shadow: inset 0 0 0 2px rgba(67, 39, 125, 0.22);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.notifications-delete-all-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.notifications-delete-all-btn:hover:not(:disabled) {
+    background: var(--kp-color-primary);
+    color: #fff;
+    box-shadow: none;
+    transform: none;
+}
+
+.notifications-delete-all-btn:hover:not(:disabled) svg path {
+    stroke: #fff;
+}
+
+.notifications-delete-all-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .notifications-mark-read-btn,
 .notifications-clear-btn {
+    box-sizing: border-box;
     flex: 0 0 auto;
     width: auto;
     min-width: 84px;
-    min-height: 34px;
-    height: 34px;
-    padding: 7px 14px;
+    min-height: 30px;
+    height: 30px;
+    padding: 0 12px;
     border: none;
     border-radius: var(--kp-radius-sm);
-    font-size: 0.86em;
+    font-size: 0.82em;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1;
     color: var(--kp-color-primary);
     background: #fff;
     box-shadow: inset 0 0 0 2px rgba(67, 39, 125, 0.22);
     cursor: pointer;
     font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -7591,7 +7649,9 @@ body.app-tab-notes header {
 
     .notifications-modal-count,
     .notifications-mark-read-btn,
-    .notifications-clear-btn {
+    .notifications-clear-btn,
+    .notifications-modal-actions,
+    .notifications-delete-all-btn {
         width: auto;
         flex: 0 0 auto;
     }
