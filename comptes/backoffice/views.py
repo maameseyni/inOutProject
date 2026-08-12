@@ -1,5 +1,5 @@
-"""Compat — préférer comptes.backoffice.views."""
-from comptes.backoffice.views import (
+"""Vues publiques du backoffice."""
+from .core import (
     backoffice_charge_action,
     backoffice_dashboard,
     backoffice_export_charges_excel,

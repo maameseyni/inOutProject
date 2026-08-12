@@ -174,6 +174,119 @@ class AbonnementOrganisation(models.Model):
             return None
         return self.periode_fin + self.duree_grace_retard()
 
+    def _dates_ordonnees(self, debut, fin):
+        """Si debut > fin, ramène debut = fin (évite des intervalles inversés)."""
+        if debut is not None and fin is not None and debut > fin:
+            return fin, fin
+        return debut, fin
+
+    def normaliser_coherence(self, save=True, synchroniser=True):
+        """
+        Règles d’invariants métier :
+        - essai / prélaunch → aucune période payante résiduelle
+        - actif / en_retard → période payante cohérente (début ≤ fin)
+        - essai → dates d’essai cohérentes
+        - statut aligné sur les dates si demandé
+        """
+        self.essai_debut, self.essai_fin = self._dates_ordonnees(
+            self.essai_debut, self.essai_fin
+        )
+        self.periode_debut, self.periode_fin = self._dates_ordonnees(
+            self.periode_debut, self.periode_fin
+        )
+
+        if self.statut in (self.STATUT_ESSAI, self.STATUT_PRELAUNCH):
+            self.periode_debut = None
+            self.periode_fin = None
+
+        if self.statut in (self.STATUT_ACTIF, self.STATUT_EN_RETARD):
+            # Sans période, un statut payant n’a pas de sens
+            maintenant = self._now()
+            if self.periode_debut is None and self.periode_fin is None:
+                self.periode_debut = maintenant
+                self.periode_fin = maintenant + timedelta(days=30)
+            elif self.periode_debut is None and self.periode_fin is not None:
+                self.periode_debut = self.periode_fin - timedelta(days=30)
+            elif self.periode_fin is None and self.periode_debut is not None:
+                self.periode_fin = self.periode_debut + timedelta(days=30)
+
+        if synchroniser:
+            self.synchroniser_statut(save=False)
+
+        if save and self.pk:
+            self.save(
+                update_fields=[
+                    'statut',
+                    'essai_debut',
+                    'essai_fin',
+                    'periode_debut',
+                    'periode_fin',
+                    'modifie_le',
+                ]
+            )
+        return self
+
+    def incoherences(self, maintenant=None):
+        """Liste textuelle des problèmes détectés (tests / audit)."""
+        maintenant = maintenant or self._now()
+        problems = []
+        if self.essai_debut and self.essai_fin and self.essai_debut > self.essai_fin:
+            problems.append('essai_debut > essai_fin')
+        if self.periode_debut and self.periode_fin and self.periode_debut > self.periode_fin:
+            problems.append('periode_debut > periode_fin')
+        if self.statut in (self.STATUT_ESSAI, self.STATUT_PRELAUNCH) and (
+            self.periode_debut or self.periode_fin
+        ):
+            problems.append('période payante présente alors que statut essai/prélaunch')
+        if self.statut == self.STATUT_ESSAI and self.essai_fin and maintenant > self.essai_fin:
+            problems.append('statut essai mais essai_fin dépassée (devrait être expire)')
+        if self.statut == self.STATUT_ACTIF and self.periode_fin and maintenant > self.periode_fin:
+            problems.append('statut actif mais periode_fin dépassée (devrait être en_retard)')
+        if self.statut == self.STATUT_EN_RETARD:
+            grace = self.fin_grace_retard()
+            if grace and maintenant > grace:
+                problems.append('statut en_retard hors grâce (devrait être expire)')
+            if not self.periode_fin:
+                problems.append('statut en_retard sans periode_fin')
+        if self.statut in (self.STATUT_ACTIF, self.STATUT_EN_RETARD) and not (
+            self.periode_debut or self.periode_fin
+        ):
+            problems.append('statut payant sans dates de période')
+        if self.statut == self.STATUT_ESSAI and not self.essai_fin and not self.essai_debut:
+            problems.append('statut essai sans dates d’essai')
+        return problems
+
+    def acces_pro_effectif(self, maintenant=None):
+        """Accès Pro réel d’après statut + dates (sans side-effect)."""
+        maintenant = maintenant or self._now()
+        # Copie légère des règles de est_acces_pro_actif sans sync/save
+        statut = self.statut
+        if statut == self.STATUT_ESSAI and self.essai_fin and maintenant > self.essai_fin:
+            statut = self.STATUT_EXPIRE
+        elif statut == self.STATUT_ACTIF and self.periode_fin and maintenant > self.periode_fin:
+            statut = self.STATUT_EN_RETARD
+        elif statut == self.STATUT_EN_RETARD:
+            fin_grace = self.fin_grace_retard()
+            if fin_grace is None or maintenant > fin_grace:
+                statut = self.STATUT_EXPIRE
+
+        if statut == self.STATUT_PRELAUNCH:
+            return True
+        if statut == self.STATUT_ESSAI:
+            if self.essai_fin is None:
+                return True
+            return maintenant <= self.essai_fin
+        if statut == self.STATUT_ACTIF:
+            if self.periode_fin is None:
+                return True
+            return maintenant <= self.periode_fin
+        if statut == self.STATUT_EN_RETARD:
+            fin_grace = self.fin_grace_retard()
+            if fin_grace is None:
+                return False
+            return maintenant <= fin_grace
+        return False
+
     def synchroniser_statut(self, maintenant=None, save=True):
         """
         Aligne le statut sur les dates :
@@ -244,6 +357,9 @@ class AbonnementOrganisation(models.Model):
         self.essai_debut = debut
         self.essai_fin = debut + self.duree_essai()
         self.lancement_applique_le = debut
+        self.periode_debut = None
+        self.periode_fin = None
+        self.normaliser_coherence(save=False, synchroniser=False)
         if save:
             self.save(
                 update_fields=[
@@ -252,9 +368,166 @@ class AbonnementOrganisation(models.Model):
                     'essai_debut',
                     'essai_fin',
                     'lancement_applique_le',
+                    'periode_debut',
+                    'periode_fin',
                     'modifie_le',
                 ]
             )
+        return self
+
+    @staticmethod
+    def _parse_jours_admin(jours, *, default=30, mini=1, maxi=365):
+        try:
+            n = int(jours)
+        except (TypeError, ValueError):
+            n = default
+        if n < mini or n > maxi:
+            raise ValueError(f'Nombre de jours invalide (entre {mini} et {maxi}).')
+        return n
+
+    def prolonger_essai(self, jours=30, save=True):
+        """
+        Prolonge l’essai de N jours à partir de max(now, essai_fin).
+        Remet le statut en essai (sans réécrire essai_debut s’il existe déjà).
+        """
+        n = self._parse_jours_admin(jours, default=30)
+        maintenant = self._now()
+        if self.essai_debut is None:
+            self.essai_debut = maintenant
+        base = self.essai_fin if self.essai_fin and self.essai_fin > maintenant else maintenant
+        self.essai_fin = base + timedelta(days=n)
+        self.statut = self.STATUT_ESSAI
+        self.periode_debut = None
+        self.periode_fin = None
+        self.normaliser_coherence(save=False, synchroniser=False)
+        if save:
+            self.save(
+                update_fields=[
+                    'essai_debut',
+                    'essai_fin',
+                    'statut',
+                    'periode_debut',
+                    'periode_fin',
+                    'modifie_le',
+                ]
+            )
+        return n
+
+    def prolonger_periode_payante(self, jours=30, save=True):
+        """Prolonge la période payante de N jours et force le statut actif."""
+        n = self._parse_jours_admin(jours, default=30)
+        maintenant = self._now()
+        if self.periode_debut is None:
+            self.periode_debut = maintenant
+        base = (
+            self.periode_fin
+            if self.periode_fin and self.periode_fin > maintenant
+            else maintenant
+        )
+        self.periode_fin = base + timedelta(days=n)
+        self.statut = self.STATUT_ACTIF
+        self.normaliser_coherence(save=False, synchroniser=False)
+        if save:
+            self.save(
+                update_fields=[
+                    'periode_debut',
+                    'periode_fin',
+                    'statut',
+                    'modifie_le',
+                ]
+            )
+        return n
+
+    def activer_periode_payante(self, jours=30, save=True):
+        """Démarre une nouvelle période payante active dès maintenant."""
+        n = self._parse_jours_admin(jours, default=30)
+        maintenant = self._now()
+        self.statut = self.STATUT_ACTIF
+        self.periode_debut = maintenant
+        self.periode_fin = maintenant + timedelta(days=n)
+        self.normaliser_coherence(save=False, synchroniser=False)
+        if save:
+            self.save(
+                update_fields=[
+                    'statut',
+                    'periode_debut',
+                    'periode_fin',
+                    'modifie_le',
+                ]
+            )
+        return n
+
+    def changer_plan(self, plan_code, save=True):
+        """Bascule le plan (pro / premium)."""
+        code = (plan_code or '').strip().lower()
+        plan = PlanAbonnement.get_by_code(code)
+        if plan is None:
+            raise ValueError(f'Plan « {code} » introuvable.')
+        self.plan = plan
+        if save:
+            self.save(update_fields=['plan', 'modifie_le'])
+        return self
+
+    def definir_statut_admin(self, statut, *, jours=30, save=True):
+        """
+        Force un statut depuis le backoffice.
+        Si essai/actif sans date valide, pose des dates à +N jours pour éviter
+        une expiration immédiate au prochain synchroniser_statut.
+        """
+        statut = (statut or '').strip().lower()
+        codes = {c for c, _ in self.STATUT_CHOICES}
+        if statut not in codes:
+            raise ValueError('Statut invalide.')
+        n = self._parse_jours_admin(jours, default=30)
+        maintenant = self._now()
+        self.statut = statut
+
+        if statut in (self.STATUT_ESSAI, self.STATUT_PRELAUNCH):
+            self.periode_debut = None
+            self.periode_fin = None
+            if statut == self.STATUT_ESSAI:
+                if self.essai_debut is None:
+                    self.essai_debut = maintenant
+                if self.essai_fin is None or self.essai_fin < maintenant:
+                    self.essai_fin = maintenant + timedelta(days=n)
+        elif statut == self.STATUT_ACTIF:
+            if self.periode_debut is None:
+                self.periode_debut = maintenant
+            if self.periode_fin is None or self.periode_fin < maintenant:
+                self.periode_fin = maintenant + timedelta(days=n)
+        elif statut == self.STATUT_EN_RETARD:
+            if self.periode_fin is None or self.periode_fin > maintenant:
+                self.periode_fin = maintenant - timedelta(hours=1)
+            if self.periode_debut is None or self.periode_debut > self.periode_fin:
+                self.periode_debut = self.periode_fin - timedelta(days=max(n, 1))
+        elif statut in (self.STATUT_EXPIRE, self.STATUT_ANNULE):
+            # Si aucune date d’échéance, l’historique reste lisible sans inventer
+            pass
+
+        # Forcer le statut choisi : ne pas re-synchroniser (annulerait un expire manuel etc.)
+        self.normaliser_coherence(save=False, synchroniser=False)
+        self.statut = statut
+        # Re-clear period if essai after normaliser
+        if statut in (self.STATUT_ESSAI, self.STATUT_PRELAUNCH):
+            self.periode_debut = None
+            self.periode_fin = None
+        if save:
+            self.save(
+                update_fields=[
+                    'statut',
+                    'essai_debut',
+                    'essai_fin',
+                    'periode_debut',
+                    'periode_fin',
+                    'modifie_le',
+                ]
+            )
+        return self
+
+    def definir_renouvellement_auto(self, actif, save=True):
+        self.renouvellement_auto = bool(actif)
+        if save:
+            self.save(update_fields=['renouvellement_auto', 'modifie_le'])
         return self
 
     @classmethod
@@ -332,6 +605,72 @@ class PaiementAbonnement(models.Model):
 
     def __str__(self):
         return f'{self.organisation} — {self.montant} {self.devise} ({self.statut})'
+
+
+class ChargePlateforme(models.Model):
+    """Dépense interne Xaliss (pub, infra, outils…) — backoffice ops uniquement."""
+
+    CAT_PUB = 'pub'
+    CAT_INFRA = 'infra'
+    CAT_OUTILS = 'outils'
+    CAT_BANQUE = 'banque'
+    CAT_AUTRE = 'autre'
+
+    CATEGORIE_CHOICES = [
+        (CAT_PUB, 'Publicité'),
+        (CAT_INFRA, 'Infrastructure'),
+        (CAT_OUTILS, 'Outils & services'),
+        (CAT_BANQUE, 'Frais bancaires'),
+        (CAT_AUTRE, 'Autre'),
+    ]
+
+    NATURE_FIXE = 'fixe'
+    NATURE_VARIABLE = 'variable'
+
+    NATURE_CHOICES = [
+        (NATURE_FIXE, 'Fixe'),
+        (NATURE_VARIABLE, 'Variable'),
+    ]
+
+    date_charge = models.DateField(db_index=True)
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    devise = models.CharField(max_length=16, default='XOF')
+    categorie = models.CharField(
+        max_length=20,
+        choices=CATEGORIE_CHOICES,
+        default=CAT_AUTRE,
+        db_index=True,
+    )
+    nature = models.CharField(
+        max_length=20,
+        choices=NATURE_CHOICES,
+        default=NATURE_VARIABLE,
+        db_index=True,
+    )
+    recurrent = models.BooleanField(
+        default=False,
+        help_text='Dépense qui se répète (ex. abonnement mensuel).',
+    )
+    libelle = models.CharField(max_length=200)
+    notes = models.TextField(blank=True, default='')
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='charges_plateforme_creees',
+    )
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'charges_plateforme'
+        verbose_name = 'charge plateforme'
+        verbose_name_plural = 'charges plateforme'
+        ordering = ['-date_charge', '-cree_le']
+
+    def __str__(self):
+        return f'{self.libelle} — {self.montant} {self.devise} ({self.date_charge})'
 
 
 class ProfilUtilisateur(models.Model):

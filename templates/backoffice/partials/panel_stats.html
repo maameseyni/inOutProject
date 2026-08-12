@@ -1,0 +1,179 @@
+        <section class="bo-panel" id="panel-stats" data-panel="stats" aria-label="Statistiques" role="tabpanel" hidden>
+            <div class="bo-intro">
+                <p class="bo-intro-kicker">Analyse</p>
+                <h2 class="bo-intro-title">Statistiques</h2>
+                <div class="bo-intro-meta">
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Période</span>
+                        <strong>{{ periode_label }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Inscriptions</span>
+                        <strong>{{ stats_totaux.inscriptions|default:0 }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Encaissé</span>
+                        <strong>{{ stats_totaux.revenus_formate|default:"0 XOF" }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Charges</span>
+                        <strong>{{ stats_totaux.charges_formate|default:"0 XOF" }}</strong>
+                    </span>
+                    <span class="bo-intro-pill{% if stats_totaux.resultat_net and stats_totaux.resultat_net < 0 %} is-negative{% endif %}">
+                        <span class="bo-intro-pill-label">Résultat net</span>
+                        <strong>{{ stats_totaux.resultat_net_formate|default:"0 XOF" }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Granularité</span>
+                        <strong>Par {{ charts_unit_label }}</strong>
+                    </span>
+                </div>
+            </div>
+
+            <div class="charts-section" id="bo-charts">
+                <div class="chart-card chart-card--wide chart-card--geo">
+                    <div class="bo-geo-head">
+                        <div>
+                            <h3 class="chart-title">Où sont situés les utilisateurs</h3>
+                            <p class="chart-subtitle">
+                                Pays et villes renseignés dans les profils
+                                · {% if periode_filtre_actif %}actifs sur {{ periode_label }}{% else %}toute la plateforme{% endif %}
+                            </p>
+                        </div>
+                        <div class="bo-geo-summary">
+                            <span class="bo-geo-stat">
+                                <strong>{{ geo_utilisateurs.localises|default:0 }}</strong>
+                                <span>localisés</span>
+                            </span>
+                            <span class="bo-geo-stat">
+                                <strong>{{ geo_utilisateurs.pct_localises|default:0 }}%</strong>
+                                <span>des comptes</span>
+                            </span>
+                            <span class="bo-geo-stat is-muted">
+                                <strong>{{ geo_utilisateurs.sans_localisation|default:0 }}</strong>
+                                <span>sans pays</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="bo-geo-grid">
+                        <div class="bo-geo-panel">
+                            <h4 class="bo-geo-panel-title">Par pays</h4>
+                            <p class="chart-empty" id="boChartGeoPaysEmpty">Aucune localisation renseignée</p>
+                            <div class="chart-scroll">
+                                <div class="chart-container chart-container--geo" id="boChartGeoPaysContainer">
+                                    <canvas id="boChartGeoPays"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bo-geo-panel">
+                            <h4 class="bo-geo-panel-title">Villes principales</h4>
+                            {% if geo_utilisateurs.villes %}
+                            <ul class="bo-geo-cities" id="boGeoCities">
+                                {% for row in geo_utilisateurs.villes %}
+                                <li class="bo-geo-city">
+                                    <div class="bo-geo-city-meta">
+                                        <span class="bo-geo-city-name">{{ row.ville }}</span>
+                                        <span class="bo-geo-city-pays">{{ row.pays }}</span>
+                                    </div>
+                                    <div class="bo-geo-city-bar-wrap" aria-hidden="true">
+                                        <span class="bo-geo-city-bar" style="width: {{ row.pct }}%"></span>
+                                    </div>
+                                    <strong class="bo-geo-city-n">{{ row.n }}</strong>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="chart-empty visible" id="boGeoCitiesEmpty">Aucune ville renseignée</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Encaissements vs charges par {{ charts_unit_label }}</h3>
+                    <p class="chart-subtitle">Revenus abonnements et dépenses Xaliss · {{ periode_label }}</p>
+                    <p class="chart-empty" id="boChartRevenusChargesEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                        <div class="chart-container" id="boChartRevenusChargesContainer">
+                            <canvas id="boChartRevenusCharges"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Revenus encaissés par {{ charts_unit_label }}</h3>
+                    <p class="chart-subtitle">Paiements d’abonnement réussis · {{ periode_label }}</p>
+                    <p class="chart-empty" id="boChartRevenusEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                        <div class="chart-container" id="boChartRevenusContainer">
+                            <canvas id="boChartRevenus"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Activité connexion</h3>
+                        <p class="chart-subtitle">
+                            {% if charts_granularite == 'day' %}
+                            Comptes dont la dernière connexion tombe sur le jour · {{ periode_label }}
+                            {% else %}
+                            Comptes dont la dernière connexion tombe sur le mois · {{ periode_label }}
+                            {% endif %}
+                        </p>
+                        <p class="chart-empty" id="boChartConnectesEmpty">Aucune donnée pour cette période</p>
+                        <div class="chart-scroll">
+                            <div class="chart-container" id="boChartConnectesContainer">
+                                <canvas id="boChartConnectes"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card chart-card--donut">
+                        <h3 class="chart-title">Répartition des abonnements</h3>
+                        <p class="chart-subtitle">État actuel de la plateforme (hors filtre temporel)</p>
+                        <p class="chart-empty" id="boChartStatutsEmpty">Aucune donnée</p>
+                        <div class="chart-scroll">
+                            <div class="chart-container chart-container--donut" id="boChartStatutsContainer">
+                                <canvas id="boChartStatuts"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Évolution des inscrits</h3>
+                    <p class="chart-subtitle">Cumul plateforme sur la période · base avant {{ periode_label }} incluse</p>
+                    <p class="chart-empty" id="boChartCumulEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                        <div class="chart-container" id="boChartCumulContainer">
+                            <canvas id="boChartCumul"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Résultat net par {{ charts_unit_label }}</h3>
+                    <p class="chart-subtitle">Encaissements − charges · {{ periode_label }}</p>
+                    <p class="chart-empty" id="boChartResultatEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                        <div class="chart-container" id="boChartResultatContainer">
+                            <canvas id="boChartResultat"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card--wide">
+                    <h3 class="chart-title">Encaissements cumulés</h3>
+                    <p class="chart-subtitle">Total encaissé (cumul plateforme) · {{ periode_label }}</p>
+                    <p class="chart-empty" id="boChartRevenusCumulEmpty">Aucune donnée pour cette période</p>
+                    <div class="chart-scroll">
+                        <div class="chart-container" id="boChartRevenusCumulContainer">
+                            <canvas id="boChartRevenusCumul"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <script type="application/json" id="bo-charts-data">{{ charts_json|safe }}</script>
+            </div>
+        </section>

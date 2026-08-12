@@ -1,0 +1,239 @@
+        <section class="bo-panel is-active" id="panel-vue" data-panel="vue" aria-label="Vue d'ensemble" role="tabpanel">
+            <div class="bo-intro">
+                <p class="bo-intro-kicker">Backoffice</p>
+                <h2 class="bo-intro-title">Vue d'ensemble</h2>
+                <div class="bo-intro-meta">
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Période</span>
+                        <strong>{{ periode_label }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Revenu prévu</span>
+                        <strong>{{ mrr_formate }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Comptes</span>
+                        <strong>{{ nb_comptes }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Connectés</span>
+                        <strong>{{ connectes_maintenant }}</strong>
+                    </span>
+                </div>
+            </div>
+
+            <div class="dashboard" aria-label="Indicateurs clés">
+                {% for kpi in kpis %}
+                <div class="stat-card {{ kpi.variant }}">
+                    <div class="stat-info">
+                        <h3>{{ kpi.label }}</h3>
+                        {% if kpi.href %}
+                        <p class="stat-value"><a class="bo-kpi-link" href="{{ kpi.href }}">{{ kpi.valeur }}</a></p>
+                        {% else %}
+                        <p class="stat-value">{{ kpi.valeur }}</p>
+                        {% endif %}
+                        <p class="stat-hint">{{ kpi.hint }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="bo-card bo-card--sante" id="bo-sante-financiere">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Pilotage Xaliss</p>
+                        <h2>Santé financière</h2>
+                        <p class="bo-card-subhint">{{ sante_financiere.hint_flux }}</p>
+                    </div>
+                    <a class="bo-btn-view" href="#finances" data-tab-link="finances">Voir détail →</a>
+                </div>
+                <div class="bo-sante-grid">
+                    <div class="bo-sante-item bo-sante-item--income">
+                        <span class="bo-sante-label">Encaissé</span>
+                        <strong class="bo-sante-value">{{ sante_financiere.encaisse_formate }}</strong>
+                    </div>
+                    <div class="bo-sante-item bo-sante-item--expense">
+                        <span class="bo-sante-label">Charges</span>
+                        <strong class="bo-sante-value">{{ sante_financiere.charges_formate }}</strong>
+                        <span class="bo-sante-hint">{{ sante_financiere.n_charges }} charge{{ sante_financiere.n_charges|pluralize }}</span>
+                    </div>
+                    <div class="bo-sante-item bo-sante-item--result{% if not sante_financiere.resultat_positif %} is-negative{% endif %}">
+                        <span class="bo-sante-label">Résultat net</span>
+                        <strong class="bo-sante-value">{{ sante_financiere.resultat_formate }}</strong>
+                        <span class="bo-sante-hint">Encaissé − charges</span>
+                    </div>
+                </div>
+            </div>
+
+            {# ——— Répartition abonnements ——— #}
+            <div class="bo-card">
+                <h2>Répartition abonnements</h2>
+                <p class="bo-card-subhint">État effectif (dates d’essai / période / grâce). Clic = filtre liste sur le même critère.</p>
+                <div class="bo-statut-grid">
+                    {% for row in par_statut %}
+                    <div class="bo-statut-item">
+                        <a class="bo-statut-chip" href="?statut={{ row.code }}{% if query_suffix_sans_statut %}&{{ query_suffix_sans_statut }}{% endif %}#utilisateurs">
+                            <span class="bo-statut-dot bo-statut-dot--{{ row.code }}"></span>
+                            <span class="bo-statut-meta">
+                                <span class="bo-statut-label">{{ row.label }}</span>
+                                <strong>{{ row.n }}</strong>
+                            </span>
+                            <span class="bo-statut-pct">{{ row.pct }}%</span>
+                        </a>
+                        {% if row.aide %}<p class="bo-statut-aide">{{ row.aide }}</p>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# ——— Alertes abonnements ——— #}
+            <div class="bo-card bo-card--alertes" id="bo-alertes">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">À traiter</p>
+                        <h2>Alertes abonnements</h2>
+                    </div>
+                    {% if alertes.total %}
+                    <span class="bo-alertes-total" title="Total des alertes">{{ alertes.total }}</span>
+                    {% endif %}
+                </div>
+                <p class="bo-card-subhint">
+                    Échéances dans les {{ alertes.horizon_jours }} prochains jours ·
+                    retards en cours ·
+                    paiements échoués ({{ alertes.echecs_jours }} derniers jours)
+                </p>
+
+                <div class="bo-alertes-summary">
+                    <a class="bo-alerte-chip bo-alerte-chip--warning" href="#bo-alertes-expire">
+                        <span class="bo-alerte-chip-n">{{ alertes.expire_bientot.n }}</span>
+                        <span class="bo-alerte-chip-label">Expire bientôt</span>
+                    </a>
+                    <a class="bo-alerte-chip bo-alerte-chip--danger" href="{% if alertes.en_retard.href_all %}{{ alertes.en_retard.href_all }}{% else %}#bo-alertes-retard{% endif %}">
+                        <span class="bo-alerte-chip-n">{{ alertes.en_retard.n }}</span>
+                        <span class="bo-alerte-chip-label">En retard</span>
+                    </a>
+                    <a class="bo-alerte-chip bo-alerte-chip--danger" href="{% if alertes.echecs.href_all %}{{ alertes.echecs.href_all }}{% else %}#bo-alertes-echecs{% endif %}">
+                        <span class="bo-alerte-chip-n">{{ alertes.echecs.n }}</span>
+                        <span class="bo-alerte-chip-label">Échecs paiement</span>
+                    </a>
+                </div>
+
+                {% if not alertes.total %}
+                <p class="bo-alertes-empty">Aucune alerte abonnement pour le moment.</p>
+                {% else %}
+
+                <div class="bo-alertes-group" id="bo-alertes-expire">
+                    <div class="bo-alertes-group-head">
+                        <h3>Expire dans {{ alertes.horizon_jours }} j</h3>
+                        <span class="bo-alertes-group-count">{{ alertes.expire_bientot.n }}</span>
+                    </div>
+                    {% if alertes.expire_bientot.items %}
+                    <ul class="bo-alertes-list">
+                        {% for item in alertes.expire_bientot.items %}
+                        <li class="bo-alerte-row bo-alerte-row--{{ item.severity }}">
+                            <div class="bo-alerte-main">
+                                <strong class="bo-alerte-org">{{ item.org_nom }}</strong>
+                                <span class="bo-alerte-meta">
+                                    {{ item.plan }} · {{ item.statut_label }} · {{ item.resume }}
+                                </span>
+                                {% if item.contact_email %}
+                                <span class="bo-alerte-contact">
+                                    {% if item.contact_nom %}{{ item.contact_nom }} · {% endif %}{{ item.contact_email }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="bo-alerte-side">
+                                <span class="bo-alerte-when">{{ item.jours_label }}</span>
+                                <span class="bo-alerte-date">{{ item.echeance }}</span>
+                                <a class="bo-alerte-link" href="{% if item.href_org %}{{ item.href_org }}{% else %}{{ item.href_users }}{% endif %}">Voir</a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% if alertes.expire_bientot.n > alertes.expire_bientot.items|length %}
+                    <p class="bo-alertes-more">Affichage des échéances les plus proches.</p>
+                    {% endif %}
+                    {% else %}
+                    <p class="bo-alertes-group-empty">Rien dans cet horizon.</p>
+                    {% endif %}
+                </div>
+
+                <div class="bo-alertes-group" id="bo-alertes-retard">
+                    <div class="bo-alertes-group-head">
+                        <h3>En retard</h3>
+                        <span class="bo-alertes-group-count">{{ alertes.en_retard.n }}</span>
+                    </div>
+                    {% if alertes.en_retard.items %}
+                    <ul class="bo-alertes-list">
+                        {% for item in alertes.en_retard.items %}
+                        <li class="bo-alerte-row bo-alerte-row--{{ item.severity }}">
+                            <div class="bo-alerte-main">
+                                <strong class="bo-alerte-org">{{ item.org_nom }}</strong>
+                                <span class="bo-alerte-meta">
+                                    {{ item.plan }} · {{ item.resume }} · {{ item.grace_label }}
+                                </span>
+                                {% if item.contact_email %}
+                                <span class="bo-alerte-contact">
+                                    {% if item.contact_nom %}{{ item.contact_nom }} · {% endif %}{{ item.contact_email }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="bo-alerte-side">
+                                <span class="bo-alerte-when">{{ item.jours_label }}</span>
+                                <span class="bo-alerte-date">Échéance {{ item.echeance }}</span>
+                                <a class="bo-alerte-link" href="{% if item.href_org %}{{ item.href_org }}{% else %}{{ item.href_users }}{% endif %}">Voir</a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% if alertes.en_retard.n > alertes.en_retard.items|length and alertes.en_retard.href_all %}
+                    <p class="bo-alertes-more">
+                        <a href="{{ alertes.en_retard.href_all }}">Voir tous les en retard →</a>
+                    </p>
+                    {% endif %}
+                    {% else %}
+                    <p class="bo-alertes-group-empty">Aucun abonnement en retard.</p>
+                    {% endif %}
+                </div>
+
+                <div class="bo-alertes-group" id="bo-alertes-echecs">
+                    <div class="bo-alertes-group-head">
+                        <h3>Paiements échoués ({{ alertes.echecs_jours }} j)</h3>
+                        <span class="bo-alertes-group-count">{{ alertes.echecs.n }}</span>
+                    </div>
+                    {% if alertes.echecs.items %}
+                    <ul class="bo-alertes-list">
+                        {% for item in alertes.echecs.items %}
+                        <li class="bo-alerte-row bo-alerte-row--{{ item.severity }}">
+                            <div class="bo-alerte-main">
+                                <strong class="bo-alerte-org">{{ item.org_nom }}</strong>
+                                <span class="bo-alerte-meta">
+                                    {{ item.montant }} · {{ item.methode }}
+                                    {% if item.reference %} · {{ item.reference }}{% endif %}
+                                    · {{ item.statut_label }}
+                                </span>
+                                {% if item.contact_email %}
+                                <span class="bo-alerte-contact">
+                                    {% if item.contact_nom %}{{ item.contact_nom }} · {% endif %}{{ item.contact_email }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="bo-alerte-side">
+                                <span class="bo-alerte-when">{{ item.jours_label }}</span>
+                                <span class="bo-alerte-date">{{ item.echeance }}</span>
+                                <a class="bo-alerte-link" href="{% if item.href_org %}{{ item.href_org }}{% else %}{{ item.href_users }}{% endif %}">Voir</a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% if alertes.echecs.n > alertes.echecs.items|length %}
+                    <p class="bo-alertes-more">Liste limitée aux échecs les plus récents (1 par organisation).</p>
+                    {% endif %}
+                    {% else %}
+                    <p class="bo-alertes-group-empty">Aucun échec récent.</p>
+                    {% endif %}
+                </div>
+
+                {% endif %}
+            </div>
+        </section>

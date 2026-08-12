@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     AbonnementOrganisation,
+    ChargePlateforme,
     MembreOrganisation,
     Organisation,
     PaiementAbonnement,
@@ -126,3 +127,23 @@ class PaiementAbonnementAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ('organisation', 'abonnement')
     readonly_fields = ('cree_le', 'modifie_le')
+
+
+@admin.register(ChargePlateforme)
+class ChargePlateformeAdmin(admin.ModelAdmin):
+    list_display = (
+        'date_charge',
+        'libelle',
+        'montant',
+        'devise',
+        'categorie',
+        'nature',
+        'recurrent',
+        'cree_par',
+        'cree_le',
+    )
+    list_filter = ('categorie', 'nature', 'recurrent', 'devise', 'date_charge')
+    search_fields = ('libelle', 'notes')
+    date_hierarchy = 'date_charge'
+    readonly_fields = ('cree_le', 'modifie_le')
+    autocomplete_fields = ('cree_par',)

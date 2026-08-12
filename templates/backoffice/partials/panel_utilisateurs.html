@@ -1,0 +1,338 @@
+        <section class="bo-panel" id="panel-utilisateurs" data-panel="utilisateurs" aria-label="Utilisateurs" role="tabpanel" hidden>
+            <div class="bo-intro">
+                <p class="bo-intro-kicker">Comptes</p>
+                <h2 class="bo-intro-title">Utilisateurs</h2>
+                <div class="bo-intro-meta">
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Période</span>
+                        <strong>{{ periode_label }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Résultats</span>
+                        <strong>{{ nb_resultats }}</strong>
+                    </span>
+                    {% if periode_filtre_actif %}
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Inscriptions</span>
+                        <strong>{{ users_totaux.inscriptions }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Connexions</span>
+                        <strong>{{ users_totaux.connexions }}</strong>
+                    </span>
+                    {% else %}
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Actifs</span>
+                        <strong>{{ users_totaux.actifs }}</strong>
+                    </span>
+                    {% endif %}
+                </div>
+                {% if periode_filtre_actif %}
+                <p class="bo-intro-sub">
+                    Liste filtrée sur {{ periode_label }} :
+                    {% if user_scope == 'inscrits' %}
+                    inscriptions uniquement
+                    {% elif user_scope == 'connectes' %}
+                    connexions (dernière connexion datée sur la période)
+                    {% else %}
+                    inscrits <em>ou</em> connectés sur la période
+                    {% endif %}.
+                    <br>
+                    Différent de « En ligne » : les sessions ouvertes maintenant ne dépendent pas de la période.
+                </p>
+                {% elif user_scope == 'sessions' %}
+                <p class="bo-intro-sub">Comptes avec une session Django ouverte <strong>maintenant</strong> (même métrique que « En ligne » sur la Vue d’ensemble).</p>
+                {% else %}
+                <p class="bo-intro-sub">Annuaire complet de la plateforme. Affinez par recherche, abonnement ou activez une période en haut.</p>
+                {% endif %}
+            </div>
+
+            <div class="bo-card bo-card--users" id="bo-users">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Annuaire plateforme</p>
+                        <h2>Liste des utilisateurs</h2>
+                        {% if periode_filtre_actif %}
+                        <p class="bo-card-subhint">Activité · {{ periode_label }}{% if user_scope %} · {{ user_scope }}{% endif %}</p>
+                        {% endif %}
+                    </div>
+                    <div class="bo-card-head-actions">
+                        <span class="bo-card-meta">
+                            {% if vue_complete %}
+                            {{ nb_resultats }} résultat{{ nb_resultats|pluralize }} · tout
+                            {% elif page_obj and page_obj.paginator.num_pages > 1 %}
+                            {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ nb_resultats }}
+                            {% else %}
+                            {{ nb_resultats }} résultat{{ nb_resultats|pluralize }}
+                            {% endif %}
+                        </span>
+                        {% if vue_complete %}
+                        <a class="bo-btn-view"
+                           href="{% url 'backoffice' %}{% if query_suffix_pages %}?{{ query_suffix_pages }}{% endif %}#utilisateurs"
+                           title="Revenir à la pagination">
+                            Pagination
+                        </a>
+                        {% else %}
+                        <a class="bo-btn-view"
+                           href="{% url 'backoffice' %}?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}all=1#utilisateurs"
+                           title="Afficher tout le tableau (scroll)">
+                            Tout afficher
+                        </a>
+                        {% endif %}
+                        <a class="bo-btn-export"
+                           href="{% url 'backoffice_export_excel' %}{% if query_suffix %}?{{ query_suffix }}{% endif %}"
+                           download
+                           title="Exporter en fichier Excel (.xlsx)">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export .xlsx
+                        </a>
+                    </div>
+                </div>
+
+                <form class="bo-filters" id="bo-filters-form" method="get" action="{% url 'backoffice' %}">
+                    {% if vue_complete %}
+                    <input type="hidden" name="all" value="1">
+                    {% endif %}
+                    {% if pay_q %}<input type="hidden" name="pay_q" value="{{ pay_q }}">{% endif %}
+                    {% if pay_statut %}<input type="hidden" name="pay_statut" value="{{ pay_statut }}">{% endif %}
+                    {% if pay_vue_complete %}<input type="hidden" name="pay_all" value="1">{% endif %}
+                    {% if periode_du and periode_au %}
+                    {# Calendrier : du/au seuls (évite de mélanger avec un preset) #}
+                    <input type="hidden" name="du" value="{{ periode_du }}">
+                    <input type="hidden" name="au" value="{{ periode_au }}">
+                    {% elif periode and periode != 'all' %}
+                    <input type="hidden" name="periode" value="{{ periode }}">
+                    {% endif %}
+                    <div class="bo-filters-search">
+                        <label for="bo-q">Recherche</label>
+                        <div class="bo-search-field">
+                            <svg class="bo-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                                <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input id="bo-q" type="search" name="q" value="{{ q }}" placeholder="e-mail, nom, organisation…">
+                        </div>
+                    </div>
+                    <div class="bo-filters-tools">
+                        <div class="bo-filter-group">
+                            <label for="bo-user-scope">Activité</label>
+                            <select id="bo-user-scope" name="user_scope" class="kp-select-native" aria-label="Type d'activité">
+                                <option value=""{% if not user_scope %} selected{% endif %}>
+                                    {% if periode_filtre_actif %}Inscrits ou connectés (période){% else %}Tous les comptes{% endif %}
+                                </option>
+                                {% if periode_filtre_actif %}
+                                <option value="inscrits"{% if user_scope == 'inscrits' %} selected{% endif %}>Inscriptions (période)</option>
+                                <option value="connectes"{% if user_scope == 'connectes' %} selected{% endif %}>Connexions (période)</option>
+                                {% endif %}
+                                <option value="sessions"{% if user_scope == 'sessions' %} selected{% endif %}>En ligne maintenant ({{ connectes_maintenant }})</option>
+                            </select>
+                        </div>
+                        <div class="bo-filter-group">
+                            <label for="bo-statut">Statut abo</label>
+                            <select id="bo-statut" name="statut" class="kp-select-native" aria-label="Filtrer par statut d'abonnement">
+                                <option value="">Tous</option>
+                                {% for code, label in statuts_choices %}
+                                <option value="{{ code }}"{% if filtre_statut == code %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="bo-filter-group">
+                            <label for="bo-plan">Plan</label>
+                            <select id="bo-plan" name="plan" class="kp-select-native" aria-label="Filtrer par plan">
+                                <option value="">Tous</option>
+                                {% for plan in plans_choices %}
+                                <option value="{{ plan.code }}"{% if filtre_plan == plan.code %} selected{% endif %}>{{ plan.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="bo-filter-group bo-filter-group--check">
+                            <span class="bo-filter-spacer" aria-hidden="true">Options</span>
+                            <label class="bo-check">
+                                <input type="checkbox" name="non_verifies" value="1"{% if non_verifies %} checked{% endif %}>
+                                <span>Non vérifiés</span>
+                            </label>
+                        </div>
+                        {% if q or filtre_statut or filtre_plan or non_verifies or user_scope %}
+                        <div class="bo-filter-group bo-filter-group--clear">
+                            <span class="bo-filter-spacer" aria-hidden="true">Reset</span>
+                            <a class="bo-btn-clear"
+                               href="{% url 'backoffice' %}{% if query_suffix_periode_seule %}?{{ query_suffix_periode_seule }}{% endif %}#utilisateurs">
+                                Effacer
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+
+                <div class="bo-table-wrap{% if vue_complete %} is-full{% endif %}">
+                    <table class="bo-table bo-table--users">
+                        <thead>
+                            <tr>
+                                <th class="col-user">Utilisateur</th>
+                                <th class="col-org">Organisation</th>
+                                <th class="col-abo">Abonnement</th>
+                                <th class="col-contact">Contact</th>
+                                <th class="col-pay">Paiement</th>
+                                <th class="col-state">État</th>
+                                <th class="col-activity">Activité</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in lignes %}
+                            <tr class="{% if not row.actif %}is-inactive{% endif %}">
+                                <td class="col-user">
+                                    <div class="bo-user-meta">
+                                        <a href="{{ row.detail_url }}" class="bo-user-email">{{ row.email }}</a>
+                                        <div class="bo-user-sub">
+                                            {% if row.nom %}<span class="bo-user-name">{{ row.nom }}</span>{% endif %}
+                                            {% if row.role %}<span class="bo-user-role">{{ row.role }}</span>{% endif %}
+                                            {% if not row.nom and not row.role %}<span class="bo-muted">—</span>{% endif %}
+                                        </div>
+                                        {% if periode_filtre_actif %}
+                                        {% if row.inscrit_sur_periode or row.connecte_sur_periode %}
+                                        <div class="bo-user-period-tags">
+                                            {% if row.inscrit_sur_periode %}<span class="bo-tag is-ok">Inscrit</span>{% endif %}
+                                            {% if row.connecte_sur_periode %}<span class="bo-tag is-info">Connecté</span>{% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="col-org">
+                                    {% if row.organisation %}
+                                    <a class="bo-org-link" href="{{ row.org_detail_url }}">{{ row.organisation.nom|default:row.organisation.slug }}</a>
+                                    {% else %}
+                                    <span class="bo-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-abo">
+                                    {% if row.statut %}
+                                    <a href="{% if row.org_detail_url %}{{ row.org_detail_url }}{% else %}{{ row.admin_abo_url }}{% endif %}" class="bo-abo-block">
+                                        <span class="bo-abo-top">
+                                            <span class="bo-plan-name">{{ row.plan }}</span>
+                                            {% if row.statut == 'prelaunch' %}
+                                            <span class="bo-badge is-prelaunch">{{ row.statut_label }}</span>
+                                            {% else %}
+                                            <span class="bo-badge is-{{ row.statut }}">{{ row.statut_label }}</span>
+                                            {% endif %}
+                                        </span>
+                                        {% if row.echeance %}
+                                        <span class="bo-abo-due{% if row.echeance_label == 'dépassée' %} is-late{% endif %}">
+                                            {{ row.echeance|date:"d/m/Y" }}
+                                            · {{ row.echeance_label }}
+                                        </span>
+                                        {% endif %}
+                                    </a>
+                                    {% else %}
+                                    <span class="bo-muted">Sans abo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-contact">
+                                    {% if row.telephone %}
+                                    <a class="bo-tel" href="tel:{{ row.telephone }}">{{ row.telephone }}</a>
+                                    {% else %}
+                                    <span class="bo-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-pay">
+                                    {% if row.paiement_montant %}
+                                    <div class="bo-paiement">
+                                        <span class="bo-cell-strong">{{ row.paiement_montant }}</span>
+                                        <span class="bo-paiement-hint">{{ row.paiement_date }}</span>
+                                    </div>
+                                    {% else %}
+                                    <span class="bo-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-state">
+                                    <div class="bo-state-tags">
+                                        {% if row.email_verifie %}
+                                        <span class="bo-tag is-ok">Vérifié</span>
+                                        {% else %}
+                                        <span class="bo-tag is-warn">Non vérifié</span>
+                                        {% endif %}
+                                        {% if row.actif %}
+                                        <span class="bo-tag is-ok">Actif</span>
+                                        {% else %}
+                                        <span class="bo-tag is-danger">Inactif</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="col-activity">
+                                    <div class="bo-activity">
+                                        <span class="bo-activity-row">
+                                            <span class="bo-activity-label">Connexion</span>
+                                            {% if row.login_relatif == 'jamais' %}
+                                            <span class="bo-muted">jamais</span>
+                                            {% else %}
+                                            <span class="bo-time{% if row.connecte_sur_periode %} is-highlight{% endif %}">{{ row.login_relatif }}</span>
+                                            {% endif %}
+                                        </span>
+                                        <span class="bo-activity-row">
+                                            <span class="bo-activity-label">Inscrit</span>
+                                            <span class="bo-time{% if row.inscrit_sur_periode %} is-highlight{% endif %}">{{ row.inscrit_relatif }}</span>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="bo-empty">
+                                    <span class="bo-empty-title">Aucun utilisateur</span>
+                                    <span class="bo-empty-sub">
+                                        {% if periode_filtre_actif %}
+                                        Aucune activité sur {{ periode_label }}. Élargissez la période ou changez le type d’activité.
+                                        {% else %}
+                                        Modifiez les filtres ou réessayez avec une autre recherche.
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if not vue_complete and page_obj and page_obj.paginator.num_pages > 1 %}
+                <nav class="bo-pagination" aria-label="Pagination du tableau">
+                    {% if page_obj.has_previous %}
+                    <a class="bo-pagination-btn" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.previous_page_number }}#utilisateurs">Précédent</a>
+                    {% else %}
+                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Précédent</span>
+                    {% endif %}
+
+                    <div class="bo-pagination-pages">
+                        {% if page_numbers.0 > 1 %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page=1#utilisateurs">1</a>
+                        {% if page_numbers.0 > 2 %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                        {% endif %}
+
+                        {% for num in page_numbers %}
+                        {% if num == page_obj.number %}
+                        <span class="bo-page-num is-current" aria-current="page">{{ num }}</span>
+                        {% else %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ num }}#utilisateurs">{{ num }}</a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_numbers|last < page_obj.paginator.num_pages %}
+                        {% if page_numbers|last < page_obj.paginator.num_pages|add:"-1" %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.paginator.num_pages }}#utilisateurs">{{ page_obj.paginator.num_pages }}</a>
+                        {% endif %}
+                    </div>
+
+                    <span class="bo-pagination-info">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+
+                    {% if page_obj.has_next %}
+                    <a class="bo-pagination-btn" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.next_page_number }}#utilisateurs">Suivant</a>
+                    {% else %}
+                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Suivant</span>
+                    {% endif %}
+                </nav>
+                {% elif vue_complete and nb_resultats %}
+                <p class="bo-full-hint">Tous les résultats · défilement vertical dans le tableau</p>
+                {% endif %}
+            </div>
+        </section>

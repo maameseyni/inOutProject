@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from comptes.models import MembreOrganisation, Organisation
-from comptes.utils import nom_affichage_utilisateur
+from comptes.utils import email_deja_utilise, nom_affichage_utilisateur
 from finances.models import Transaction
 
 User = get_user_model()
@@ -61,22 +61,32 @@ class Command(BaseCommand):
                 f'Organisation « {slug} » introuvable. Importez d\'abord les données.'
             )
 
-        user, created = User.objects.get_or_create(
-            username=email,
-            defaults={
-                'email': email,
-                'first_name': options['prenom'],
-                'last_name': options['nom'],
-            },
+        user = (
+            User.objects.filter(username__iexact=email).first()
+            or User.objects.filter(email__iexact=email).first()
         )
-        if created:
-            user.set_password(password)
-            user.save()
+        created = False
+        if user is None:
+            if email_deja_utilise(email):
+                raise CommandError(f'E-mail déjà utilisé : {email}')
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                first_name=options['prenom'],
+                last_name=options['nom'],
+            )
+            created = True
             self.stdout.write(self.style.SUCCESS(f'Utilisateur créé : {email}'))
         else:
+            user.email = email
+            if options['prenom']:
+                user.first_name = options['prenom']
+            if options['nom']:
+                user.last_name = options['nom']
             if password:
                 user.set_password(password)
-                user.save()
+            user.save()
             self.stdout.write(f'Utilisateur existant mis à jour : {email}')
 
         membre, m_created = MembreOrganisation.objects.get_or_create(

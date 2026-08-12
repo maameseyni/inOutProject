@@ -1,0 +1,237 @@
+        <section class="bo-panel" id="panel-paiements" data-panel="paiements" aria-label="Paiements" role="tabpanel" hidden>
+            <div class="bo-intro">
+                <p class="bo-intro-kicker">Billing</p>
+                <h2 class="bo-intro-title">Paiements</h2>
+                <div class="bo-intro-meta">
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Période</span>
+                        <strong>{{ periode_label }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Résultats</span>
+                        <strong>{{ nb_paiements }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Encaissé</span>
+                        <strong>{{ pays_totaux_base.total_reussi_formate }}</strong>
+                    </span>
+                    <span class="bo-intro-pill">
+                        <span class="bo-intro-pill-label">Échecs</span>
+                        <strong>{{ pays_totaux_base.n_echec }}</strong>
+                    </span>
+                </div>
+                <p class="bo-intro-sub">
+                    Paiements d’abonnement (tous statuts)
+                    {% if periode_filtre_actif %}sur {{ periode_label }}{% else %}· historique complet{% endif %}.
+                </p>
+            </div>
+
+            <div class="bo-card bo-card--users" id="bo-paiements">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Flux monétaires</p>
+                        <h2>Liste des paiements</h2>
+                        {% if periode_filtre_actif %}
+                        <p class="bo-card-subhint">Filtré · {{ periode_label }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="bo-card-head-actions">
+                        <span class="bo-card-meta">
+                            {% if pay_vue_complete %}
+                            {{ nb_paiements }} paiement{{ nb_paiements|pluralize }} · tout
+                            {% elif pay_page_obj and pay_page_obj.paginator.num_pages > 1 %}
+                            {{ pay_page_obj.start_index }}–{{ pay_page_obj.end_index }} / {{ nb_paiements }}
+                            {% else %}
+                            {{ nb_paiements }} paiement{{ nb_paiements|pluralize }}
+                            {% endif %}
+                        </span>
+                        {% if pay_vue_complete %}
+                        <a class="bo-btn-view"
+                           href="{% url 'backoffice' %}{% if query_suffix_pay_pages %}?{{ query_suffix_pay_pages }}{% endif %}#paiements"
+                           title="Revenir à la pagination">
+                            Pagination
+                        </a>
+                        {% else %}
+                        <a class="bo-btn-view"
+                           href="{% url 'backoffice' %}?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_all=1#paiements"
+                           title="Afficher tous les paiements">
+                            Tout afficher
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="bo-pay-chips" role="group" aria-label="Filtrer par statut de paiement">
+                    {% for chip in pay_statut_chips %}
+                    <a class="bo-pay-chip{% if chip.active %} is-active{% endif %} bo-pay-chip--{{ chip.code|default:'all' }}"
+                       href="{{ chip.href }}">
+                        <strong>{{ chip.n }}</strong>
+                        <span>{{ chip.label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+
+                <form class="bo-filters" id="bo-pay-filters-form" method="get" action="{% url 'backoffice' %}">
+                    {% if pay_vue_complete %}
+                    <input type="hidden" name="pay_all" value="1">
+                    {% endif %}
+                    {% if periode_du and periode_au %}
+                    <input type="hidden" name="du" value="{{ periode_du }}">
+                    <input type="hidden" name="au" value="{{ periode_au }}">
+                    {% elif periode and periode != 'all' %}
+                    <input type="hidden" name="periode" value="{{ periode }}">
+                    {% endif %}
+                    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                    {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
+                    {% if filtre_plan %}<input type="hidden" name="plan" value="{{ filtre_plan }}">{% endif %}
+                    {% if non_verifies %}<input type="hidden" name="non_verifies" value="1">{% endif %}
+                    {% if user_scope %}<input type="hidden" name="user_scope" value="{{ user_scope }}">{% endif %}
+                    {% if vue_complete %}<input type="hidden" name="all" value="1">{% endif %}
+                    {# pay_statut géré uniquement par le <select> (évite doublon masqué/select) #}
+
+                    <div class="bo-filters-search">
+                        <label for="bo-pay-q">Recherche</label>
+                        <div class="bo-search-field">
+                            <svg class="bo-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                                <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input id="bo-pay-q" type="search" name="pay_q" value="{{ pay_q }}" placeholder="organisation, référence, méthode…">
+                        </div>
+                    </div>
+                    <div class="bo-filters-tools">
+                        <div class="bo-filter-group">
+                            <label for="bo-pay-statut">Statut paiement</label>
+                            <select id="bo-pay-statut" name="pay_statut" class="kp-select-native" aria-label="Filtrer par statut de paiement">
+                                <option value="">Tous</option>
+                                {% for code, label in pay_statuts_choices %}
+                                <option value="{{ code }}"{% if pay_statut == code %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% if pay_q or pay_statut %}
+                        <div class="bo-filter-group bo-filter-group--clear">
+                            <span class="bo-filter-spacer" aria-hidden="true">Reset</span>
+                            <a class="bo-btn-clear"
+                               href="{% url 'backoffice' %}{% if query_suffix_pay_clear %}?{{ query_suffix_pay_clear }}{% endif %}#paiements">
+                                Effacer
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+
+                <div class="bo-table-wrap{% if pay_vue_complete %} is-full{% endif %}">
+                    <table class="bo-table bo-table--paiements">
+                        <thead>
+                            <tr>
+                                <th class="col-pay-date">Date</th>
+                                <th class="col-pay-org">Organisation</th>
+                                <th class="col-pay-montant">Montant</th>
+                                <th class="col-pay-statut">Statut</th>
+                                <th class="col-pay-methode">Méthode</th>
+                                <th class="col-pay-ref">Référence</th>
+                                <th class="col-pay-plan">Plan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in lignes_paiements %}
+                            <tr>
+                                <td class="col-pay-date">
+                                    <div class="bo-paiement">
+                                        <span class="bo-cell-strong">{{ row.date_label }}</span>
+                                        <span class="bo-paiement-hint">{{ row.date_relatif }}</span>
+                                    </div>
+                                </td>
+                                <td class="col-pay-org">
+                                    {% if row.detail_url %}
+                                    <a class="bo-org-link" href="{{ row.detail_url }}">{{ row.org_nom }}</a>
+                                    {% elif row.admin_org_url %}
+                                    <a class="bo-org-link" href="{{ row.admin_org_url }}">{{ row.org_nom }}</a>
+                                    {% else %}
+                                    <span>{{ row.org_nom }}</span>
+                                    {% endif %}
+                                    <div class="bo-user-sub">
+                                        {% if row.detail_url %}<a class="bo-alerte-link" href="{{ row.detail_url }}">Fiche</a> · {% endif %}
+                                        <a class="bo-alerte-link" href="{{ row.href_users }}">Comptes</a>
+                                        · <a class="bo-alerte-link" href="{{ row.admin_url }}">Admin</a>
+                                    </div>
+                                </td>
+                                <td class="col-pay-montant">
+                                    <span class="bo-cell-strong">{{ row.montant }}</span>
+                                    {% if row.periode_couverte %}
+                                    <span class="bo-paiement-hint">{{ row.periode_couverte }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-pay-statut">
+                                    <span class="bo-badge is-pay-{{ row.statut }}">{{ row.statut_label }}</span>
+                                </td>
+                                <td class="col-pay-methode">{{ row.methode }}</td>
+                                <td class="col-pay-ref">
+                                    {% if row.reference %}
+                                    <code class="bo-pay-ref">{{ row.reference }}</code>
+                                    {% else %}
+                                    <span class="bo-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-pay-plan">{{ row.plan }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="bo-empty">
+                                    <span class="bo-empty-title">Aucun paiement</span>
+                                    <span class="bo-empty-sub">
+                                        {% if periode_filtre_actif or pay_statut or pay_q %}
+                                        Aucun résultat pour ces filtres. Élargissez la période ou effacez les filtres.
+                                        {% else %}
+                                        Aucun paiement d’abonnement enregistré pour le moment.
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if not pay_vue_complete and pay_page_obj and pay_page_obj.paginator.num_pages > 1 %}
+                <nav class="bo-pagination" aria-label="Pagination des paiements">
+                    {% if pay_page_obj.has_previous %}
+                    <a class="bo-pagination-btn" href="?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_page={{ pay_page_obj.previous_page_number }}#paiements">Précédent</a>
+                    {% else %}
+                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Précédent</span>
+                    {% endif %}
+
+                    <div class="bo-page-numbers">
+                        {% if pay_page_numbers|first > 1 %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_page=1#paiements">1</a>
+                        {% if pay_page_numbers|first > 2 %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                        {% endif %}
+
+                        {% for num in pay_page_numbers %}
+                        {% if num == pay_page_obj.number %}
+                        <span class="bo-page-num is-current" aria-current="page">{{ num }}</span>
+                        {% else %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_page={{ num }}#paiements">{{ num }}</a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if pay_page_numbers|last < pay_page_obj.paginator.num_pages %}
+                        {% if pay_page_numbers|last < pay_page_obj.paginator.num_pages|add:"-1" %}<span class="bo-page-ellipsis">…</span>{% endif %}
+                        <a class="bo-page-num" href="?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_page={{ pay_page_obj.paginator.num_pages }}#paiements">{{ pay_page_obj.paginator.num_pages }}</a>
+                        {% endif %}
+                    </div>
+
+                    <span class="bo-pagination-info">Page {{ pay_page_obj.number }} sur {{ pay_page_obj.paginator.num_pages }}</span>
+
+                    {% if pay_page_obj.has_next %}
+                    <a class="bo-pagination-btn" href="?{% if query_suffix_pay_pages %}{{ query_suffix_pay_pages }}&{% endif %}pay_page={{ pay_page_obj.next_page_number }}#paiements">Suivant</a>
+                    {% else %}
+                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Suivant</span>
+                    {% endif %}
+                </nav>
+                {% elif pay_vue_complete and nb_paiements %}
+                <p class="bo-full-hint">Tous les paiements · défilement vertical dans le tableau</p>
+                {% endif %}
+            </div>
+        </section>

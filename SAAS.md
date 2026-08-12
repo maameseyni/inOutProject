@@ -96,6 +96,7 @@ Navigateur (/app/)
 | Fuseau | Africa/Dakar |
 
 Doc technique détaillée : **`XALISS.md`**  
+Backoffice ops (utilisateurs, abos, finances Xaliss) : **`BACKOFFICE.md`**  
 Démarrage : **`DJANGO.md`** · Production : **`PRODUCTION.md`**
 
 ---
@@ -128,9 +129,9 @@ Démarrage : **`DJANGO.md`** · Production : **`PRODUCTION.md`**
 | `static/js/script.js` | UI (graphiques, factures, listes) |
 | `static/js/django-bridge.js` | Pont API, sync, verrous |
 | `static/css/style.css` | Design system (gutter, cartes, boutons) |
-| `comptes/` | Auth, organisations, inscription |
+| `comptes/` | Auth, organisations, inscription, backoffice |
 | `finances/` | Transactions, clients, API |
 
 ---
 
-*Dernière mise à jour : juillet 2026*
+*Dernière mise à jour : août 2026*

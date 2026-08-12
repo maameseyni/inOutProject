@@ -1,0 +1,246 @@
+/* Calendrier date custom (même langage visuel que l’app) */
+
+.kp-date-picker,
+.note-reminder-picker {
+    position: relative;
+    width: 100%;
+    z-index: 1;
+}
+
+.kp-date-picker:has(.note-reminder-trigger[aria-expanded="true"]),
+.note-reminder-picker:has(.note-reminder-trigger[aria-expanded="true"]) {
+    z-index: 220;
+}
+
+.kp-date-picker .note-reminder-control,
+.note-reminder-control {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.kp-date-picker .note-reminder-trigger,
+.note-reminder-trigger {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 2px solid var(--kp-color-border-input, #e5e7eb);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--kp-color-text, #333);
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(67, 39, 125, 0.05);
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kp-date-picker .note-reminder-trigger:hover,
+.note-reminder-trigger:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(67, 39, 125, 0.08);
+}
+
+.kp-date-picker .note-reminder-trigger[aria-expanded="true"],
+.kp-date-picker .note-reminder-trigger:focus,
+.note-reminder-trigger[aria-expanded="true"],
+.note-reminder-trigger:focus {
+    outline: none;
+    border-color: var(--kp-color-primary, #43277d);
+    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.12);
+}
+
+.note-reminder-trigger-icon {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--kp-color-primary, #43277d);
+}
+
+.note-reminder-trigger-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.note-reminder-trigger-text.is-placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.note-reminder-popover,
+.kp-date-popover {
+    position: absolute;
+    left: 0;
+    right: auto;
+    /* Ouverture vers le bas (sous le champ) */
+    top: calc(100% + 6px);
+    bottom: auto;
+    z-index: 200;
+    width: min(100%, 248px);
+    padding: 10px;
+    border: 1px solid #ebe6f2;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 28px rgba(67, 39, 125, 0.16);
+}
+
+.note-reminder-popover[hidden],
+.kp-date-popover[hidden] {
+    display: none !important;
+}
+
+.note-reminder-popover--date {
+    width: min(100%, 248px);
+}
+
+.note-reminder-popover--date .note-reminder-body {
+    display: block;
+}
+
+.note-reminder-popover--date .note-reminder-popover-actions {
+    justify-content: flex-start;
+}
+
+.note-reminder-body {
+    display: block;
+}
+
+.note-reminder-cal {
+    min-width: 0;
+}
+
+.note-reminder-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.note-reminder-month-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: capitalize;
+}
+
+.note-reminder-nav {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: #f8f6fc;
+    color: #43277d;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.note-reminder-nav:hover {
+    background: #efeaf8;
+}
+
+.note-reminder-weekdays,
+.note-reminder-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.note-reminder-weekdays {
+    margin-bottom: 4px;
+}
+
+.note-reminder-weekdays span {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: lowercase;
+    padding: 2px 0;
+}
+
+.note-reminder-day {
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #334155;
+    font-size: 0.78rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.note-reminder-day:hover:not(:disabled) {
+    background: #f3eef9;
+    color: #43277d;
+}
+
+.note-reminder-day.is-outside {
+    color: #cbd5e1;
+}
+
+.note-reminder-day.is-today:not(.is-selected) {
+    box-shadow: inset 0 0 0 1px rgba(67, 39, 125, 0.35);
+}
+
+.note-reminder-day.is-selected {
+    background: #43277d;
+    color: #fff;
+    font-weight: 600;
+}
+
+.note-reminder-popover-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #f1eef6;
+}
+
+.note-reminder-link-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #43277d;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 2px;
+}
+
+.note-reminder-link-btn:hover {
+    text-decoration: underline;
+}
+
+/* Backoffice fields alignment */
+.bo-period-field .kp-date-picker,
+.bo-period-field .note-reminder-picker {
+    width: 100%;
+}
+
+.bo-period-row--calendar {
+    overflow: visible;
+}
+
+.bo-period-bar {
+    overflow: visible;
+}
+
+.bo-top-chrome {
+    overflow: visible;
+}

@@ -9,415 +9,217 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}">
+    <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-finances-9">
 </head>
 <body class="bo-body" data-bo-tab="vue">
+    {% include 'partials/django_messages_data.html' %}
     <div class="bo-shell">
-        <nav class="bo-top-nav" aria-label="Sections backoffice" role="tablist">
-            <button type="button" class="bo-tab is-active" data-tab="vue" role="tab" aria-selected="true" aria-controls="panel-vue" title="Vue d'ensemble">
-                <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                </svg>
-                <span class="bo-tab-label">Vue d'ensemble</span>
-            </button>
-            <button type="button" class="bo-tab" data-tab="stats" role="tab" aria-selected="false" aria-controls="panel-stats" title="Statistiques">
-                <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M18 17V9M13 17V5M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="bo-tab-label">Statistiques</span>
-            </button>
-            <button type="button" class="bo-tab" data-tab="utilisateurs" role="tab" aria-selected="false" aria-controls="panel-utilisateurs" title="Utilisateurs">
-                <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <span class="bo-tab-label">Utilisateurs</span>
-            </button>
-            <button type="button" class="bo-tab" data-tab="outils" role="tab" aria-selected="false" aria-controls="panel-outils" title="Outils">
-                <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="bo-tab-label">Outils</span>
-            </button>
-        </nav>
+        <div class="bo-top-chrome">
+            <nav class="bo-top-nav" aria-label="Sections backoffice" role="tablist">
+                <button type="button" class="bo-tab is-active" data-tab="vue" role="tab" aria-selected="true" aria-controls="panel-vue" title="Vue d'ensemble">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Vue d'ensemble</span>
+                </button>
+                <button type="button" class="bo-tab" data-tab="stats" role="tab" aria-selected="false" aria-controls="panel-stats" title="Statistiques">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M18 17V9M13 17V5M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Statistiques</span>
+                </button>
+                <button type="button" class="bo-tab" data-tab="utilisateurs" role="tab" aria-selected="false" aria-controls="panel-utilisateurs" title="Utilisateurs">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Utilisateurs</span>
+                </button>
+                <button type="button" class="bo-tab" data-tab="paiements" role="tab" aria-selected="false" aria-controls="panel-paiements" title="Paiements">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M2 10h20" stroke="currentColor" stroke-width="2"/>
+                        <path d="M6 15h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Paiements</span>
+                </button>
+                <button type="button" class="bo-tab" data-tab="finances" role="tab" aria-selected="false" aria-controls="panel-finances" title="Finances Xaliss">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Finances</span>
+                </button>
+                <button type="button" class="bo-tab" data-tab="outils" role="tab" aria-selected="false" aria-controls="panel-outils" title="Outils">
+                    <svg class="bo-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="bo-tab-label">Outils</span>
+                </button>
+            </nav>
 
-        {# ——— Vue d'ensemble ——— #}
-        <section class="bo-panel is-active" id="panel-vue" data-panel="vue" aria-label="Vue d'ensemble" role="tabpanel">
-            <div class="bo-intro">
-                <p class="bo-intro-kicker">Backoffice</p>
-                <h2 class="bo-intro-title">Vue d'ensemble</h2>
-                <div class="bo-intro-meta">
-                    <span class="bo-intro-pill">
-                        <span class="bo-intro-pill-label">Revenu prévu</span>
-                        <strong>{{ mrr_formate }}</strong>
+            <form class="bo-period-bar" method="get" action="{% url 'backoffice' %}" id="bo-period-form" aria-label="Filtre temporel">
+                {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
+                {% if filtre_plan %}<input type="hidden" name="plan" value="{{ filtre_plan }}">{% endif %}
+                {% if non_verifies %}<input type="hidden" name="non_verifies" value="1">{% endif %}
+                {% if user_scope %}<input type="hidden" name="user_scope" value="{{ user_scope }}">{% endif %}
+                {% if vue_complete %}<input type="hidden" name="all" value="1">{% endif %}
+                {% if pay_q %}<input type="hidden" name="pay_q" value="{{ pay_q }}">{% endif %}
+                {% if pay_statut %}<input type="hidden" name="pay_statut" value="{{ pay_statut }}">{% endif %}
+                {% if pay_vue_complete %}<input type="hidden" name="pay_all" value="1">{% endif %}
+                {% if charge_q %}<input type="hidden" name="charge_q" value="{{ charge_q }}">{% endif %}
+                {% if charge_categorie %}<input type="hidden" name="charge_categorie" value="{{ charge_categorie }}">{% endif %}
+                {% if charge_vue_complete %}<input type="hidden" name="charge_all" value="1">{% endif %}
+
+                <div class="bo-period-row bo-period-row--top">
+                    <span class="bo-period-heading">
+                        <svg class="bo-period-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Période
                     </span>
-                    <span class="bo-intro-pill">
-                        <span class="bo-intro-pill-label">Utilisateurs</span>
-                        <strong>{{ nb_resultats }}</strong>
-                    </span>
-                </div>
-            </div>
-
-            <div class="dashboard" aria-label="Indicateurs clés">
-                {% for kpi in kpis %}
-                <div class="stat-card {{ kpi.variant }}">
-                    <div class="stat-info">
-                        <h3>{{ kpi.label }}</h3>
-                        <p class="stat-value">{{ kpi.valeur }}</p>
-                        <p class="stat-hint">{{ kpi.hint }}</p>
+                    <div class="bo-period-mode" role="group" aria-label="Mode de filtre">
+                        <button type="button" class="bo-period-mode-btn{% if periode_mode == 'day' %} is-active{% endif %}" data-period-mode="day">Jour</button>
+                        <button type="button" class="bo-period-mode-btn{% if periode_mode != 'day' %} is-active{% endif %}" data-period-mode="range">Période</button>
                     </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="bo-card">
-                <h2>Répartition abonnements</h2>
-                <div class="bo-statut-grid">
-                    {% for row in par_statut %}
-                    <a class="bo-statut-chip" href="?statut={{ row.code }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filtre_plan %}&plan={{ filtre_plan }}{% endif %}{% if non_verifies %}&non_verifies=1{% endif %}#utilisateurs">
-                        <span class="bo-statut-dot bo-statut-dot--{{ row.code }}"></span>
-                        <span class="bo-statut-meta">
-                            <span class="bo-statut-label">{{ row.label }}</span>
-                            <strong>{{ row.n }}</strong>
-                        </span>
-                        <span class="bo-statut-pct">{{ row.pct }}%</span>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </section>
-
-        {# ——— Statistiques / graphiques (style app) ——— #}
-        <section class="bo-panel" id="panel-stats" data-panel="stats" aria-label="Statistiques" role="tabpanel" hidden>
-            <div class="bo-intro">
-                <p class="bo-intro-kicker">Analyse</p>
-                <h2 class="bo-intro-title">Statistiques</h2>
-                <p class="bo-intro-sub">Évolution de la plateforme sur les 12 derniers mois</p>
-            </div>
-
-            <div class="charts-section" id="bo-charts">
-                <div class="chart-card chart-card--wide">
-                    <h3 class="chart-title">Revenus encaissés par mois</h3>
-                    <p class="chart-subtitle">Montants des paiements d’abonnement réussis</p>
-                    <p class="chart-empty" id="boChartRevenusEmpty">Aucune donnée pour cette période</p>
-                    <div class="chart-scroll">
-                        <div class="chart-container" id="boChartRevenusContainer">
-                            <canvas id="boChartRevenus"></canvas>
-                        </div>
-                    </div>
+                    <p class="bo-period-active-label" id="bo-period-active-label">{{ periode_label }}</p>
                 </div>
 
-                <div class="charts-grid">
-                    <div class="chart-card">
-                        <h3 class="chart-title">Activité connexion</h3>
-                        <p class="chart-subtitle">Utilisateurs dont la dernière connexion tombe sur le mois</p>
-                        <p class="chart-empty" id="boChartConnectesEmpty">Aucune donnée</p>
-                        <div class="chart-scroll">
-                            <div class="chart-container" id="boChartConnectesContainer">
-                                <canvas id="boChartConnectes"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Répartition des abonnements</h3>
-                        <p class="chart-subtitle">Volume actuel par statut</p>
-                        <p class="chart-empty" id="boChartStatutsEmpty">Aucune donnée</p>
-                        <div class="chart-scroll">
-                            <div class="chart-container chart-container--donut" id="boChartStatutsContainer">
-                                <canvas id="boChartStatuts"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chart-card chart-card--wide">
-                    <h3 class="chart-title">Évolution des inscrits</h3>
-                    <p class="chart-subtitle">Cumul total des comptes au fil des mois</p>
-                    <p class="chart-empty" id="boChartCumulEmpty">Aucune donnée pour cette période</p>
-                    <div class="chart-scroll">
-                        <div class="chart-container" id="boChartCumulContainer">
-                            <canvas id="boChartCumul"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chart-card chart-card--wide">
-                    <h3 class="chart-title">Revenus cumulés</h3>
-                    <p class="chart-subtitle">Total encaissé au fil du temps</p>
-                    <p class="chart-empty" id="boChartRevenusCumulEmpty">Aucune donnée pour cette période</p>
-                    <div class="chart-scroll">
-                        <div class="chart-container" id="boChartRevenusCumulContainer">
-                            <canvas id="boChartRevenusCumul"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <script type="application/json" id="bo-charts-data">{{ charts_json|safe }}</script>
-            </div>
-        </section>
-
-        {# ——— Utilisateurs ——— #}
-        <section class="bo-panel" id="panel-utilisateurs" data-panel="utilisateurs" aria-label="Utilisateurs" role="tabpanel" hidden>
-            <div class="bo-intro">
-                <p class="bo-intro-kicker">Comptes</p>
-                <h2 class="bo-intro-title">Utilisateurs</h2>
-                <div class="bo-intro-meta">
-                    <span class="bo-intro-pill">
-                        <span class="bo-intro-pill-label">Résultats</span>
-                        <strong>{{ nb_resultats }}</strong>
-                    </span>
-                </div>
-            </div>
-
-            <div class="bo-card bo-card--users" id="bo-users">
-                <div class="bo-card-head">
-                    <div class="bo-card-head-text">
-                        <p class="bo-card-kicker">Annuaire plateforme</p>
-                        <h2>Liste des utilisateurs</h2>
-                    </div>
-                    <div class="bo-card-head-actions">
-                        <span class="bo-card-meta">
-                            {% if vue_complete %}
-                            {{ nb_resultats }} résultat{{ nb_resultats|pluralize }} · tout
-                            {% elif page_obj and page_obj.paginator.num_pages > 1 %}
-                            {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ nb_resultats }}
-                            {% else %}
-                            {{ nb_resultats }} résultat{{ nb_resultats|pluralize }}
-                            {% endif %}
-                        </span>
-                        {% if vue_complete %}
-                        <a class="bo-btn-view"
-                           href="{% url 'backoffice' %}{% if query_suffix_pages %}?{{ query_suffix_pages }}{% endif %}#utilisateurs"
-                           title="Revenir à la pagination">
-                            Pagination
-                        </a>
-                        {% else %}
-                        <a class="bo-btn-view"
-                           href="{% url 'backoffice' %}?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}all=1#utilisateurs"
-                           title="Afficher tout le tableau (scroll)">
-                            Tout afficher
-                        </a>
-                        {% endif %}
-                        <a class="bo-btn-export"
-                           href="{% url 'backoffice_export_excel' %}{% if query_suffix %}?{{ query_suffix }}{% endif %}"
-                           download
-                           title="Exporter en fichier Excel (.xlsx)">
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Export .xlsx
-                        </a>
-                    </div>
-                </div>
-
-                <form class="bo-filters" id="bo-filters-form" method="get" action="{% url 'backoffice' %}">
-                    {% if vue_complete %}
-                    <input type="hidden" name="all" value="1">
-                    {% endif %}
-                    <div class="bo-filters-search">
-                        <label for="bo-q">Recherche</label>
-                        <div class="bo-search-field">
-                            <svg class="bo-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
-                                <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                            <input id="bo-q" type="search" name="q" value="{{ q }}" placeholder="e-mail, nom, organisation…">
-                        </div>
-                    </div>
-                    <div class="bo-filters-tools">
-                        <div class="bo-filter-group">
-                            <label for="bo-statut">Statut abo</label>
-                            <select id="bo-statut" name="statut" class="kp-select-native" aria-label="Filtrer par statut d'abonnement">
-                                <option value="">Tous</option>
-                                {% for code, label in statuts_choices %}
-                                <option value="{{ code }}"{% if filtre_statut == code %} selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="bo-filter-group">
-                            <label for="bo-plan">Plan</label>
-                            <select id="bo-plan" name="plan" class="kp-select-native" aria-label="Filtrer par plan">
-                                <option value="">Tous</option>
-                                {% for plan in plans_choices %}
-                                <option value="{{ plan.code }}"{% if filtre_plan == plan.code %} selected{% endif %}>{{ plan.nom }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="bo-filter-group bo-filter-group--check">
-                            <span class="bo-filter-spacer" aria-hidden="true">Options</span>
-                            <label class="bo-check">
-                                <input type="checkbox" name="non_verifies" value="1"{% if non_verifies %} checked{% endif %}>
-                                <span>Non vérifiés</span>
-                            </label>
-                        </div>
-                        {% if q or filtre_statut or filtre_plan or non_verifies %}
-                        <div class="bo-filter-group bo-filter-group--clear">
-                            <span class="bo-filter-spacer" aria-hidden="true">Reset</span>
-                            <a class="bo-btn-clear" href="{% url 'backoffice' %}#utilisateurs">Effacer</a>
-                        </div>
-                        {% endif %}
-                    </div>
-                </form>
-
-                <div class="bo-table-wrap{% if vue_complete %} is-full{% endif %}">
-                    <table class="bo-table bo-table--users">
-                        <thead>
-                            <tr>
-                                <th class="col-user">Utilisateur</th>
-                                <th class="col-org">Organisation</th>
-                                <th class="col-abo">Abonnement</th>
-                                <th class="col-contact">Contact</th>
-                                <th class="col-pay">Paiement</th>
-                                <th class="col-state">État</th>
-                                <th class="col-activity">Activité</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in lignes %}
-                            <tr class="{% if not row.actif %}is-inactive{% endif %}">
-                                <td class="col-user">
-                                    <div class="bo-user-meta">
-                                        <a href="{{ row.admin_user_url }}" class="bo-user-email">{{ row.email }}</a>
-                                        <div class="bo-user-sub">
-                                            {% if row.nom %}<span class="bo-user-name">{{ row.nom }}</span>{% endif %}
-                                            {% if row.role %}<span class="bo-user-role">{{ row.role }}</span>{% endif %}
-                                            {% if not row.nom and not row.role %}<span class="bo-muted">—</span>{% endif %}
+                <div class="bo-period-row bo-period-row--calendar">
+                    <div class="bo-period-day-fields{% if periode_mode != 'day' %} is-hidden{% endif %}" id="boPeriodDayFields">
+                        <label class="bo-period-field">
+                            <span>Jour</span>
+                            <div class="note-reminder-picker note-reminder-picker--date kp-date-picker" id="boPeriodDayPicker">
+                                <input type="hidden" id="boPeriodDay" value="{% if periode_du %}{{ periode_du }}{% endif %}" autocomplete="off">
+                                <div class="note-reminder-control">
+                                    <button type="button" class="note-reminder-trigger" id="boPeriodDayTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="boPeriodDayPopover">
+                                        <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        <span class="note-reminder-trigger-text{% if not periode_du %} is-placeholder{% endif %}" id="boPeriodDayTriggerText">{% if periode_du %}{{ periode_du }}{% else %}Choisir une date{% endif %}</span>
+                                    </button>
+                                </div>
+                                <div class="note-reminder-popover note-reminder-popover--date" id="boPeriodDayPopover" role="dialog" aria-label="Choisir une date" hidden>
+                                    <div class="note-reminder-body">
+                                        <div class="note-reminder-cal">
+                                            <div class="note-reminder-cal-head">
+                                                <button type="button" class="note-reminder-nav" id="boPeriodDayPrevMonth" aria-label="Mois précédent">‹</button>
+                                                <span class="note-reminder-month-label" id="boPeriodDayMonthLabel"></span>
+                                                <button type="button" class="note-reminder-nav" id="boPeriodDayNextMonth" aria-label="Mois suivant">›</button>
+                                            </div>
+                                            <div class="note-reminder-weekdays" aria-hidden="true">
+                                                <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span>di</span>
+                                            </div>
+                                            <div class="note-reminder-days" id="boPeriodDayDays"></div>
                                         </div>
                                     </div>
-                                </td>
-                                <td class="col-org">
-                                    {% if row.organisation %}
-                                    <a class="bo-org-link" href="{{ row.admin_org_url }}">{{ row.organisation.nom|default:row.organisation.slug }}</a>
-                                    {% else %}
-                                    <span class="bo-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="col-abo">
-                                    {% if row.statut %}
-                                    <a href="{{ row.admin_abo_url }}" class="bo-abo-block">
-                                        <span class="bo-abo-top">
-                                            <span class="bo-plan-name">{{ row.plan }}</span>
-                                            {% if row.statut == 'prelaunch' %}
-                                            <span class="bo-badge is-prelaunch">{{ row.statut_label }}</span>
-                                            {% else %}
-                                            <span class="bo-badge is-{{ row.statut }}">{{ row.statut_label }}</span>
-                                            {% endif %}
-                                        </span>
-                                        {% if row.echeance %}
-                                        <span class="bo-abo-due{% if row.echeance_label == 'dépassée' %} is-late{% endif %}">
-                                            {{ row.echeance|date:"d/m/Y" }}
-                                            · {{ row.echeance_label }}
-                                        </span>
-                                        {% endif %}
-                                    </a>
-                                    {% else %}
-                                    <span class="bo-muted">Sans abo</span>
-                                    {% endif %}
-                                </td>
-                                <td class="col-contact">
-                                    {% if row.telephone %}
-                                    <a class="bo-tel" href="tel:{{ row.telephone }}">{{ row.telephone }}</a>
-                                    {% else %}
-                                    <span class="bo-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="col-pay">
-                                    {% if row.paiement_montant %}
-                                    <div class="bo-paiement">
-                                        <span class="bo-cell-strong">{{ row.paiement_montant }}</span>
-                                        <span class="bo-paiement-hint">{{ row.paiement_date }}</span>
+                                    <div class="note-reminder-popover-actions">
+                                        <button type="button" class="note-reminder-link-btn" id="boPeriodDayTodayBtn">Aujourd’hui</button>
                                     </div>
-                                    {% else %}
-                                    <span class="bo-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="col-state">
-                                    <div class="bo-state-tags">
-                                        {% if row.email_verifie %}
-                                        <span class="bo-tag is-ok">Vérifié</span>
-                                        {% else %}
-                                        <span class="bo-tag is-warn">Non vérifié</span>
-                                        {% endif %}
-                                        {% if row.actif %}
-                                        <span class="bo-tag is-ok">Actif</span>
-                                        {% else %}
-                                        <span class="bo-tag is-danger">Inactif</span>
-                                        {% endif %}
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="bo-period-range-fields{% if periode_mode == 'day' %} is-hidden{% endif %}" id="boPeriodRangeFields">
+                        <label class="bo-period-field">
+                            <span>Du</span>
+                            <div class="note-reminder-picker note-reminder-picker--date kp-date-picker" id="boPeriodFromPicker">
+                                <input type="hidden" name="du" id="boPeriodFrom" value="{{ periode_du }}" autocomplete="off">
+                                <div class="note-reminder-control">
+                                    <button type="button" class="note-reminder-trigger" id="boPeriodFromTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="boPeriodFromPopover">
+                                        <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        <span class="note-reminder-trigger-text{% if not periode_du %} is-placeholder{% endif %}" id="boPeriodFromTriggerText">{% if periode_du %}{{ periode_du }}{% else %}Choisir une date{% endif %}</span>
+                                    </button>
+                                </div>
+                                <div class="note-reminder-popover note-reminder-popover--date" id="boPeriodFromPopover" role="dialog" aria-label="Date de début" hidden>
+                                    <div class="note-reminder-body">
+                                        <div class="note-reminder-cal">
+                                            <div class="note-reminder-cal-head">
+                                                <button type="button" class="note-reminder-nav" id="boPeriodFromPrevMonth" aria-label="Mois précédent">‹</button>
+                                                <span class="note-reminder-month-label" id="boPeriodFromMonthLabel"></span>
+                                                <button type="button" class="note-reminder-nav" id="boPeriodFromNextMonth" aria-label="Mois suivant">›</button>
+                                            </div>
+                                            <div class="note-reminder-weekdays" aria-hidden="true">
+                                                <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span>di</span>
+                                            </div>
+                                            <div class="note-reminder-days" id="boPeriodFromDays"></div>
+                                        </div>
                                     </div>
-                                </td>
-                                <td class="col-activity">
-                                    <div class="bo-activity">
-                                        <span class="bo-activity-row">
-                                            <span class="bo-activity-label">Connexion</span>
-                                            {% if row.login_relatif == 'jamais' %}
-                                            <span class="bo-muted">jamais</span>
-                                            {% else %}
-                                            <span class="bo-time">{{ row.login_relatif }}</span>
-                                            {% endif %}
-                                        </span>
-                                        <span class="bo-activity-row">
-                                            <span class="bo-activity-label">Inscrit</span>
-                                            <span class="bo-time">{{ row.inscrit_relatif }}</span>
-                                        </span>
+                                    <div class="note-reminder-popover-actions">
+                                        <button type="button" class="note-reminder-link-btn" id="boPeriodFromTodayBtn">Aujourd’hui</button>
                                     </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="bo-empty">
-                                    <span class="bo-empty-title">Aucun utilisateur</span>
-                                    <span class="bo-empty-sub">Modifiez les filtres ou réessayez avec une autre recherche.</span>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+                        </label>
+                        <label class="bo-period-field">
+                            <span>Au</span>
+                            <div class="note-reminder-picker note-reminder-picker--date kp-date-picker" id="boPeriodToPicker">
+                                <input type="hidden" name="au" id="boPeriodTo" value="{{ periode_au }}" autocomplete="off">
+                                <div class="note-reminder-control">
+                                    <button type="button" class="note-reminder-trigger" id="boPeriodToTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="boPeriodToPopover">
+                                        <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        <span class="note-reminder-trigger-text{% if not periode_au %} is-placeholder{% endif %}" id="boPeriodToTriggerText">{% if periode_au %}{{ periode_au }}{% else %}Choisir une date{% endif %}</span>
+                                    </button>
+                                </div>
+                                <div class="note-reminder-popover note-reminder-popover--date" id="boPeriodToPopover" role="dialog" aria-label="Date de fin" hidden>
+                                    <div class="note-reminder-body">
+                                        <div class="note-reminder-cal">
+                                            <div class="note-reminder-cal-head">
+                                                <button type="button" class="note-reminder-nav" id="boPeriodToPrevMonth" aria-label="Mois précédent">‹</button>
+                                                <span class="note-reminder-month-label" id="boPeriodToMonthLabel"></span>
+                                                <button type="button" class="note-reminder-nav" id="boPeriodToNextMonth" aria-label="Mois suivant">›</button>
+                                            </div>
+                                            <div class="note-reminder-weekdays" aria-hidden="true">
+                                                <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span>di</span>
+                                            </div>
+                                            <div class="note-reminder-days" id="boPeriodToDays"></div>
+                                        </div>
+                                    </div>
+                                    <div class="note-reminder-popover-actions">
+                                        <button type="button" class="note-reminder-link-btn" id="boPeriodToTodayBtn">Aujourd’hui</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="bo-period-actions">
+                        <button type="submit" class="bo-period-apply" id="boPeriodApply">Appliquer</button>
+                        <button type="button" class="bo-period-clear" id="boPeriodClear" title="Réinitialiser (toutes les données)">Effacer</button>
+                    </div>
                 </div>
 
-                {% if not vue_complete and page_obj and page_obj.paginator.num_pages > 1 %}
-                <nav class="bo-pagination" aria-label="Pagination du tableau">
-                    {% if page_obj.has_previous %}
-                    <a class="bo-pagination-btn" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.previous_page_number }}#utilisateurs">Précédent</a>
-                    {% else %}
-                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Précédent</span>
-                    {% endif %}
-
-                    <div class="bo-pagination-pages">
-                        {% if page_numbers.0 > 1 %}
-                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page=1#utilisateurs">1</a>
-                        {% if page_numbers.0 > 2 %}<span class="bo-page-ellipsis">…</span>{% endif %}
-                        {% endif %}
-
-                        {% for num in page_numbers %}
-                        {% if num == page_obj.number %}
-                        <span class="bo-page-num is-current" aria-current="page">{{ num }}</span>
-                        {% else %}
-                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ num }}#utilisateurs">{{ num }}</a>
-                        {% endif %}
+                <div class="bo-period-row">
+                    <div class="bo-period-presets" role="group" aria-label="Périodes rapides">
+                        {% for key, label in periodes_presets %}
+                        <button type="button"
+                                class="bo-period-btn{% if periode == key %} is-active{% endif %}"
+                                data-periode-preset="{{ key }}"
+                                {% if periode == key %}aria-current="true"{% endif %}>
+                            {{ label }}
+                        </button>
                         {% endfor %}
-
-                        {% if page_numbers|last < page_obj.paginator.num_pages %}
-                        {% if page_numbers|last < page_obj.paginator.num_pages|add:"-1" %}<span class="bo-page-ellipsis">…</span>{% endif %}
-                        <a class="bo-page-num" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.paginator.num_pages }}#utilisateurs">{{ page_obj.paginator.num_pages }}</a>
-                        {% endif %}
                     </div>
+                </div>
+            </form>
+        </div>
 
-                    <span class="bo-pagination-info">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {# ——— Vue d'ensemble ——— #}
+        {% include "backoffice/partials/panel_vue.html" %}
 
-                    {% if page_obj.has_next %}
-                    <a class="bo-pagination-btn" href="?{% if query_suffix_pages %}{{ query_suffix_pages }}&{% endif %}page={{ page_obj.next_page_number }}#utilisateurs">Suivant</a>
-                    {% else %}
-                    <span class="bo-pagination-btn is-disabled" aria-disabled="true">Suivant</span>
-                    {% endif %}
-                </nav>
-                {% elif vue_complete and nb_resultats %}
-                <p class="bo-full-hint">Tous les résultats · défilement vertical dans le tableau</p>
-                {% endif %}
-            </div>
-        </section>
+        {# ——— Statistiques / graphiques (style app) ——— #}
+        {% include "backoffice/partials/panel_stats.html" %}
+
+        {# ——— Utilisateurs ——— #}
+        {% include "backoffice/partials/panel_utilisateurs.html" %}
+
+        {# ——— Paiements abonnement ——— #}
+        {% include "backoffice/partials/panel_paiements.html" %}
+
+        {# ——— Finances plateforme (charges Xaliss) ——— #}
+        {% include "backoffice/partials/panel_finances.html" %}
 
         {# ——— Outils / admin ——— #}
         <section class="bo-panel" id="panel-outils" data-panel="outils" aria-label="Outils" role="tabpanel" hidden>
@@ -503,6 +305,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/kp-select.js' %}"></script>
+    <script src="{% static 'js/kp-date.js' %}"></script>
+    <script src="{% static 'js/xaliss-flash.js' %}"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-soft-3"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {
@@ -512,6 +317,15 @@
                 statistiques: 'stats',
                 users: 'utilisateurs',
                 'bo-users': 'utilisateurs',
+                paiements: 'paiements',
+                payments: 'paiements',
+                billing: 'paiements',
+                'bo-paiements': 'paiements',
+                finances: 'finances',
+                finance: 'finances',
+                charges: 'finances',
+                'bo-finances': 'finances',
+                'bo-charges': 'finances',
                 'bo-charts': 'stats',
                 admin: 'outils'
             };
@@ -519,13 +333,21 @@
                 vue: 'Vue d\'ensemble',
                 stats: 'Statistiques',
                 utilisateurs: 'Utilisateurs',
+                paiements: 'Paiements',
+                finances: 'Finances',
                 outils: 'Outils'
             };
 
             var body = document.body;
-            var tabs = Array.prototype.slice.call(document.querySelectorAll('.bo-tab[data-tab]'));
-            var panels = Array.prototype.slice.call(document.querySelectorAll('.bo-panel[data-panel]'));
             var chartsReady = false;
+            var chartInstances = [];
+
+            function refreshChrome() {
+                return {
+                    tabs: Array.prototype.slice.call(document.querySelectorAll('.bo-tab[data-tab]')),
+                    panels: Array.prototype.slice.call(document.querySelectorAll('.bo-panel[data-panel]'))
+                };
+            }
 
             function normalizeTab(raw) {
                 if (!raw) return null;
@@ -533,6 +355,22 @@
                 if (ALIAS[key]) return ALIAS[key];
                 if (LABELS[key]) return key;
                 return null;
+            }
+
+            function destroyCharts() {
+                if (typeof Chart !== 'undefined' && Chart.getChart) {
+                    document.querySelectorAll('#panel-stats canvas').forEach(function (canvas) {
+                        try {
+                            var existing = Chart.getChart(canvas);
+                            if (existing) existing.destroy();
+                        } catch (e) {}
+                    });
+                }
+                chartInstances.forEach(function (c) {
+                    try { c.destroy(); } catch (e2) {}
+                });
+                chartInstances = [];
+                chartsReady = false;
             }
 
             function initCharts() {
@@ -545,13 +383,25 @@
                 } catch (e) {
                     return;
                 }
+                destroyCharts();
                 chartsReady = true;
+
+                function makeChart(el, cfg) {
+                    if (!el) return null;
+                    var ch = new Chart(el, cfg);
+                    chartInstances.push(ch);
+                    return ch;
+                }
 
                 var primary = '#43277d';
                 var colorBlue = 'rgba(59, 130, 246, 0.78)';
                 var colorBlueBorder = '#3b82f6';
                 var colorGreen = 'rgba(16, 185, 129, 0.78)';
                 var colorGreenBorder = '#10b981';
+                var colorRed = 'rgba(239, 68, 68, 0.78)';
+                var colorRedBorder = '#ef4444';
+                var colorAmber = 'rgba(245, 158, 11, 0.78)';
+                var colorAmberBorder = '#f59e0b';
                 var statutColors = {
                     prelaunch: '#94a3b8',
                     essai: '#3b82f6',
@@ -563,6 +413,8 @@
 
                 var labels = data.labels || [];
                 var revenus = data.revenus_mois || [];
+                var charges = data.charges_mois || [];
+                var resultatNet = data.resultat_net_mois || [];
                 var connectes = data.connectes_mois || [];
                 var cumul = data.inscrits_cumul || [];
 
@@ -602,18 +454,81 @@
                     if (containerEl) containerEl.style.display = isEmpty ? 'none' : '';
                 }
 
-                function scrollWidth(containerEl, count, px) {
+                /**
+                 * Même logique que l’app : élargit le conteneur si beaucoup de points
+                 * (scroll horizontal possible mais barre de scroll masquée + hint).
+                 */
+                function getChartScrollViewportWidth(containerEl) {
+                    var wrap = containerEl && containerEl.parentElement;
+                    if (wrap && wrap.clientWidth > 0) return wrap.clientWidth;
+                    var card = wrap && wrap.closest ? wrap.closest('.chart-card') : null;
+                    if (card && card.clientWidth > 0) return Math.max(280, card.clientWidth - 48);
+                    return Math.max(400, Math.min(960, (window.innerWidth || 800) - 80));
+                }
+
+                function updateChartScrollHint(containerEl, isScrollable) {
                     if (!containerEl) return;
-                    var need = (count || 0) * (px || 56);
-                    var parent = containerEl.parentElement;
-                    var view = parent ? parent.clientWidth : 0;
-                    if (need > view && view > 0) {
-                        containerEl.style.minWidth = need + 'px';
-                        containerEl.style.width = need + 'px';
+                    var wrap = containerEl.parentElement;
+                    if (!wrap || !wrap.classList.contains('chart-scroll')) return;
+                    var hint = wrap.querySelector('.chart-scroll-hint');
+                    if (!hint) {
+                        hint = document.createElement('p');
+                        hint.className = 'chart-scroll-hint';
+                        hint.setAttribute('aria-hidden', 'true');
+                        hint.textContent = 'Glissez pour voir →';
+                        wrap.appendChild(hint);
+                        hint.addEventListener('click', function () {
+                            var maxScroll = wrap.scrollWidth - wrap.clientWidth;
+                            wrap.scrollBy({ left: Math.min(140, maxScroll), behavior: 'smooth' });
+                        });
+                    }
+                    if (isScrollable) {
+                        hint.removeAttribute('hidden');
+                        if (!wrap.dataset.scrollHintBound) {
+                            wrap.dataset.scrollHintBound = '1';
+                            wrap.addEventListener('scroll', function () {
+                                if (wrap.scrollLeft > 10) {
+                                    hint.setAttribute('hidden', '');
+                                }
+                            }, { passive: true });
+                        }
+                    } else {
+                        hint.setAttribute('hidden', '');
+                    }
+                }
+
+                function fitBarWidth(containerEl, count, minBarPx) {
+                    if (!containerEl) return;
+                    minBarPx = minBarPx || 44;
+                    if (!count || count <= 0) {
+                        containerEl.style.minWidth = '';
+                        containerEl.style.width = '';
+                        updateChartScrollHint(containerEl, false);
+                        return;
+                    }
+                    var viewportW = getChartScrollViewportWidth(containerEl);
+                    var contentW = count * minBarPx;
+                    var scrollable = contentW > viewportW;
+                    if (scrollable) {
+                        containerEl.style.minWidth = contentW + 'px';
+                        containerEl.style.width = contentW + 'px';
                     } else {
                         containerEl.style.minWidth = '';
                         containerEl.style.width = '';
                     }
+                    updateChartScrollHint(containerEl, scrollable);
+                }
+
+                function barDatasetStyle(color, border) {
+                    return {
+                        backgroundColor: color,
+                        borderColor: border,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        categoryPercentage: 0.68,
+                        barPercentage: 0.82,
+                        maxBarThickness: 36
+                    };
                 }
 
                 function lineYBounds(values) {
@@ -627,22 +542,115 @@
                     return { min: yMin, max: yMax, beginAtZero: !hasNeg };
                 }
 
-                // 1) Revenus mensuels — barres pleine largeur
-                var revEmpty = !labels.length || !hasSeries(revenus);
-                setEmpty('boChartRevenusEmpty', 'boChartRevenusContainer', revEmpty);
-                if (!revEmpty) {
-                    scrollWidth(document.getElementById('boChartRevenusContainer'), labels.length, 56);
-                    new Chart(document.getElementById('boChartRevenus'), {
+                // 0) Encaissements vs charges — barres groupées
+                var rcEmpty = !labels.length || (!hasSeries(revenus) && !hasSeries(charges));
+                setEmpty('boChartRevenusChargesEmpty', 'boChartRevenusChargesContainer', rcEmpty);
+                if (!rcEmpty) {
+                    fitBarWidth(document.getElementById('boChartRevenusChargesContainer'), labels.length, 72);
+                    makeChart(document.getElementById('boChartRevenusCharges'), {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                Object.assign({
+                                    label: 'Encaissements (XOF)',
+                                    data: revenus
+                                }, barDatasetStyle(colorGreen, colorGreenBorder)),
+                                Object.assign({
+                                    label: 'Charges (XOF)',
+                                    data: charges
+                                }, barDatasetStyle(colorRed, colorRedBorder))
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: legendOpts('top'),
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return formatAmount(ctx.raw);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { callback: formatAxisTick }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // 0b) Résultat net — barres (positif / négatif)
+                var resEmpty = !labels.length || !hasSeries(resultatNet);
+                setEmpty('boChartResultatEmpty', 'boChartResultatContainer', resEmpty);
+                if (!resEmpty) {
+                    fitBarWidth(document.getElementById('boChartResultatContainer'), labels.length, 56);
+                    var resColors = resultatNet.map(function (v) {
+                        return (Number(v) || 0) >= 0 ? colorGreen : colorRed;
+                    });
+                    var resBorders = resultatNet.map(function (v) {
+                        return (Number(v) || 0) >= 0 ? colorGreenBorder : colorRedBorder;
+                    });
+                    makeChart(document.getElementById('boChartResultat'), {
                         type: 'bar',
                         data: {
                             labels: labels,
                             datasets: [{
-                                label: 'Revenus (XOF)',
-                                data: revenus,
-                                backgroundColor: colorGreen,
-                                borderColor: colorGreenBorder,
-                                borderWidth: 1
+                                label: 'Résultat net (XOF)',
+                                data: resultatNet,
+                                backgroundColor: resColors,
+                                borderColor: resBorders,
+                                borderWidth: 1,
+                                borderRadius: 6,
+                                maxBarThickness: 36
                             }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: legendOpts('top'),
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return formatAmount(ctx.raw);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 }
+                                },
+                                y: {
+                                    ticks: { callback: formatAxisTick }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // 1) Revenus mensuels — barres pleine largeur
+                var revEmpty = !labels.length || !hasSeries(revenus);
+                setEmpty('boChartRevenusEmpty', 'boChartRevenusContainer', revEmpty);
+                if (!revEmpty) {
+                    fitBarWidth(document.getElementById('boChartRevenusContainer'), labels.length, 56);
+                    makeChart(document.getElementById('boChartRevenus'), {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [Object.assign({
+                                label: 'Revenus (XOF)',
+                                data: revenus
+                            }, barDatasetStyle(colorGreen, colorGreenBorder))]
                         },
                         options: {
                             responsive: true,
@@ -674,22 +682,20 @@
                 var connEmpty = !labels.length || !hasSeries(connectes);
                 setEmpty('boChartConnectesEmpty', 'boChartConnectesContainer', connEmpty);
                 if (!connEmpty) {
-                    scrollWidth(document.getElementById('boChartConnectesContainer'), labels.length, 48);
-                    new Chart(document.getElementById('boChartConnectes'), {
+                    fitBarWidth(document.getElementById('boChartConnectesContainer'), labels.length, 56);
+                    makeChart(document.getElementById('boChartConnectes'), {
                         type: 'bar',
                         data: {
                             labels: labels,
-                            datasets: [{
+                            datasets: [Object.assign({
                                 label: 'Connectés',
-                                data: connectes,
-                                backgroundColor: colorBlue,
-                                borderColor: colorBlueBorder,
-                                borderWidth: 1
-                            }]
+                                data: connectes
+                            }, barDatasetStyle(colorBlue, colorBlueBorder))]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            layout: { padding: { left: 4, right: 8, top: 4, bottom: 0 } },
                             plugins: {
                                 legend: legendOpts('top'),
                                 tooltip: {
@@ -714,7 +720,7 @@
                     });
                 }
 
-                // 3b) Donut statuts
+                // 3b) Donut statuts — pleine largeur de la carte
                 var st = data.statuts || {};
                 var stValues = st.values || [];
                 var stEmpty = !st.labels || !st.labels.length || !hasSeries(stValues);
@@ -723,7 +729,13 @@
                     var colors = (st.codes || []).map(function (code) {
                         return statutColors[code] || primary;
                     });
-                    new Chart(document.getElementById('boChartStatuts'), {
+                    var stCont = document.getElementById('boChartStatutsContainer');
+                    if (stCont) {
+                        stCont.style.width = '';
+                        stCont.style.maxWidth = '';
+                        stCont.style.minWidth = '';
+                    }
+                    makeChart(document.getElementById('boChartStatuts'), {
                         type: 'doughnut',
                         data: {
                             labels: st.labels,
@@ -737,10 +749,19 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            layout: { padding: 8 },
+                            cutout: '58%',
                             plugins: {
                                 legend: {
                                     position: 'right',
-                                    labels: { boxWidth: 12, padding: 12, font: { size: 12 } }
+                                    align: 'center',
+                                    labels: {
+                                        boxWidth: 14,
+                                        boxHeight: 14,
+                                        padding: 14,
+                                        font: { size: 12 },
+                                        usePointStyle: false
+                                    }
                                 },
                                 tooltip: {
                                     callbacks: {
@@ -756,13 +777,77 @@
                     });
                 }
 
+                // 3c) Pays — barres horizontales
+                var geo = data.geo || {};
+                var geoPays = geo.pays || {};
+                var geoLabels = geoPays.labels || [];
+                var geoValues = geoPays.values || [];
+                var geoEmpty = !geoLabels.length || !hasSeries(geoValues);
+                setEmpty('boChartGeoPaysEmpty', 'boChartGeoPaysContainer', geoEmpty);
+                if (!geoEmpty) {
+                    var geoH = Math.max(180, geoLabels.length * 36 + 40);
+                    var geoCont = document.getElementById('boChartGeoPaysContainer');
+                    if (geoCont) geoCont.style.height = geoH + 'px';
+                    var geoPalette = geoLabels.map(function (_, i) {
+                        var tones = [
+                            'rgba(67, 39, 125, 0.85)',
+                            'rgba(16, 185, 129, 0.78)',
+                            'rgba(59, 130, 246, 0.78)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(236, 72, 153, 0.75)',
+                            'rgba(20, 184, 166, 0.78)'
+                        ];
+                        return tones[i % tones.length];
+                    });
+                    makeChart(document.getElementById('boChartGeoPays'), {
+                        type: 'bar',
+                        data: {
+                            labels: geoLabels,
+                            datasets: [{
+                                label: 'Utilisateurs',
+                                data: geoValues,
+                                backgroundColor: geoPalette,
+                                borderWidth: 0,
+                                borderRadius: 8,
+                                barThickness: 22
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            var totalLoc = geo.localises || geoValues.reduce(function (a, b) { return a + b; }, 0) || 1;
+                                            var pct = Math.round(100 * ctx.raw / totalLoc);
+                                            return ctx.raw + ' utilisateur' + (ctx.raw > 1 ? 's' : '') + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0, callback: formatAxisTick }
+                                },
+                                y: {
+                                    ticks: { autoSkip: false }
+                                }
+                            }
+                        }
+                    });
+                }
+
                 // 4) Ligne cumul inscrits — style « Évolution de la recette »
                 var cumulEmpty = !labels.length || !hasSeries(cumul);
                 setEmpty('boChartCumulEmpty', 'boChartCumulContainer', cumulEmpty);
                 if (!cumulEmpty) {
-                    scrollWidth(document.getElementById('boChartCumulContainer'), labels.length, 52);
+                    fitBarWidth(document.getElementById('boChartCumulContainer'), labels.length, 52);
                     var yCumul = lineYBounds(cumul);
-                    new Chart(document.getElementById('boChartCumul'), {
+                    makeChart(document.getElementById('boChartCumul'), {
                         type: 'line',
                         data: {
                             labels: labels,
@@ -816,18 +901,21 @@
                 }
 
                 // 5) Ligne revenus cumulés — style « Bénéfice / recette »
-                var revCumul = [];
-                var run = 0;
-                revenus.forEach(function (v) {
-                    run += Number(v) || 0;
-                    revCumul.push(run);
-                });
+                var revCumul = data.revenus_cumul;
+                if (!revCumul || !revCumul.length) {
+                    revCumul = [];
+                    var run = 0;
+                    revenus.forEach(function (v) {
+                        run += Number(v) || 0;
+                        revCumul.push(run);
+                    });
+                }
                 var revCumulEmpty = !labels.length || !hasSeries(revCumul);
                 setEmpty('boChartRevenusCumulEmpty', 'boChartRevenusCumulContainer', revCumulEmpty);
                 if (!revCumulEmpty) {
-                    scrollWidth(document.getElementById('boChartRevenusCumulContainer'), labels.length, 52);
+                    fitBarWidth(document.getElementById('boChartRevenusCumulContainer'), labels.length, 52);
                     var yRev = lineYBounds(revCumul);
-                    new Chart(document.getElementById('boChartRevenusCumul'), {
+                    makeChart(document.getElementById('boChartRevenusCumul'), {
                         type: 'line',
                         data: {
                             labels: labels,
@@ -933,13 +1021,14 @@
                 body.className = body.className.replace(/\bbo-tab-\S+/g, '').trim();
                 body.classList.add('bo-tab-' + tab);
 
-                tabs.forEach(function (btn) {
+                var chrome = refreshChrome();
+                chrome.tabs.forEach(function (btn) {
                     var on = btn.getAttribute('data-tab') === tab;
                     btn.classList.toggle('is-active', on);
                     btn.setAttribute('aria-selected', on ? 'true' : 'false');
                 });
 
-                panels.forEach(function (panel) {
+                chrome.panels.forEach(function (panel) {
                     var on = panel.getAttribute('data-panel') === tab;
                     panel.classList.toggle('is-active', on);
                     if (on) {
@@ -971,15 +1060,38 @@
                 }
             }
 
-            tabs.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    try {
-                        sessionStorage.removeItem('boUsersKeepView');
-                        sessionStorage.removeItem('boUsersViewTop');
-                        sessionStorage.removeItem('boUsersScrollY');
-                    } catch (e) {}
-                    setTab(btn.getAttribute('data-tab'));
-                });
+            window.boSetTab = setTab;
+            window.boDestroyCharts = destroyCharts;
+            window.boApplyChartsJson = function (chartsJson) {
+                destroyCharts();
+                var el = document.getElementById('bo-charts-data');
+                if (el) {
+                    el.textContent = typeof chartsJson === 'string'
+                        ? chartsJson
+                        : JSON.stringify(chartsJson || {});
+                }
+                if ((document.body.getAttribute('data-bo-tab') || '') === 'stats') {
+                    requestAnimationFrame(function () { initCharts(); });
+                }
+            };
+
+            function softGo(url, softOpts) {
+                softOpts = softOpts || {};
+                if (window.BoSoft && typeof window.BoSoft.softNavigate === 'function') {
+                    return window.BoSoft.softNavigate(url, softOpts);
+                }
+                window.location.assign(url);
+            }
+
+            document.querySelector('.bo-top-nav') && document.querySelector('.bo-top-nav').addEventListener('click', function (e) {
+                var btn = e.target.closest('.bo-tab[data-tab]');
+                if (!btn) return;
+                try {
+                    sessionStorage.removeItem('boUsersKeepView');
+                    sessionStorage.removeItem('boUsersViewTop');
+                    sessionStorage.removeItem('boUsersScrollY');
+                } catch (err) {}
+                setTab(btn.getAttribute('data-tab'));
             });
 
             window.addEventListener('hashchange', function () {
@@ -987,12 +1099,141 @@
                 if (t) setTab(t, false);
             });
 
+            document.body.addEventListener('click', function (e) {
+                var link = e.target.closest('[data-tab-link]');
+                if (!link) return;
+                e.preventDefault();
+                setTab(link.getAttribute('data-tab-link') || link.getAttribute('href').replace('#', ''));
+            });
+
             if (typeof window.initKpSelectFields === 'function') {
                 window.initKpSelectFields();
             }
 
-            var form = document.getElementById('bo-filters-form');
-            if (form) {
+            if (typeof window.initKpDatePicker === 'function') {
+                window.initKpDatePicker('boPeriodDay', { placeholder: 'Choisir une date', allowClear: false });
+                window.initKpDatePicker('boPeriodFrom', { placeholder: 'Choisir une date', allowClear: false });
+                window.initKpDatePicker('boPeriodTo', { placeholder: 'Choisir une date', allowClear: false });
+            }
+
+            function syncDateField(id, value) {
+                if (typeof window.setKpDateValue === 'function') {
+                    window.setKpDateValue(id, value || '', false);
+                } else {
+                    var el = document.getElementById(id);
+                    if (el) el.value = value || '';
+                }
+            }
+
+            function bindPeriodForm() {
+                var periodForm = document.getElementById('bo-period-form');
+                if (!periodForm || periodForm.dataset.boBound === '1') return;
+                periodForm.dataset.boBound = '1';
+
+                var dayFields = document.getElementById('boPeriodDayFields');
+                var rangeFields = document.getElementById('boPeriodRangeFields');
+                var dayInput = document.getElementById('boPeriodDay');
+                var fromInput = document.getElementById('boPeriodFrom');
+                var toInput = document.getElementById('boPeriodTo');
+
+                function currentTab() {
+                    return (document.body.getAttribute('data-bo-tab') || 'vue').trim() || 'vue';
+                }
+
+                function baseParams() {
+                    var params = new URLSearchParams();
+                    function takeForm(form) {
+                        if (!form) return;
+                        Array.from(new FormData(form).entries()).forEach(function (entry) {
+                            var key = entry[0];
+                            var value = String(entry[1] == null ? '' : entry[1]).trim();
+                            if (value !== '') params.set(key, value);
+                        });
+                    }
+                    // Chrome période d'abord, puis formulaires listes (plus frais après soft-nav)
+                    // pour qu'une recherche récente écrase les hiddens périmés du bandeau.
+                    takeForm(periodForm);
+                    takeForm(document.getElementById('bo-pay-filters-form'));
+                    takeForm(document.getElementById('bo-filters-form'));
+                    // Période calendrier / preset sont appliqués hors de cette base
+                    ['du', 'au', 'periode'].forEach(function (k) { params.delete(k); });
+                    return params;
+                }
+
+                function navigate(params) {
+                    var qs = params.toString();
+                    softGo(
+                        periodForm.action + (qs ? '?' + qs : '') + '#' + currentTab(),
+                        { mode: 'refresh', tab: currentTab() }
+                    );
+                }
+
+                function setMode(mode) {
+                    var isDay = mode === 'day';
+                    periodForm.querySelectorAll('.bo-period-mode-btn').forEach(function (btn) {
+                        btn.classList.toggle('is-active', btn.getAttribute('data-period-mode') === mode);
+                    });
+                    if (dayFields) dayFields.classList.toggle('is-hidden', !isDay);
+                    if (rangeFields) rangeFields.classList.toggle('is-hidden', isDay);
+                    if (isDay && dayInput && fromInput) {
+                        var dayVal = fromInput.value || toInput.value || dayInput.value || '';
+                        syncDateField('boPeriodDay', dayVal);
+                    }
+                    if (!isDay && fromInput && dayInput && dayInput.value) {
+                        if (!fromInput.value) syncDateField('boPeriodFrom', dayInput.value);
+                        if (!toInput.value) syncDateField('boPeriodTo', dayInput.value);
+                    }
+                }
+
+                periodForm.querySelectorAll('.bo-period-mode-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        setMode(btn.getAttribute('data-period-mode') || 'range');
+                    });
+                });
+
+                periodForm.querySelectorAll('[data-periode-preset]').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var key = btn.getAttribute('data-periode-preset') || 'all';
+                        var params = baseParams();
+                        if (key && key !== 'all') {
+                            params.set('periode', key);
+                        }
+                        navigate(params);
+                    });
+                });
+
+                var clearBtn = document.getElementById('boPeriodClear');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function () {
+                        navigate(baseParams());
+                    });
+                }
+
+                periodForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var params = baseParams();
+                    var isDay = dayFields && !dayFields.classList.contains('is-hidden');
+                    if (isDay) {
+                        var day = (dayInput && dayInput.value) || '';
+                        if (day) {
+                            params.set('du', day);
+                            params.set('au', day);
+                        }
+                    } else {
+                        var from = (fromInput && fromInput.value) || '';
+                        var to = (toInput && toInput.value) || '';
+                        if (from) params.set('du', from);
+                        if (to) params.set('au', to);
+                    }
+                    navigate(params);
+                });
+            }
+
+            function bindUsersFilters() {
+                var form = document.getElementById('bo-filters-form');
+                if (!form || form.dataset.boBound === '1') return;
+                form.dataset.boBound = '1';
+
                 function applyFilters() {
                     rememberUsersView();
                     var params = new URLSearchParams();
@@ -1002,14 +1243,17 @@
                         if (value !== '') params.append(key, value);
                     });
                     var qs = params.toString();
-                    window.location.assign(form.action + (qs ? '?' + qs : '') + '#utilisateurs');
+                    softGo(
+                        form.action + (qs ? '?' + qs : '') + '#utilisateurs',
+                        { mode: 'users', tab: 'utilisateurs', keepFocusSearch: true }
+                    );
                 }
 
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
                     applyFilters();
                 });
-                ['bo-statut', 'bo-plan'].forEach(function (id) {
+                ['bo-statut', 'bo-plan', 'bo-user-scope'].forEach(function (id) {
                     var el = document.getElementById(id);
                     if (el) el.addEventListener('change', applyFilters);
                 });
@@ -1020,7 +1264,6 @@
                 var searchTimer = null;
                 if (searchInput) {
                     function applySearchLive() {
-                        try { sessionStorage.setItem('boFocusSearch', '1'); } catch (e) {}
                         applyFilters();
                     }
                     searchInput.addEventListener('input', function () {
@@ -1034,6 +1277,169 @@
                 }
             }
 
+            function bindPayFilters() {
+                var payForm = document.getElementById('bo-pay-filters-form');
+                if (!payForm || payForm.dataset.boBound === '1') return;
+                payForm.dataset.boBound = '1';
+
+                function applyPayFilters() {
+                    var params = new URLSearchParams();
+                    Array.from(new FormData(payForm).entries()).forEach(function (entry) {
+                        var key = entry[0];
+                        var value = String(entry[1] == null ? '' : entry[1]).trim();
+                        if (value !== '') params.append(key, value);
+                    });
+                    var qs = params.toString();
+                    softGo(
+                        payForm.action + (qs ? '?' + qs : '') + '#paiements',
+                        { mode: 'payments', tab: 'paiements' }
+                    );
+                }
+                payForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    applyPayFilters();
+                });
+                var payStatut = document.getElementById('bo-pay-statut');
+                if (payStatut) payStatut.addEventListener('change', applyPayFilters);
+                var paySearch = document.getElementById('bo-pay-q');
+                var paySearchTimer = null;
+                if (paySearch) {
+                    paySearch.addEventListener('input', function () {
+                        clearTimeout(paySearchTimer);
+                        paySearchTimer = setTimeout(applyPayFilters, 320);
+                    });
+                    paySearch.addEventListener('search', function () {
+                        clearTimeout(paySearchTimer);
+                        applyPayFilters();
+                    });
+                }
+            }
+
+            function syncPeriodChromeHiddens() {
+                var periodForm = document.getElementById('bo-period-form');
+                if (!periodForm) return;
+                var usersForm = document.getElementById('bo-filters-form');
+                var payForm = document.getElementById('bo-pay-filters-form');
+                var names = [
+                    'q', 'statut', 'plan', 'non_verifies', 'user_scope', 'all',
+                    'pay_q', 'pay_statut', 'pay_all'
+                ];
+                names.forEach(function (name) {
+                    var val = '';
+                    if (usersForm) {
+                        var uEl = usersForm.elements.namedItem(name);
+                        if (uEl) {
+                            if (uEl.type === 'checkbox') val = uEl.checked ? (uEl.value || '1') : '';
+                            else val = (uEl.value || '').trim();
+                        }
+                    }
+                    if (!val && payForm) {
+                        var pEl = payForm.elements.namedItem(name);
+                        if (pEl) val = (pEl.value || '').trim();
+                    }
+                    var existing = periodForm.querySelectorAll('input[name="' + name + '"]');
+                    existing.forEach(function (n) { n.remove(); });
+                    if (val) {
+                        var h = document.createElement('input');
+                        h.type = 'hidden';
+                        h.name = name;
+                        h.value = val;
+                        periodForm.appendChild(h);
+                    }
+                });
+            }
+
+            function bindChargeFormEdit() {
+                if (document.body.dataset.boChargeBound === '1') return;
+                document.body.dataset.boChargeBound = '1';
+
+                function setNativeSelect(id, value) {
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    el.value = value || '';
+                    if (typeof window.syncEnhancedSelectLabel === 'function') {
+                        window.syncEnhancedSelectLabel(el);
+                    }
+                }
+
+                function resetChargeForm() {
+                    var form = document.getElementById('bo-charge-form-main');
+                    if (!form) return;
+                    var actionEl = document.getElementById('boChargeAction');
+                    var idEl = document.getElementById('boChargeId');
+                    var kicker = document.getElementById('boChargeFormKicker');
+                    var title = document.getElementById('boChargeFormTitle');
+                    var submit = document.getElementById('boChargeSubmit');
+                    var dateEl = document.getElementById('boChargeDate');
+                    if (actionEl) actionEl.value = 'create';
+                    if (idEl) idEl.value = '';
+                    if (kicker) kicker.textContent = 'Nouvelle charge';
+                    if (title) title.textContent = 'Enregistrer une dépense';
+                    if (submit) submit.textContent = 'Enregistrer';
+                    form.reset();
+                    if (dateEl && dateEl.defaultValue) dateEl.value = dateEl.defaultValue;
+                    setNativeSelect('bo-charge-categorie', '');
+                }
+
+                document.addEventListener('click', function (e) {
+                    var editBtn = e.target.closest('.bo-charge-edit-btn');
+                    if (editBtn) {
+                        var actionEl = document.getElementById('boChargeAction');
+                        var idEl = document.getElementById('boChargeId');
+                        var kicker = document.getElementById('boChargeFormKicker');
+                        var title = document.getElementById('boChargeFormTitle');
+                        var submit = document.getElementById('boChargeSubmit');
+                        if (actionEl) actionEl.value = 'update';
+                        if (idEl) idEl.value = editBtn.getAttribute('data-charge-id') || '';
+                        if (kicker) kicker.textContent = 'Modification';
+                        if (title) title.textContent = 'Modifier la charge';
+                        if (submit) submit.textContent = 'Enregistrer les modifications';
+                        var dateEl = document.getElementById('boChargeDate');
+                        if (dateEl) dateEl.value = editBtn.getAttribute('data-charge-date') || '';
+                        var montantEl = document.getElementById('boChargeMontant');
+                        if (montantEl) montantEl.value = editBtn.getAttribute('data-charge-montant') || '';
+                        setNativeSelect('bo-charge-categorie', editBtn.getAttribute('data-charge-categorie'));
+                        var libEl = document.getElementById('boChargeLibelle');
+                        if (libEl) libEl.value = editBtn.getAttribute('data-charge-libelle') || '';
+                        var notesEl = document.getElementById('boChargeNotes');
+                        if (notesEl) notesEl.value = editBtn.getAttribute('data-charge-notes') || '';
+                        var card = document.getElementById('bo-charge-form');
+                        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        return;
+                    }
+                    if (e.target.id === 'boChargeCancelEdit') {
+                        resetChargeForm();
+                    }
+                });
+            }
+
+            function rebindInteractive() {
+                // après swap : les forms listes sont neufs (pas de data-bo-bound)
+                bindUsersFilters();
+                bindPayFilters();
+                bindChargeFormEdit();
+                // bandeau période n’est pas remplacé, mais les hiddens doivent suivre
+                syncPeriodChromeHiddens();
+                if (typeof window.initKpSelectFields === 'function') {
+                    window.initKpSelectFields();
+                }
+            }
+
+            window.boAfterPanelSwap = function (mode, opts) {
+                rebindInteractive();
+                var tab = (opts && opts.tab)
+                    || (mode === 'users' ? 'utilisateurs' : null)
+                    || (mode === 'payments' ? 'paiements' : null)
+                    || (mode === 'finances' ? 'finances' : null)
+                    || (document.body.getAttribute('data-bo-tab') || 'vue');
+                setTab(tab, false, { scrollTop: false, keepView: true });
+            };
+
+            bindPeriodForm();
+            bindUsersFilters();
+            bindPayFilters();
+            bindChargeFormEdit();
+
             // Pagination / liens filtre (chips statut) → même position tableau
             document.addEventListener('click', function (e) {
                 var a = e.target.closest('a[href]');
@@ -1043,12 +1449,16 @@
                 rememberUsersView();
             }, true);
 
-            // Onglet initial : hash, sinon filtres → utilisateurs
+            // Onglet initial : hash, sinon filtres → utilisateurs / paiements
             var initial = normalizeTab(location.hash);
             if (!initial) {
                 var params = new URLSearchParams(location.search);
-                if (params.has('q') || params.has('statut') || params.has('plan') ||
-                    params.has('non_verifies') || params.has('page') || params.has('all')) {
+                if (params.has('pay_q') || params.has('pay_statut') ||
+                    params.has('pay_page') || params.has('pay_all')) {
+                    initial = 'paiements';
+                } else if (params.has('q') || params.has('statut') || params.has('plan') ||
+                    params.has('non_verifies') || params.has('page') || params.has('all') ||
+                    params.get('user_scope') === 'sessions') {
                     initial = 'utilisateurs';
                 } else {
                     initial = 'vue';
@@ -1056,7 +1466,7 @@
             }
             setTab(initial, true);
 
-            // Garder le focus dans le champ après une recherche live
+            // Garder le focus dans le champ après une recherche live (full reload fallback)
             try {
                 if (sessionStorage.getItem('boFocusSearch') === '1') {
                     sessionStorage.removeItem('boFocusSearch');

@@ -17,10 +17,12 @@ Ou double-cliquez sur **`start-local-server.bat`**.
 | http://127.0.0.1:8000/connexion/ | Connexion |
 | http://127.0.0.1:8000/inscription/ | Inscription |
 | http://127.0.0.1:8000/app/ | Application (transactions, stats, paramètres) |
+| http://127.0.0.1:8000/backoffice/ | Backoffice ops (stats plateforme, finances Xaliss) |
 | http://127.0.0.1:8000/admin/ | Administration Django |
 
 Documentation complète : **`XALISS.md`**  
 Fiche produit SaaS : **`SAAS.md`**  
+Backoffice ops : **`BACKOFFICE.md`**  
 Feuille de route 8→9/10 : **`growupmysaas.md`**  
 Guide démarrage rapide : **`DJANGO.md`**  
 Mise en production : **`PRODUCTION.md`**

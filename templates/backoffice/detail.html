@@ -1,0 +1,549 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ fiche_title }} · Backoffice Xaliss</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-soft-1">
+</head>
+<body class="bo-body bo-body--detail">
+    {% include 'partials/django_messages_data.html' %}
+    <div class="bo-shell bo-shell--detail">
+        <header class="bo-detail-top">
+            <a class="bo-detail-back" href="{{ retour_url }}">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Retour au backoffice
+            </a>
+            <div class="bo-detail-top-actions">
+                {% if admin_url %}
+                <a class="bo-btn-export" href="{{ admin_url }}">Admin Django</a>
+                {% endif %}
+            </div>
+        </header>
+
+        {# ── Identité ── #}
+        <header class="bo-fiche-hero">
+            <span class="bo-fiche-focus">{{ focus_label }}</span>
+            <h1 class="bo-fiche-title">{{ fiche_title }}</h1>
+            {% if sous_titre %}<p class="bo-fiche-sub">{{ sous_titre }}{% if role_dans_org %} · {{ role_dans_org }}{% endif %}</p>{% endif %}
+
+            <div class="bo-fiche-pills">
+                {% if compte %}
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">Compte</span>
+                    <strong>{% if compte.actif %}Actif{% else %}Inactif{% endif %}</strong>
+                </span>
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">E-mail</span>
+                    <strong>{% if compte.email_verifie %}Vérifié{% else %}Non vérifié{% endif %}</strong>
+                </span>
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">Présence</span>
+                    <strong>{% if compte.en_ligne %}En ligne{% else %}Hors ligne{% endif %}</strong>
+                </span>
+                {% endif %}
+                {% if abo %}
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">Abonnement</span>
+                    <strong>{{ abo.statut_label }}</strong>
+                </span>
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">Plan</span>
+                    <strong>{{ abo.plan }}</strong>
+                </span>
+                {% endif %}
+                {% if org %}
+                <span class="bo-intro-pill">
+                    <span class="bo-intro-pill-label">Encaissé</span>
+                    <strong>{{ org.pay_stats.total_reussi_formate }}</strong>
+                </span>
+                {% endif %}
+            </div>
+
+            {% if orgs_switcher|length > 1 %}
+            <nav class="bo-fiche-org-switch" aria-label="Organisations du compte">
+                <span class="bo-fiche-org-switch-label">Organisations</span>
+                <div class="bo-fiche-org-switch-list">
+                    {% for item in orgs_switcher %}
+                    <a class="bo-fiche-org-chip{% if item.active %} is-active{% endif %}" href="{{ item.url }}">
+                        {{ item.nom }}
+                        <small>{{ item.role }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </nav>
+            {% endif %}
+        </header>
+
+        <nav class="bo-fiche-toc" aria-label="Sections de la fiche">
+            {% if compte %}<a href="#sec-compte">1. Compte</a>{% endif %}
+            <a href="#sec-organisation">2. Organisation</a>
+            <a href="#sec-abonnement">3. Abonnement</a>
+            <a href="#sec-membres">4. Membres</a>
+            <a href="#sec-paiements">5. Paiements</a>
+        </nav>
+
+        <div class="bo-fiche-stack">
+
+            {# ── 1. Compte ── #}
+            {% if compte %}
+            <section class="bo-card bo-fiche-section" id="sec-compte">
+                <header class="bo-fiche-section-head">
+                    <span class="bo-fiche-num">1</span>
+                    <div>
+                        <h2>Compte</h2>
+                        <p>Identité et activité de connexion</p>
+                    </div>
+                    <a class="bo-btn-view" href="{{ compte.admin_url }}">Admin user</a>
+                </header>
+                <dl class="bo-fiche-facts">
+                    <div class="bo-fiche-fact">
+                        <dt>E-mail</dt>
+                        <dd>{{ compte.email|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Nom complet</dt>
+                        <dd>{{ compte.nom|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Identifiant</dt>
+                        <dd>{{ compte.username|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Pays</dt>
+                        <dd>{{ compte.pays|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Ville</dt>
+                        <dd>{{ compte.ville|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Rôle dans l’org</dt>
+                        <dd>{{ role_dans_org|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Inscription</dt>
+                        <dd>{{ compte.date_joined }} <span class="bo-muted">· {{ compte.date_joined_relatif }}</span></dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Dernière connexion</dt>
+                        <dd>{{ compte.last_login }} <span class="bo-muted">· {{ compte.last_login_relatif }}</span></dd>
+                    </div>
+                    {% if compte.email_en_attente %}
+                    <div class="bo-fiche-fact">
+                        <dt>E-mail en attente</dt>
+                        <dd>{{ compte.email_en_attente }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Présence</dt>
+                        <dd>{% if compte.en_ligne %}En ligne{% else %}Hors ligne{% endif %}</dd>
+                    </div>
+                    {% endif %}
+                    <div class="bo-fiche-fact bo-fiche-fact--tags">
+                        <dt>État</dt>
+                        <dd class="bo-state-tags">
+                            {% if compte.actif %}<span class="bo-tag is-ok">Actif</span>{% else %}<span class="bo-tag is-danger">Inactif</span>{% endif %}
+                            {% if compte.email_verifie %}<span class="bo-tag is-ok">E-mail vérifié</span>{% else %}<span class="bo-tag is-warn">Non vérifié</span>{% endif %}
+                            {% if compte.en_ligne %}<span class="bo-tag is-info">En ligne</span>{% endif %}
+                            {% if compte.staff %}<span class="bo-tag is-info">Staff</span>{% endif %}
+                            {% if compte.superuser %}<span class="bo-tag is-warn">Superuser</span>{% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+            {% endif %}
+
+            {# ── 2. Organisation ── #}
+            <section class="bo-card bo-fiche-section" id="sec-organisation">
+                <header class="bo-fiche-section-head">
+                    <span class="bo-fiche-num">2</span>
+                    <div>
+                        <h2>Organisation</h2>
+                        <p>Coordonnées et identité légale / commerciale</p>
+                    </div>
+                    {% if org %}
+                    <a class="bo-btn-view" href="{{ org.admin_url }}">Admin org</a>
+                    {% endif %}
+                </header>
+                {% if org %}
+                <dl class="bo-fiche-facts">
+                    <div class="bo-fiche-fact">
+                        <dt>Nom</dt>
+                        <dd>{{ org.nom }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Slug</dt>
+                        <dd><code class="bo-pay-ref">{{ org.slug }}</code></dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>E-mail</dt>
+                        <dd>{{ org.email|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Téléphone</dt>
+                        <dd>{% if org.telephone %}<a href="tel:{{ org.telephone }}">{{ org.telephone }}</a>{% else %}—{% endif %}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Adresse</dt>
+                        <dd>{{ org.adresse|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Site web</dt>
+                        <dd>{{ org.site_web|default:"—" }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Devise</dt>
+                        <dd>{{ org.devise }}</dd>
+                    </div>
+                    <div class="bo-fiche-fact">
+                        <dt>Créée / modifiée</dt>
+                        <dd>{{ org.cree_le }} <span class="bo-muted">·</span> {{ org.modifie_le }}</dd>
+                    </div>
+                </dl>
+                {% if focus == 'user' %}
+                <p class="bo-fiche-section-foot">
+                    <a class="bo-alerte-link" href="{{ org.detail_url }}">Ouvrir la fiche en focus Organisation →</a>
+                </p>
+                {% elif compte %}
+                <p class="bo-fiche-section-foot">
+                    Compte affiché : <a class="bo-alerte-link" href="{{ compte.detail_url }}">{{ compte.email }}</a>
+                </p>
+                {% endif %}
+                {% else %}
+                <p class="bo-fiche-empty">Ce compte n’est rattaché à aucune organisation.</p>
+                {% endif %}
+            </section>
+
+            {# ── 3. Abonnement ── #}
+            <section class="bo-card bo-fiche-section" id="sec-abonnement">
+                <header class="bo-fiche-section-head">
+                    <span class="bo-fiche-num">3</span>
+                    <div>
+                        <h2>Abonnement</h2>
+                        <p>Plan, statut et échéances</p>
+                    </div>
+                    {% if abo %}
+                    <a class="bo-btn-view" href="{{ abo.admin_url }}">Admin abo</a>
+                    {% endif %}
+                </header>
+                {% if abo %}
+                {% if abo.statut_desync %}
+                <div class="bo-abo-desync" role="status">
+                    Statut stocké en base : <strong>{{ abo.statut_db_label }}</strong>
+                    · lecture effective : <strong>{{ abo.statut_label }}</strong>.
+                    Utilisez « Synchroniser le statut » pour aligner la base.
+                </div>
+                {% endif %}
+                <div class="bo-fiche-abo-banner bo-fiche-abo-banner--{{ abo.statut }}">
+                    <span class="bo-badge is-{{ abo.statut }}">{{ abo.statut_label }}</span>
+                    <strong>{{ abo.plan }}</strong>
+                    <span>{{ abo.prix }} / mois</span>
+                    {% if abo.acces_pro %}
+                    <span class="bo-tag is-ok">Accès Pro actif</span>
+                    {% else %}
+                    <span class="bo-tag is-danger">Sans accès Pro</span>
+                    {% endif %}
+                </div>
+                <dl class="bo-fiche-facts">
+                    <div class="bo-fiche-fact">
+                        <dt>Échéance</dt>
+                        <dd>{{ abo.echeance }}{% if abo.echeance_label %} <span class="bo-muted">· {{ abo.echeance_label }}</span>{% endif %}</dd>
+                    </div>
+                    {% if abo.show_essai and abo.essai_fin %}
+                    <div class="bo-fiche-fact">
+                        <dt>Essai</dt>
+                        <dd>{{ abo.essai_debut }} → {{ abo.essai_fin }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if abo.show_periode and abo.periode_fin %}
+                    <div class="bo-fiche-fact">
+                        <dt>Période payante</dt>
+                        <dd>{{ abo.periode_debut }} → {{ abo.periode_fin }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if abo.grace %}
+                    <div class="bo-fiche-fact">
+                        <dt>Fin de grâce</dt>
+                        <dd>{{ abo.grace }}</dd>
+                    </div>
+                    {% endif %}
+                    <div class="bo-fiche-fact">
+                        <dt>Renouvellement auto</dt>
+                        <dd>{% if abo.renouvellement_auto %}Oui{% else %}Non{% endif %}</dd>
+                    </div>
+                    {% if abo.fournisseur %}
+                    <div class="bo-fiche-fact">
+                        <dt>Fournisseur</dt>
+                        <dd>{{ abo.fournisseur }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if abo.id_externe %}
+                    <div class="bo-fiche-fact">
+                        <dt>ID externe</dt>
+                        <dd><code class="bo-pay-ref">{{ abo.id_externe }}</code></dd>
+                    </div>
+                    {% endif %}
+                    <div class="bo-fiche-fact">
+                        <dt>Créé / modifié</dt>
+                        <dd>{{ abo.cree_le }} · {{ abo.modifie_le }}</dd>
+                    </div>
+                </dl>
+
+                {% if org.abo_action_url %}
+                <div class="bo-abo-actions">
+                    <div class="bo-abo-actions-head">
+                        <h3>Actions admin</h3>
+                        <p>Prolonger l’accès, changer le statut ou le plan de cette organisation.</p>
+                    </div>
+                    <div class="bo-abo-actions-grid">
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="prolonger_essai">
+                            <span class="bo-abo-action-title">Prolonger l’essai</span>
+                            <label class="bo-abo-field">
+                                <span>Jours</span>
+                                <input type="number" name="jours" min="1" max="365" value="30" required>
+                            </label>
+                            <button type="submit" class="bo-abo-submit">Prolonger</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="redemarrer_essai">
+                            <span class="bo-abo-action-title">Redémarrer l’essai</span>
+                            <p class="bo-abo-action-hint">Nouvel essai de {{ abo.jours_defaut_essai }} jours à partir d’aujourd’hui.</p>
+                            <button type="submit" class="bo-abo-submit" onclick="return confirm('Redémarrer un essai complet ?');">Redémarrer</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="prolonger_periode">
+                            <span class="bo-abo-action-title">Prolonger le payant</span>
+                            <label class="bo-abo-field">
+                                <span>Jours</span>
+                                <input type="number" name="jours" min="1" max="365" value="30" required>
+                            </label>
+                            <button type="submit" class="bo-abo-submit">Prolonger</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="activer_payant">
+                            <span class="bo-abo-action-title">Activer une période payante</span>
+                            <label class="bo-abo-field">
+                                <span>Jours</span>
+                                <input type="number" name="jours" min="1" max="365" value="30" required>
+                            </label>
+                            <button type="submit" class="bo-abo-submit">Activer</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="definir_statut">
+                            <span class="bo-abo-action-title">Changer le statut</span>
+                            <label class="bo-abo-field">
+                                <span>Statut</span>
+                                <select name="statut" required>
+                                    {% for s in abo.statuts_choices %}
+                                    <option value="{{ s.code }}"{% if s.selected %} selected{% endif %}>{{ s.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="bo-abo-field">
+                                <span>Jours si dates manquantes</span>
+                                <input type="number" name="jours" min="1" max="365" value="30">
+                            </label>
+                            <button type="submit" class="bo-abo-submit">Appliquer</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="changer_plan">
+                            <span class="bo-abo-action-title">Changer le plan</span>
+                            <label class="bo-abo-field">
+                                <span>Plan</span>
+                                <select name="plan" required>
+                                    {% for p in abo.plans_choices %}
+                                    <option value="{{ p.code }}"{% if p.selected %} selected{% endif %}>{{ p.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button type="submit" class="bo-abo-submit">Changer</button>
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="renouvellement">
+                            <span class="bo-abo-action-title">Renouvellement auto</span>
+                            <p class="bo-abo-action-hint">Actuellement : {% if abo.renouvellement_auto %}activé{% else %}désactivé{% endif %}.</p>
+                            {% if abo.renouvellement_auto %}
+                            <input type="hidden" name="value" value="0">
+                            <button type="submit" class="bo-abo-submit bo-abo-submit--ghost">Désactiver</button>
+                            {% else %}
+                            <input type="hidden" name="value" value="1">
+                            <button type="submit" class="bo-abo-submit">Activer</button>
+                            {% endif %}
+                        </form>
+
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="synchroniser">
+                            <span class="bo-abo-action-title">Synchroniser le statut</span>
+                            <p class="bo-abo-action-hint">Réaligner le statut sur les dates (essai / période).</p>
+                            <button type="submit" class="bo-abo-submit bo-abo-submit--ghost">Synchroniser</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="bo-fiche-empty">{% if has_org %}Aucun abonnement rattaché.{% else %}Indisponible sans organisation.{% endif %}</p>
+                {% if has_org and org.abo_action_url %}
+                <div class="bo-abo-actions">
+                    <div class="bo-abo-actions-head">
+                        <h3>Actions admin</h3>
+                        <p>Créer / démarrer un abonnement pour cette organisation.</p>
+                    </div>
+                    <div class="bo-abo-actions-grid">
+                        <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ fiche_self_url }}">
+                            <input type="hidden" name="action" value="redemarrer_essai">
+                            <span class="bo-abo-action-title">Démarrer un essai</span>
+                            <p class="bo-abo-action-hint">Crée l’abonnement et active un essai standard.</p>
+                            <button type="submit" class="bo-abo-submit">Démarrer</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </section>
+
+            {# ── 4. Membres ── #}
+            <section class="bo-card bo-fiche-section" id="sec-membres">
+                <header class="bo-fiche-section-head">
+                    <span class="bo-fiche-num">4</span>
+                    <div>
+                        <h2>Membres{% if org %} ({{ org.n_membres }}){% endif %}</h2>
+                        <p>Personnes rattachées à l’organisation</p>
+                    </div>
+                </header>
+                {% if org and org.membres %}
+                <div class="bo-table-wrap">
+                    <table class="bo-table bo-table--detail">
+                        <thead>
+                            <tr>
+                                <th>Membre</th>
+                                <th>Rôle</th>
+                                <th>État</th>
+                                <th>Connexion</th>
+                                <th>Inscription</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in org.membres %}
+                            <tr class="{% if m.is_focus %}is-focus-row{% endif %}">
+                                <td>
+                                    <a href="{{ m.detail_url }}" class="bo-user-email">{{ m.email }}</a>
+                                    {% if m.nom %}<div class="bo-user-sub">{{ m.nom }}</div>{% endif %}
+                                    {% if m.is_focus %}<span class="bo-tag is-info">Compte en focus</span>{% endif %}
+                                </td>
+                                <td>{{ m.role }}</td>
+                                <td>
+                                    {% if m.actif %}<span class="bo-tag is-ok">Actif</span>{% else %}<span class="bo-tag is-danger">Inactif</span>{% endif %}
+                                </td>
+                                <td>{{ m.login_relatif }}</td>
+                                <td>{{ m.inscrit_relatif }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="bo-fiche-empty">{% if has_org %}Aucun membre.{% else %}Indisponible sans organisation.{% endif %}</p>
+                {% endif %}
+            </section>
+
+            {# ── 5. Paiements ── #}
+            <section class="bo-card bo-fiche-section" id="sec-paiements">
+                <header class="bo-fiche-section-head">
+                    <span class="bo-fiche-num">5</span>
+                    <div>
+                        <h2>Paiements</h2>
+                        <p>Historique d’abonnement de l’organisation</p>
+                    </div>
+                    {% if org %}
+                    <a class="bo-btn-view" href="{% url 'backoffice' %}?pay_q={{ org.slug|urlencode }}#paiements">Liste BO</a>
+                    {% endif %}
+                </header>
+                {% if org %}
+                <div class="bo-fiche-pay-stats">
+                    <div><strong>{{ org.pay_stats.n }}</strong><span>Total</span></div>
+                    <div><strong>{{ org.pay_stats.n_reussi }}</strong><span>Réussis</span></div>
+                    <div><strong>{{ org.pay_stats.n_echec }}</strong><span>Échecs</span></div>
+                    <div><strong>{{ org.pay_stats.n_attente }}</strong><span>En attente</span></div>
+                    <div class="bo-fiche-pay-stats-amount"><strong>{{ org.pay_stats.total_reussi_formate }}</strong><span>Encaissé</span></div>
+                </div>
+                {% if org.paiements_tronque %}
+                <p class="bo-fiche-section-foot">
+                    Affichage des {{ org.paiements_limite }} derniers sur {{ org.paiements_total }} —
+                    <a class="bo-alerte-link" href="{% url 'backoffice' %}?pay_q={{ org.slug|urlencode }}#paiements">voir tout dans l’onglet Paiements</a>
+                </p>
+                {% endif %}
+                {% if org.paiements %}
+                <div class="bo-table-wrap">
+                    <table class="bo-table bo-table--detail">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                                <th>Méthode</th>
+                                <th>Référence</th>
+                                <th>Période</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in org.paiements %}
+                            <tr>
+                                <td>
+                                    <span class="bo-cell-strong">{{ p.date_label }}</span>
+                                    <span class="bo-paiement-hint">{{ p.date_relatif }}</span>
+                                </td>
+                                <td>{{ p.montant }}</td>
+                                <td><span class="bo-badge is-pay-{{ p.statut }}">{{ p.statut_label }}</span></td>
+                                <td>{{ p.methode }}</td>
+                                <td>{% if p.reference %}<code class="bo-pay-ref">{{ p.reference }}</code>{% else %}<span class="bo-muted">—</span>{% endif %}</td>
+                                <td>{% if p.periode_couverte %}{{ p.periode_couverte }}{% else %}<span class="bo-muted">—</span>{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="bo-fiche-empty">Aucun paiement enregistré.</p>
+                {% endif %}
+                {% else %}
+                <p class="bo-fiche-empty">Indisponible sans organisation.</p>
+                {% endif %}
+            </section>
+
+        </div>
+    </div>
+    <script src="{% static 'js/xaliss-flash.js' %}"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-soft-3"></script>
+</body>
+</html>
