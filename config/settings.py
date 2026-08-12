@@ -228,13 +228,25 @@ BACKOFFICE_ALLOWED_EMAILS = _env_list(
     'imamelhadji.msk@gmail.com',
 )
 
-# Cache local pour le rate limiting (1 process). En multi-workers, préférer Redis.
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'xaliss-default',
-    },
-}
+# Cache : LocMem en local (1 process). Redis si REDIS_URL est défini (recommandé en prod).
+_redis_url = (os.environ.get('REDIS_URL') or '').strip()
+if _redis_url:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': _redis_url,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        },
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'xaliss-default',
+        },
+    }
 RATELIMIT_USE_CACHE = 'default'
 RATELIMIT_ENABLE = _env_bool('DJANGO_RATELIMIT_ENABLE', True)
 
