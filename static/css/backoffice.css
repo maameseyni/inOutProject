@@ -3680,6 +3680,11 @@ body.bo-body.is-bo-loading .bo-shell {
     margin-bottom: 22px;
 }
 
+.bo-card--prolonger {
+    margin-top: 22px;
+    margin-bottom: 22px;
+}
+
 .bo-broadcast-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(140px, 200px) auto;
@@ -3739,6 +3744,28 @@ body.bo-body.is-bo-loading .bo-shell {
 }
 
 .bo-broadcast-form .bo-abo-submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.bo-prolonger-form {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 4px 0 4px;
+}
+
+.bo-prolonger-form .bo-abo-field {
+    margin: 0;
+}
+
+.bo-prolonger-form .bo-abo-submit {
+    height: 42px;
+    white-space: nowrap;
+}
+
+.bo-prolonger-form .bo-abo-submit:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }
@@ -3926,6 +3953,14 @@ body.bo-body.is-bo-loading .bo-shell {
     }
 
     .bo-broadcast-form .bo-abo-submit {
+        width: 100%;
+    }
+
+    .bo-prolonger-form {
+        grid-template-columns: 1fr;
+    }
+
+    .bo-prolonger-form .bo-abo-submit {
         width: 100%;
     }
 

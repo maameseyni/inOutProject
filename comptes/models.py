@@ -455,6 +455,16 @@ class AbonnementOrganisation(models.Model):
             )
         return n
 
+    def prolonger_acces(self, jours=30, save=True):
+        """
+        Prolonge l’accès de N jours quel que soit le statut :
+        - actif / en_retard → période payante
+        - essai / prelaunch / expiré / annulé → essai
+        """
+        if self.statut in (self.STATUT_ACTIF, self.STATUT_EN_RETARD):
+            return self.prolonger_periode_payante(jours, save=save)
+        return self.prolonger_essai(jours, save=save)
+
     def activer_periode_payante(self, jours=30, save=True):
         """Démarre une nouvelle période payante active dès maintenant."""
         n = self._parse_jours_admin(jours, default=30)

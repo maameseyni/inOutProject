@@ -11,6 +11,7 @@ from comptes.backoffice.views import (
     backoffice_lancement_action,
     backoffice_org_abo_action,
     backoffice_org_detail,
+    backoffice_prolonger_tous_action,
     backoffice_user_detail,
 )
 from config.pwa_views import service_worker
@@ -24,6 +25,11 @@ urlpatterns = [
         'backoffice/notifications/broadcast/',
         backoffice_broadcast_notif_action,
         name='backoffice_broadcast_notif_action',
+    ),
+    path(
+        'backoffice/abonnements/prolonger-tous/',
+        backoffice_prolonger_tous_action,
+        name='backoffice_prolonger_tous_action',
     ),
     path('backoffice/charges/action/', backoffice_charge_action, name='backoffice_charge_action'),
     path('backoffice/charges/export.xlsx', backoffice_export_charges_excel, name='backoffice_export_charges_excel'),

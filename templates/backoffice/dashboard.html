@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-broadcast-4">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-prolonger-2">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
@@ -518,13 +518,51 @@
                     <span class="bo-tool-desc">Télécharger les utilisateurs filtrés (.xlsx)</span>
                 </a>
             </div>
+
+            <div class="bo-card bo-card--prolonger" id="bo-prolonger">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Abonnements</p>
+                        <h2>Prolonger tous les accès</h2>
+                        <p class="bo-card-subhint">
+                            Ajoute des jours à
+                            {{ prolongation_bo.nb_abonnements }} organisation{{ prolongation_bo.nb_abonnements|pluralize }},
+                            quel que soit le statut (essai, payant, prélaunch, expiré…).
+                        </p>
+                    </div>
+                </div>
+
+                <form class="bo-prolonger-form"
+                      method="post"
+                      action="{% url 'backoffice_prolonger_tous_action' %}"
+                      data-bo-confirm
+                      data-bo-confirm-title="Prolonger tous les accès"
+                      data-bo-confirm-message="Chaque organisation gagne le nombre de jours indiqué. Les comptes payants prolongent leur période ; les autres prolongent / repassent en essai."
+                      data-bo-confirm-detail="{{ prolongation_bo.nb_abonnements }} organisation{{ prolongation_bo.nb_abonnements|pluralize }}"
+                      data-bo-confirm-ok="Prolonger"
+                      data-bo-confirm-tone="warning"
+                      data-bo-confirm-phrase="{{ prolongation_bo.phrase_confirm }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'backoffice' %}#outils">
+                    <input type="hidden" name="confirmation" value="" class="js-bo-confirm-phrase-value">
+                    <label class="bo-abo-field">
+                        <span>Jours à ajouter</span>
+                        <input type="number" name="jours" min="1" max="365" step="1" required
+                               value="{{ prolongation_bo.jours_defaut }}"
+                               inputmode="numeric">
+                    </label>
+                    <button type="submit" class="bo-abo-submit" {% if prolongation_bo.nb_abonnements < 1 %}disabled{% endif %}>
+                        Prolonger tous
+                    </button>
+                </form>
+            </div>
         </section>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/kp-date.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-broadcast-4"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-prolonger-1"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {

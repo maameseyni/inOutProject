@@ -1048,7 +1048,10 @@
         } while (page <= totalPages);
 
         persistNotesLocal(accountId, { notes: allNotes });
-        if (typeof ensureNoteReminders === 'function') ensureNoteReminders();
+        // Ne pas appeler ensureNoteReminders ici : Promise.all tourne en parallèle
+        // avec loadNotificationsFromApi. Sinon les rappels s'ajoutent sur le cache
+        // local pendant le fetch, et le badge flash (ex. 5 → 11 → 6).
+        // Les rappels partent via xalissCheckScheduledNotifications après le chargement.
         await persistOfflineSnapshot();
     }
 
@@ -1087,10 +1090,8 @@
     }
 
     async function loadNotificationsFromApi() {
-        if (typeof window.xalissResetNotificationCache === 'function') {
-            window.xalissResetNotificationCache();
-        }
-
+        // Ne pas reset le cache ici : un reset + await laisse ensure*/addAppNotification
+        // réhydrater l'ancien localStorage en parallèle (flash de badge au refresh).
         const data = await apiFetch('/notifications/');
         const remote = Array.isArray(data.notifications) ? data.notifications : [];
         const ignored = Array.isArray(data.ignoredSystemIds) ? data.ignoredSystemIds : [];
@@ -1111,6 +1112,7 @@
                     body: JSON.stringify({ notifications: localList }),
                 });
                 localStorage.setItem(migrationKey, '1');
+                window._xalissNotifBootReady = true;
                 if (typeof window.xalissReplaceNotifications === 'function') {
                     window.xalissReplaceNotifications(
                         migrated.notifications || [],
@@ -1126,9 +1128,13 @@
         if (!alreadyMigrated) {
             localStorage.setItem(migrationKey, '1');
         }
+        // Autoriser le badge seulement une fois la source serveur appliquée.
+        window._xalissNotifBootReady = true;
         if (typeof window.xalissReplaceNotifications === 'function') {
             // Source de vérité = serveur pour ce user/org.
             window.xalissReplaceNotifications(remote, ignored);
+        } else if (typeof updateNotificationsBadge === 'function') {
+            updateNotificationsBadge();
         }
     }
 
@@ -1310,6 +1316,11 @@
     window.xalissLoadTransactions = loadTransactionsFromApi;
 
     window.xalissLoadAllData = async function () {
+        // Masquer le badge jusqu'à l'hydratation serveur (évite le flash au refresh).
+        window._xalissNotifBootReady = false;
+        if (typeof updateNotificationsBadge === 'function') {
+            updateNotificationsBadge();
+        }
         if (typeof showFlashMessageFromStorage === 'function') {
             showFlashMessageFromStorage();
         }
@@ -1362,6 +1373,11 @@
                 });
             }
         } catch (error) {
+            // Ne pas laisser le badge bloqué masqué si le chargement échoue.
+            window._xalissNotifBootReady = true;
+            if (typeof updateNotificationsBadge === 'function') {
+                updateNotificationsBadge();
+            }
             // Si les transactions sont déjà là, on ne bascule pas sur un cache vide.
             if (Array.isArray(transactions) && transactions.length > 0) {
                 updateDisplay();

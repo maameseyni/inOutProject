@@ -1224,6 +1224,7 @@ STATUT_ABO_AIDE = {
 
 # Phrase exacte à taper pour confirmer le lancement global (anti-erreur).
 LANCEMENT_CONFIRM_PHRASE = 'LANCER XALISS'
+PROLONGER_TOUS_CONFIRM_PHRASE = 'PROLONGER TOUS'
 
 
 def _statut_effectif(abo, maintenant=None):
@@ -2655,6 +2656,11 @@ def backoffice_dashboard(request):
                 .count()
             ),
         },
+        'prolongation_bo': {
+            'nb_abonnements': AbonnementOrganisation.objects.count(),
+            'jours_defaut': 30,
+            'phrase_confirm': PROLONGER_TOUS_CONFIRM_PHRASE,
+        },
         'charts_json': json.dumps(
             {
                 **charts_data,
@@ -3376,6 +3382,81 @@ def backoffice_broadcast_notif_action(request):
                 'message': msg_text,
                 'next': next_url,
                 'created': created,
+            }
+        )
+
+    return redirect(next_url)
+
+
+@backoffice_required
+@require_POST
+def backoffice_prolonger_tous_action(request):
+    """Prolonge l’accès de toutes les organisations, quel que soit le statut."""
+    fallback = reverse('backoffice') + '#outils'
+    next_url = _safe_bo_next(request.POST.get('next'), fallback)
+    if '#' not in next_url:
+        next_url = f'{next_url}#outils'
+
+    ok = True
+    level = 'success'
+    msg_text = ''
+    updated = 0
+    jours = 0
+
+    try:
+        phrase = (request.POST.get('confirmation') or '').strip().upper()
+        if phrase != PROLONGER_TOUS_CONFIRM_PHRASE:
+            raise ValueError(
+                f'Confirmation incorrecte. Tapez exactement « {PROLONGER_TOUS_CONFIRM_PHRASE} ».'
+            )
+
+        jours = AbonnementOrganisation._parse_jours_admin(
+            request.POST.get('jours'),
+            default=30,
+            mini=1,
+            maxi=365,
+        )
+        qs = AbonnementOrganisation.objects.select_related('organisation').order_by('pk')
+        total = qs.count()
+        if total == 0:
+            raise ValueError('Aucun abonnement à prolonger.')
+
+        for abo in qs.iterator():
+            abo.prolonger_acces(jours, save=True)
+            updated += 1
+
+        msg_text = (
+            f'Accès prolongé de {jours} jour{"s" if jours > 1 else ""} '
+            f'pour {updated} organisation{"s" if updated > 1 else ""} '
+            f'(essai ou période payante selon le statut).'
+        )
+    except ValueError as exc:
+        ok = False
+        level = 'error'
+        msg_text = str(exc)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            'backoffice_prolonger_tous_action failed'
+        )
+        ok = False
+        level = 'error'
+        msg_text = 'Impossible de prolonger les accès. Réessayez.'
+
+    if level == 'success':
+        messages.success(request, msg_text)
+    else:
+        messages.error(request, msg_text)
+
+    if _request_wants_ajax(request):
+        return JsonResponse(
+            {
+                'ok': ok,
+                'level': level,
+                'message': msg_text,
+                'next': next_url,
+                'updated': updated,
+                'jours': jours,
             }
         )
 

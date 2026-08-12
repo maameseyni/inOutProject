@@ -384,10 +384,16 @@ function getNotificationHistory() {
 
 function updateNotificationsBadge() {
     const countEl = document.getElementById('notificationsCount');
+    if (!countEl) return;
+    // Boot Django : ne pas peindre le badge depuis le localStorage (flash 5→11→6).
+    if (window.XALISS_DJANGO && window._xalissNotifBootReady !== true) {
+        countEl.hidden = true;
+        countEl.textContent = '0';
+        return;
+    }
     const unread = getNotificationHistory().filter(function (item) {
         return item && item.read !== true;
     }).length;
-    if (!countEl) return;
     if (unread > 0) {
         countEl.hidden = false;
         countEl.textContent = unread > 99 ? '99+' : String(unread);

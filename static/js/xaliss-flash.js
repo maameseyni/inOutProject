@@ -448,6 +448,7 @@
         // En mode Django, l'historique cloche vient de l'API (django-bridge).
         // Ne pas hydrater/migrer le cache local ici : risque de mélanger les comptes.
         if (global.XALISS_DJANGO) {
+            global._xalissNotifBootReady = false;
             resetNotificationCacheForAccount();
             showFlashMessageFromStorage();
             showDjangoMessages();

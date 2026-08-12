@@ -389,6 +389,15 @@
                 opts.detail = (opts.detail ? opts.detail + ' · ' : '') + '« ' + preview + ' »';
             }
         }
+        if (form.classList.contains('bo-prolonger-form')) {
+            var joursField = form.querySelector('input[name="jours"]');
+            var joursVal = joursField ? String(joursField.value || '').trim() : '';
+            if (joursVal) {
+                opts.detail = (opts.detail ? opts.detail + ' · ' : '') + '+' + joursVal + ' jour' + (joursVal === '1' ? '' : 's');
+                opts.message = 'Chaque organisation gagne ' + joursVal + ' jour' + (joursVal === '1' ? '' : 's')
+                    + '. Les comptes payants prolongent leur période ; les autres prolongent / repassent en essai.';
+            }
+        }
         return opts;
     }
 
