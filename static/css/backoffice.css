@@ -3421,11 +3421,15 @@ body.bo-body.is-bo-loading .bo-shell {
 
 .bo-confirm-phrase {
     margin: 16px 0 0;
-    display: grid;
+    display: none;
     gap: 7px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
+}
+
+.bo-confirm-phrase:not([hidden]) {
+    display: grid;
 }
 
 .bo-confirm-phrase-label {
@@ -3672,6 +3676,122 @@ body.bo-body.is-bo-loading .bo-shell {
     margin-bottom: 22px;
 }
 
+.bo-card--broadcast {
+    margin-bottom: 22px;
+}
+
+.bo-broadcast-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 200px) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 4px 0 4px;
+}
+
+.bo-broadcast-form .bo-abo-field {
+    margin: 0;
+}
+
+.bo-broadcast-form .bo-broadcast-message {
+    grid-column: 1 / -1;
+}
+
+.bo-broadcast-form textarea {
+    width: 100%;
+    min-height: 88px;
+    resize: vertical;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1.5px solid rgba(67, 39, 125, 0.18);
+    background: #fff;
+    font-family: Outfit, system-ui, sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: #2a2140;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bo-broadcast-form textarea:focus {
+    border-color: rgba(67, 39, 125, 0.45);
+    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1);
+}
+
+.bo-broadcast-preview {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    color: #7a7190;
+    line-height: 1.35;
+}
+
+.bo-broadcast-preview strong {
+    color: #43277d;
+    font-weight: 700;
+}
+
+.bo-broadcast-form .bo-abo-submit {
+    height: 42px;
+    white-space: nowrap;
+}
+
+.bo-broadcast-form .bo-abo-submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-wrap {
+    width: 100%;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-trigger {
+    min-height: 42px;
+    height: 42px;
+    padding: 0 12px;
+    border-width: 1.5px;
+    border-color: rgba(67, 39, 125, 0.18);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #2a2140;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-trigger:hover {
+    border-color: rgba(67, 39, 125, 0.32);
+    box-shadow: none;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-wrap.is-open .kp-select-trigger,
+.bo-broadcast-form .bo-broadcast-type .kp-select-trigger:focus {
+    border-color: rgba(67, 39, 125, 0.45);
+    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1);
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-chevron {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-menu {
+    border-radius: 12px;
+    border: 1px solid rgba(67, 39, 125, 0.14);
+    box-shadow: 0 14px 32px rgba(28, 18, 52, 0.14);
+    padding: 6px;
+}
+
+.bo-broadcast-form .bo-broadcast-type .kp-select-option {
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-weight: 560;
+}
+
 .bo-acces-form {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
@@ -3799,6 +3919,14 @@ body.bo-body.is-bo-loading .bo-shell {
 @media (max-width: 800px) {
     .bo-acces-form {
         grid-template-columns: 1fr;
+    }
+
+    .bo-broadcast-form {
+        grid-template-columns: 1fr;
+    }
+
+    .bo-broadcast-form .bo-abo-submit {
+        width: 100%;
     }
 
     .bo-acces-row {

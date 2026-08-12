@@ -380,6 +380,15 @@
                 opts.detail = String(emailField.value || '').trim();
             }
         }
+        // Aperçu message broadcast
+        if (form.classList.contains('bo-broadcast-form')) {
+            var msgField = form.querySelector('textarea[name="message"]');
+            var preview = msgField ? String(msgField.value || '').trim() : '';
+            if (preview) {
+                if (preview.length > 120) preview = preview.slice(0, 117) + '…';
+                opts.detail = (opts.detail ? opts.detail + ' · ' : '') + '« ' + preview + ' »';
+            }
+        }
         return opts;
     }
 

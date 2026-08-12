@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-lancement-5">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-broadcast-4">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
@@ -344,6 +344,51 @@
                 </div>
             </div>
 
+            <div class="bo-card bo-card--broadcast" id="bo-broadcast">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Communication</p>
+                        <h2>Notification à tous</h2>
+                        <p class="bo-card-subhint">
+                            Envoie une notification in-app à
+                            {{ notif_broadcast.nb_destinataires }} utilisateur{{ notif_broadcast.nb_destinataires|pluralize }}
+                            actif{{ notif_broadcast.nb_destinataires|pluralize }}.
+                            Signée automatiquement « Équipe Xaliss », séparée de votre texte.
+                        </p>
+                    </div>
+                </div>
+
+                <form class="bo-broadcast-form"
+                      method="post"
+                      action="{% url 'backoffice_broadcast_notif_action' %}"
+                      data-bo-confirm
+                      data-bo-confirm-title="Envoyer la notification"
+                      data-bo-confirm-message="Chaque utilisateur verra « Équipe Xaliss » puis votre message, dans sa cloche de notification."
+                      data-bo-confirm-detail="{{ notif_broadcast.nb_destinataires }} destinataire{{ notif_broadcast.nb_destinataires|pluralize }}"
+                      data-bo-confirm-ok="Envoyer"
+                      data-bo-confirm-tone="warning">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'backoffice' %}#outils">
+                    <label class="bo-abo-field bo-broadcast-message">
+                        <span>Message</span>
+                        <textarea name="message" required maxlength="2000" rows="3" placeholder="Ex. Nouvelle fonctionnalité disponible, maintenance prévue…"></textarea>
+                        <span class="bo-broadcast-preview">Aperçu : <strong>Équipe Xaliss</strong> + votre message</span>
+                    </label>
+                    <label class="bo-abo-field bo-broadcast-type">
+                        <span>Type</span>
+                        <select name="type" class="kp-select-native" aria-label="Type de notification">
+                            <option value="info" selected>Info</option>
+                            <option value="success">Succès</option>
+                            <option value="warning">Avertissement</option>
+                            <option value="error">Erreur / alerte</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="bo-abo-submit" {% if notif_broadcast.nb_destinataires < 1 %}disabled{% endif %}>
+                        Envoyer à tous
+                    </button>
+                </form>
+            </div>
+
             <div class="bo-tools-grid">
                 {% if lancement_bo.disponible %}
                 <form method="post"
@@ -479,7 +524,7 @@
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/kp-date.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-lancement-2"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-broadcast-4"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {

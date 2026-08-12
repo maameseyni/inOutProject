@@ -2644,6 +2644,17 @@ def backoffice_dashboard(request):
             'jours_essai': AbonnementOrganisation.duree_essai().days,
             'phrase_confirm': LANCEMENT_CONFIRM_PHRASE,
         },
+        'notif_broadcast': {
+            'nb_destinataires': (
+                MembreOrganisation.objects.filter(
+                    actif=True,
+                    utilisateur__is_active=True,
+                )
+                .values('utilisateur_id')
+                .distinct()
+                .count()
+            ),
+        },
         'charts_json': json.dumps(
             {
                 **charts_data,
@@ -3296,6 +3307,75 @@ def backoffice_lancement_action(request):
                 'message': msg_text,
                 'next': next_url,
                 'updated': updated,
+            }
+        )
+
+    return redirect(next_url)
+
+
+@backoffice_required
+@require_POST
+def backoffice_broadcast_notif_action(request):
+    """Envoie une notification in-app à tous les utilisateurs actifs de Xaliss."""
+    from finances.services.notifications import (
+        NotificationServiceError,
+        broadcast_notification_to_all_users,
+    )
+
+    fallback = reverse('backoffice') + '#outils'
+    next_url = _safe_bo_next(request.POST.get('next'), fallback)
+    if '#' not in next_url:
+        next_url = f'{next_url}#outils'
+
+    ok = True
+    level = 'success'
+    msg_text = ''
+    created = 0
+
+    try:
+        message = (request.POST.get('message') or '').strip()
+        type_notif = (request.POST.get('type') or 'info').strip().lower()
+        result = broadcast_notification_to_all_users(
+            message=message,
+            type_notif=type_notif,
+        )
+        created = int(result.get('created') or 0)
+        if created == 0:
+            raise ValueError('Aucun destinataire actif trouvé.')
+        msg_text = (
+            f'Notification envoyée à {created} utilisateur'
+            f'{"s" if created > 1 else ""}.'
+        )
+    except NotificationServiceError as exc:
+        ok = False
+        level = 'error'
+        msg_text = exc.message
+    except ValueError as exc:
+        ok = False
+        level = 'error'
+        msg_text = str(exc)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            'backoffice_broadcast_notif_action failed'
+        )
+        ok = False
+        level = 'error'
+        msg_text = 'Impossible d’envoyer la notification. Réessayez.'
+
+    if level == 'success':
+        messages.success(request, msg_text)
+    else:
+        messages.error(request, msg_text)
+
+    if _request_wants_ajax(request):
+        return JsonResponse(
+            {
+                'ok': ok,
+                'level': level,
+                'message': msg_text,
+                'next': next_url,
+                'created': created,
             }
         )
 

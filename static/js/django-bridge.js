@@ -1132,6 +1132,108 @@
         }
     }
 
+    let knownNotifIds = null;
+    let notifPollTimer = null;
+    let notifPollInFlight = false;
+    const NOTIF_POLL_MS = 30000;
+
+    function seedKnownNotificationIds() {
+        const list = typeof window.xalissGetNotifications === 'function'
+            ? window.xalissGetNotifications()
+            : [];
+        knownNotifIds = new Set(
+            (Array.isArray(list) ? list : [])
+                .map(function (n) { return n && n.id; })
+                .filter(Boolean)
+        );
+    }
+
+    async function pollNotificationsFromApi(options) {
+        options = options || {};
+        if (notifPollInFlight) return;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+        if (typeof document !== 'undefined' && document.hidden && !options.force) return;
+        notifPollInFlight = true;
+        try {
+            const data = await apiFetch('/notifications/');
+            const remote = Array.isArray(data.notifications) ? data.notifications : [];
+            const ignored = Array.isArray(data.ignoredSystemIds) ? data.ignoredSystemIds : [];
+
+            const remoteIds = new Set(
+                remote.map(function (n) { return n && n.id; }).filter(Boolean)
+            );
+            let newcomers = [];
+            if (knownNotifIds !== null) {
+                newcomers = remote.filter(function (n) {
+                    return n && n.id && !knownNotifIds.has(n.id);
+                });
+            }
+            knownNotifIds = remoteIds;
+
+            if (typeof window.xalissReplaceNotifications === 'function') {
+                window.xalissReplaceNotifications(remote, ignored);
+            }
+
+            if (!newcomers.length) return;
+
+            newcomers.sort(function (a, b) {
+                return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+            });
+
+            if (typeof window.xalissPlayNotificationSound === 'function') {
+                window.xalissPlayNotificationSound();
+            }
+            window.dispatchEvent(new CustomEvent('xaliss:notification-alert'));
+
+            function formatIncomingToast(item) {
+                var msg = item && item.message ? String(item.message) : '';
+                var sid = item && item.systemId ? String(item.systemId) : '';
+                if (sid.indexOf('bo_bcast_') === 0) {
+                    return 'Équipe Xaliss — ' + msg;
+                }
+                return msg;
+            }
+
+            if (newcomers.length === 1) {
+                showNotification(formatIncomingToast(newcomers[0]), newcomers[0].type || 'info', {
+                    transient: true,
+                    duration: 5200,
+                });
+            } else {
+                var officialCount = newcomers.filter(function (n) {
+                    return n && n.systemId && String(n.systemId).indexOf('bo_bcast_') === 0;
+                }).length;
+                showNotification(
+                    officialCount === newcomers.length
+                        ? newcomers.length + ' annonces de l’équipe Xaliss — ouvrez la cloche pour les voir.'
+                        : newcomers.length + ' nouvelles notifications — ouvrez la cloche pour les voir.',
+                    'info',
+                    { transient: true, duration: 5600 }
+                );
+            }
+        } catch (e) {
+            /* hors ligne / session : ignore */
+        } finally {
+            notifPollInFlight = false;
+        }
+    }
+
+    function startNotificationsPolling() {
+        if (notifPollTimer) return;
+        seedKnownNotificationIds();
+        notifPollTimer = setInterval(function () {
+            pollNotificationsFromApi();
+        }, NOTIF_POLL_MS);
+        if (typeof document !== 'undefined' && !window._xalissNotifVisibilityBound) {
+            window._xalissNotifVisibilityBound = true;
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    pollNotificationsFromApi({ force: true });
+                }
+            });
+        }
+    }
+
     let notifRemoteQueue = Promise.resolve();
     function enqueueNotifRemote(task) {
         notifRemoteQueue = notifRemoteQueue.then(task).catch(function () { /* ignore */ });
@@ -1229,6 +1331,8 @@
                 loadCategoriesFromApi(),
                 loadNotificationsFromApi()
             ]);
+            seedKnownNotificationIds();
+            startNotificationsPolling();
             const syncData = await apiFetch('/sync/');
             if (syncData && syncData.syncSeq !== undefined) {
                 lastSyncSeq = syncData.syncSeq;

@@ -3,6 +3,7 @@ from django.urls import include, path
 
 from comptes.backoffice.views import (
     backoffice_acces_action,
+    backoffice_broadcast_notif_action,
     backoffice_charge_action,
     backoffice_dashboard,
     backoffice_export_charges_excel,
@@ -19,6 +20,11 @@ urlpatterns = [
     path('backoffice/', backoffice_dashboard, name='backoffice'),
     path('backoffice/acces/action/', backoffice_acces_action, name='backoffice_acces_action'),
     path('backoffice/lancement/', backoffice_lancement_action, name='backoffice_lancement_action'),
+    path(
+        'backoffice/notifications/broadcast/',
+        backoffice_broadcast_notif_action,
+        name='backoffice_broadcast_notif_action',
+    ),
     path('backoffice/charges/action/', backoffice_charge_action, name='backoffice_charge_action'),
     path('backoffice/charges/export.xlsx', backoffice_export_charges_excel, name='backoffice_export_charges_excel'),
     path('backoffice/export.xlsx', backoffice_export_excel, name='backoffice_export_excel'),

@@ -397,6 +397,11 @@ function updateNotificationsBadge() {
     }
 }
 
+function isOfficialXalissBroadcast(item) {
+    const sid = item && item.systemId ? String(item.systemId) : '';
+    return sid.indexOf('bo_bcast_') === 0;
+}
+
 function renderNotificationsModal() {
     const listEl = document.getElementById('notificationsList');
     const emptyEl = document.getElementById('notificationsEmpty');
@@ -421,15 +426,27 @@ function renderNotificationsModal() {
     listEl.innerHTML = notifications.map(function (item) {
         const type = item && item.type ? item.type : 'info';
         const isUnread = !(item && item.read === true);
+        const isOfficial = isOfficialXalissBroadcast(item);
+        const fromHtml = isOfficial
+            ? '<p class="notification-item-from">Équipe Xaliss</p>'
+            : '';
         return '<div class="notification-item notification-item--' + escapeHtml(type)
-            + (isUnread ? ' notification-item--unread' : ' notification-item--read') + '">' +
+            + (isUnread ? ' notification-item--unread' : ' notification-item--read')
+            + (isOfficial ? ' notification-item--official' : '') + '">' +
             '<div class="notification-item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' + getNotificationIcon(type) + '</svg></div>' +
             '<div class="notification-item-main">' +
             '<div class="notification-item-topline">' +
+            '<div class="notification-item-copy">' +
+            fromHtml +
             '<div class="notification-item-message">' + escapeHtml(item.message || '') + '</div>' +
+            '</div>' +
             '<span class="notification-item-badge">' + escapeHtml(getNotificationTypeLabel(type)) + '</span>' +
             '</div>' +
-            '<div class="notification-item-meta">' + escapeHtml(getNotificationTypeLabel(type)) + (item.createdAt ? ' · ' + escapeHtml(formatNotificationDate(item.createdAt)) : '') + '</div>' +
+            '<div class="notification-item-meta">'
+            + (isOfficial ? 'Annonce officielle · ' : '')
+            + escapeHtml(getNotificationTypeLabel(type))
+            + (item.createdAt ? ' · ' + escapeHtml(formatNotificationDate(item.createdAt)) : '')
+            + '</div>' +
             '</div>' +
             '</div>';
     }).join('');

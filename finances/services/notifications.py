@@ -197,3 +197,73 @@ def migrate_notifications(org, user, items: list) -> dict:
         except NotificationServiceError:
             continue
     return list_notifications(org, user) | {'migrated': created}
+
+
+def broadcast_notification_to_all_users(*, message: str, type_notif: str = 'info') -> dict:
+    """
+    Crée une notification in-app pour chaque utilisateur actif membre d’une org.
+    Une notif par user (org « principale » : propriétaire > admin > membre).
+    """
+    from django.db.models import Case, IntegerField, When
+
+    from comptes.models import MembreOrganisation
+
+    text = str(message or '').strip()
+    if not text:
+        raise NotificationServiceError('Le message est obligatoire.')
+    text = text[:2000]
+
+    kind = str(type_notif or Notification.TYPE_INFO).strip().lower()
+    if kind not in ALLOWED_TYPES:
+        kind = Notification.TYPE_INFO
+
+    membres = (
+        MembreOrganisation.objects.filter(
+            actif=True,
+            utilisateur__is_active=True,
+        )
+        .select_related('organisation', 'utilisateur')
+        .order_by(
+            'utilisateur_id',
+            Case(
+                When(role=MembreOrganisation.ROLE_PROPRIETAIRE, then=0),
+                When(role=MembreOrganisation.ROLE_ADMIN, then=1),
+                default=2,
+                output_field=IntegerField(),
+            ),
+            'pk',
+        )
+    )
+
+    targets = []
+    seen_users = set()
+    for membre in membres.iterator(chunk_size=500):
+        uid = membre.utilisateur_id
+        if uid in seen_users:
+            continue
+        seen_users.add(uid)
+        targets.append((membre.organisation_id, uid))
+
+    if not targets:
+        return {'created': 0, 'destinataires': 0}
+
+    now = timezone.now()
+    batch_id = f'bo_bcast_{format(int(time.time() * 1000), "x")}'
+    rows = [
+        Notification(
+            id=f'{batch_id}_{uid}_{_generate_id()[-8:]}',
+            organisation_id=org_id,
+            utilisateur_id=uid,
+            message=text,
+            type_notif=kind,
+            system_id=f'{batch_id}_{uid}',
+            lu=False,
+            cree_le=now,
+        )
+        for org_id, uid in targets
+    ]
+
+    with db_transaction.atomic():
+        Notification.objects.bulk_create(rows, batch_size=200)
+
+    return {'created': len(rows), 'destinataires': len(targets), 'batch_id': batch_id}
