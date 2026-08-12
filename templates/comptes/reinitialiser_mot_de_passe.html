@@ -1,15 +1,24 @@
 {% extends 'comptes/base_auth.html' %}
 {% block title %}Nouveau mot de passe — Xaliss{% endblock %}
+{% block auth_card_class %} auth-card--narrow auth-card--reset{% endblock %}
 {% block content %}
-<div class="auth-header">
-    <div class="auth-avatar" aria-hidden="true">
+<a class="auth-back-link" href="{% url 'connexion' %}">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Connexion
+</a>
+
+<div class="auth-header auth-header--compact">
+    <div class="auth-avatar auth-avatar--lock" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/>
             <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
     </div>
+    <p class="auth-kicker">Sécurité</p>
     <h1>Nouveau mot de passe</h1>
-    <p class="auth-subtitle">Choisissez un mot de passe sécurisé pour votre compte.</p>
+    <p class="auth-subtitle">Choisissez un mot de passe solide pour votre compte.</p>
 </div>
 
 {% if validlink %}
@@ -17,7 +26,7 @@
 <div class="non-field-errors">{{ form.non_field_errors }}</div>
 {% endif %}
 
-<form method="post" novalidate class="auth-form-stack">
+<form method="post" novalidate class="auth-form-stack auth-form-stack--narrow">
     {% csrf_token %}
     {% with icon='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' %}
     {% include 'comptes/partials/auth_field.html' with field=form.new_password1 icon=icon password=True required=True %}
@@ -26,7 +35,7 @@
     <button type="submit" class="auth-btn">Enregistrer</button>
 </form>
 {% else %}
-<div class="non-field-errors">Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien.</div>
+<div class="non-field-errors">Ce lien est invalide ou a expiré. Demandez-en un nouveau.</div>
 <a class="auth-btn" href="{% url 'mot_de_passe_oublie' %}">Demander un nouveau lien</a>
 {% endif %}
 {% endblock %}

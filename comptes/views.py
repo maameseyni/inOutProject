@@ -470,6 +470,9 @@ class MotDePasseOublieView(PasswordResetView):
         email = form.cleaned_data['email']
         utilisateurs = list(form.get_users(email))
 
+        # Afficher l’adresse saisie sur la page suivante (sans confirmer l’existence du compte).
+        self.request.session['password_reset_email'] = email
+
         if utilisateurs and quota_mot_de_passe_atteint(email):
             messages.info(
                 self.request,
@@ -495,6 +498,11 @@ class MotDePasseOublieView(PasswordResetView):
 
 class MotDePasseOublieEnvoyeView(PasswordResetDoneView):
     template_name = 'comptes/mot_de_passe_oublie_envoye.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['email'] = self.request.session.get('password_reset_email', '')
+        return context
 
 
 class ReinitialiserMotDePasseView(PasswordResetConfirmView):

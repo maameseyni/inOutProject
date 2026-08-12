@@ -23,7 +23,12 @@ from django.views.decorators.http import require_POST
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from .auth import backoffice_required, emails_backoffice_autorises
+from .auth import (
+    backoffice_required,
+    emails_backoffice_autorises,
+    emails_backoffice_env,
+    invalider_cache_acces_backoffice,
+)
 from .partials import partial_kind as _partial_kind
 from .partials import request_wants_ajax as _request_wants_ajax
 
@@ -31,6 +36,7 @@ from .partials import request_wants_ajax as _request_wants_ajax
 _emails_backoffice_autorises = emails_backoffice_autorises
 
 from ..models import (
+    AccesBackoffice,
     AbonnementOrganisation,
     ChargePlateforme,
     MembreOrganisation,
@@ -98,6 +104,76 @@ def _parse_iso_date(value):
         return date_cls(y, m, d)
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def _liste_acces_backoffice(viewer=None):
+    """Liste unifiée des opérateurs (.env + DB) pour l’UI Outils."""
+    from django.db.models.functions import Lower as LowerFn
+
+    env_set = emails_backoffice_env()
+    db_rows = {
+        str(row.email).strip().lower(): row
+        for row in AccesBackoffice.objects.all()
+    }
+    viewer_email = ''
+    if viewer is not None and getattr(viewer, 'is_authenticated', False):
+        viewer_email = (
+            getattr(viewer, 'email', None) or viewer.get_username() or ''
+        ).strip().lower()
+
+    all_emails = sorted(set(env_set) | set(db_rows.keys()))
+
+    users_by_email = {}
+    if all_emails:
+        UserModel = get_user_model()
+        for u in UserModel.objects.annotate(email_l=LowerFn('email')).filter(
+            email_l__in=all_emails
+        ).only('id', 'email', 'first_name', 'last_name', 'username'):
+            users_by_email[(u.email or '').strip().lower()] = u
+
+    lignes = []
+    for email in all_emails:
+        row = db_rows.get(email)
+        via_env = email in env_set
+        via_db = bool(row and row.actif)
+        if not via_env and not row:
+            continue
+        user = users_by_email.get(email)
+        can_revoke = via_db and email != viewer_email
+        can_delete = bool(row) and email != viewer_email
+        can_reactivate = bool(row) and not row.actif and email != viewer_email
+        if via_env and via_db:
+            source_label = 'Env + backoffice'
+        elif via_env:
+            source_label = 'Fichier .env'
+        elif via_db:
+            source_label = 'Backoffice'
+        else:
+            source_label = 'Révoqué'
+        lignes.append({
+            'email': email,
+            'via_env': via_env,
+            'via_db': via_db,
+            'actif': via_env or via_db,
+            'db_id': row.pk if row else None,
+            'note': (row.note if row else '') or '',
+            'ajoute_le': row.cree_le if row else None,
+            'user_id': user.pk if user else None,
+            'user_label': (
+                (user.get_full_name() or user.username) if user else ''
+            ),
+            'is_self': email == viewer_email,
+            'can_revoke': can_revoke,
+            'can_delete': can_delete,
+            'can_reactivate': can_reactivate,
+            'source_label': source_label,
+        })
+    lignes.sort(key=lambda x: (0 if x['actif'] else 1, x['email']))
+    return {
+        'lignes': lignes,
+        'n_actifs': sum(1 for x in lignes if x['actif']),
+        'viewer_email': viewer_email,
+    }
 
 
 def _local_day_start(d):
@@ -2554,6 +2630,7 @@ def backoffice_dashboard(request):
         'charts_granularite': charts_data.get('granularite') or 'month',
         'stats_totaux': charts_data.get('totaux') or {},
         'geo_utilisateurs': geo_data,
+        'acces_backoffice': _liste_acces_backoffice(request.user),
         'charts_json': json.dumps(
             {
                 **charts_data,
@@ -3295,6 +3372,153 @@ def backoffice_charge_action(request):
         ok = False
         level = 'error'
         msg_text = 'Impossible d’appliquer l’action sur la charge.'
+
+    if level == 'success':
+        messages.success(request, msg_text)
+    else:
+        messages.error(request, msg_text)
+
+    if _request_wants_ajax(request):
+        return JsonResponse(
+            {
+                'ok': ok,
+                'level': level,
+                'message': msg_text,
+                'next': next_url,
+                'action': action,
+            }
+        )
+
+    return redirect(next_url)
+
+
+@backoffice_required
+@require_POST
+def backoffice_acces_action(request):
+    """Ajouter ou révoquer un e-mail autorisé au backoffice (hors .env)."""
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    fallback = reverse('backoffice') + '#outils'
+    next_url = _safe_bo_next(request.POST.get('next'), fallback)
+
+    action = (request.POST.get('action') or '').strip().lower()
+    email_raw = (request.POST.get('email') or '').strip().lower()
+    note = (request.POST.get('note') or '').strip()[:200]
+    ok = True
+    level = 'success'
+    msg_text = ''
+
+    viewer_email = (
+        getattr(request.user, 'email', None) or request.user.get_username() or ''
+    ).strip().lower()
+
+    try:
+        if action == 'add':
+            if not email_raw:
+                raise ValueError('Indiquez une adresse e-mail.')
+            try:
+                validate_email(email_raw)
+            except ValidationError as exc:
+                raise ValueError('Adresse e-mail invalide.') from exc
+
+            row, created = AccesBackoffice.objects.get_or_create(
+                email=email_raw,
+                defaults={
+                    'actif': True,
+                    'note': note,
+                    'ajoute_par': request.user if request.user.is_authenticated else None,
+                },
+            )
+            if not created:
+                row.actif = True
+                if note:
+                    row.note = note
+                if row.ajoute_par_id is None and request.user.is_authenticated:
+                    row.ajoute_par = request.user
+                row.save()
+                msg_text = f'Accès backoffice réactivé pour {email_raw}.'
+            else:
+                msg_text = f'Accès backoffice accordé à {email_raw}.'
+
+            UserModel = get_user_model()
+            if not UserModel.objects.filter(email__iexact=email_raw).exists():
+                msg_text += (
+                    ' Aucun compte Xaliss avec cet e-mail pour l’instant '
+                    '— l’accès s’appliquera dès la première connexion.'
+                )
+            invalider_cache_acces_backoffice()
+
+        elif action == 'revoke':
+            if not email_raw:
+                raise ValueError('E-mail manquant.')
+            if email_raw == viewer_email:
+                raise ValueError('Vous ne pouvez pas révoquer votre propre accès.')
+
+            row = AccesBackoffice.objects.filter(email__iexact=email_raw).first()
+            if not row or not row.actif:
+                raise ValueError('Cet accès n’est pas actif dans le backoffice.')
+
+            row.actif = False
+            row.save(update_fields=['actif', 'modifie_le'])
+            invalider_cache_acces_backoffice()
+
+            if email_raw in emails_backoffice_env():
+                msg_text = (
+                    f'Accès base révoqué pour {email_raw}, mais l’e-mail reste '
+                    f'autorisé via BACKOFFICE_ALLOWED_EMAILS (.env).'
+                )
+            else:
+                msg_text = f'Accès backoffice révoqué pour {email_raw}.'
+
+        elif action == 'reactivate':
+            if not email_raw:
+                raise ValueError('E-mail manquant.')
+            row = AccesBackoffice.objects.filter(email__iexact=email_raw).first()
+            if not row:
+                raise ValueError('Aucun enregistrement à réactiver.')
+            row.actif = True
+            row.save(update_fields=['actif', 'modifie_le'])
+            invalider_cache_acces_backoffice()
+            msg_text = f'Accès backoffice réactivé pour {email_raw}.'
+
+        elif action == 'delete':
+            if not email_raw:
+                raise ValueError('E-mail manquant.')
+            if email_raw == viewer_email:
+                raise ValueError('Vous ne pouvez pas supprimer votre propre accès.')
+
+            row = AccesBackoffice.objects.filter(email__iexact=email_raw).first()
+            if not row:
+                raise ValueError('Aucun enregistrement backoffice à supprimer.')
+
+            row.delete()
+            invalider_cache_acces_backoffice()
+
+            if email_raw in emails_backoffice_env():
+                msg_text = (
+                    f'Entrée supprimée pour {email_raw}. '
+                    f'L’e-mail reste autorisé via le .env.'
+                )
+            else:
+                msg_text = f'Accès backoffice supprimé définitivement : {email_raw}.'
+        else:
+            ok = False
+            level = 'error'
+            msg_text = 'Action accès inconnue.'
+    except ValueError as exc:
+        ok = False
+        level = 'error'
+        msg_text = str(exc)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            'backoffice_acces_action failed action=%s',
+            action,
+        )
+        ok = False
+        level = 'error'
+        msg_text = 'Impossible de modifier les accès. Réessayez.'
 
     if level == 'success':
         messages.success(request, msg_text)

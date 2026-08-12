@@ -87,8 +87,8 @@ class ConnexionForm(AuthenticationForm):
 class ReinitialiserMotDePasseForm(SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['new_password1'].label = 'Nouveau mot de passe'
-        self.fields['new_password2'].label = 'Confirmer le mot de passe'
+        self.fields['new_password1'].label = 'Mot de passe'
+        self.fields['new_password2'].label = 'Confirmation'
         for field in self.fields.values():
             widget = field.widget
             css = widget.attrs.get('class', '')

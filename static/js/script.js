@@ -43,9 +43,17 @@ function companyProfileLocalStorageKey(accountId) {
     return 'kaayprint_company_profile_' + accountId;
 }
 
-/** Identifiant « compte » côté app : aujourd’hui le login session ; plus tard remplaçable par Firebase Auth uid. */
+/** Identifiant « compte » côté app : org Django si dispo, sinon login legacy. */
 function getCurrentAccountId() {
+    if (window.XALISS_DJANGO && window.XALISS_DJANGO.orgSlug) {
+        return sanitizeFirestoreDocId(window.XALISS_DJANGO.orgSlug);
+    }
     return sanitizeFirestoreDocId(sessionStorage.getItem('kaayprint_username') || 'default');
+}
+
+function transactionsLocalStorageKey(accountId) {
+    const id = sanitizeFirestoreDocId(accountId || getCurrentAccountId());
+    return 'kaayprint_transactions_' + id;
 }
 
 function sanitizeFirestoreDocId(raw) {
@@ -1028,13 +1036,15 @@ const CLIENT_PROVENANCE_OPTIONS = [
     { value: 'google', label: 'Google / Recherche' },
     { value: 'salon_evenement', label: 'Salon / Événement' },
     { value: 'bouche_a_oreille', label: 'Bouche-à-oreille' },
-    { value: 'neant', label: 'Non applicable' },
+    { value: 'prestataire', label: 'Prestataire' },
     { value: 'autre', label: 'Autre' }
 ];
 
 function normalizeClientProvenance(value) {
     const v = String(value || '').trim();
-    if (v === 'collaborateur' || v === 'prestataire') return '';
+    // Legacy : « neant » / « Non applicable » → prestataire
+    if (v === 'neant') return 'prestataire';
+    if (v === 'collaborateur') return '';
     return v;
 }
 
@@ -1587,19 +1597,43 @@ function normalizeClientEntry(c) {
     };
 }
 
+function clientProvenanceDedupeRank(client) {
+    const code = normalizeClientProvenance(client && client.provenance);
+    if (code && code !== 'prestataire') return 0;
+    if (code === 'prestataire') return 1;
+    return 2;
+}
+
 function normalizeClientListPayload(obj) {
     const o = obj && typeof obj === 'object' ? obj : {};
     const raw = Array.isArray(o.clients) ? o.clients : (Array.isArray(o) ? o : []);
-    const seen = new Set();
-    const clients = [];
+    const byName = {};
     raw.forEach(function (item) {
         const n = normalizeClientEntry(item);
         if (!n) return;
         const key = n.name.toLowerCase();
-        if (seen.has(key)) return;
-        seen.add(key);
-        clients.push(n);
+        const prev = byName[key];
+        if (!prev) {
+            byName[key] = n;
+            return;
+        }
+        // En cas de doublon de nom : garder la vraie provenance d'acquisition
+        // (pas « prestataire » / vide), puis la fiche la plus ancienne (évite qu'un
+        // reimport récent écrase WhatsApp par Instagram/Facebook).
+        const rankNew = clientProvenanceDedupeRank(n);
+        const rankPrev = clientProvenanceDedupeRank(prev);
+        if (rankNew < rankPrev) {
+            byName[key] = n;
+            return;
+        }
+        if (rankNew > rankPrev) return;
+        const tNew = n.createdAt ? new Date(n.createdAt).getTime() : 0;
+        const tPrev = prev.createdAt ? new Date(prev.createdAt).getTime() : 0;
+        if (tNew && tPrev && tNew < tPrev) {
+            byName[key] = n;
+        }
     });
+    const clients = Object.keys(byName).map(function (k) { return byName[k]; });
     clients.sort(compareClientsNewestFirst);
     return { clients: clients };
 }
@@ -5160,7 +5194,7 @@ function patchTransactionOnFirestore(id, patch) {
 
 function persistTransactionsCache() {
     if (!useFirebase || !db) {
-        localStorage.setItem('kaayprint_transactions', JSON.stringify(transactions));
+        localStorage.setItem(transactionsLocalStorageKey(), JSON.stringify(transactions));
         updateDisplay();
     }
 }
@@ -5282,7 +5316,11 @@ function saveClientProfileReminderIds(ids) {
 }
 
 function isClientProfileIncomplete(client) {
-    return !client || !client.provenance || client.provenance === 'autre';
+    // « Autre » et « Prestataire » sont des choix valides — pas à compléter.
+    // Seule l'absence de provenance compte comme incomplet.
+    if (!client) return true;
+    const code = normalizeClientProvenance(client.provenance);
+    return !code;
 }
 
 function pruneClientProfileReminders() {
@@ -5809,8 +5847,12 @@ function clientMatchesProvenanceFilter(client, filterValue) {
     if (filterValue === '__incomplete__') {
         return loadClientProfileReminderIds().indexOf(client.id) !== -1;
     }
-    if (filterValue === '__none__') return !client.provenance;
-    return normalizeClientProvenance(client.provenance) === filterValue;
+    const code = normalizeClientProvenance(client && client.provenance);
+    // Aligné sur le graphe : « Autres » = vide + option « autre »
+    if (filterValue === '__autres__' || filterValue === '__none__') {
+        return !code || code === 'autre';
+    }
+    return code === filterValue;
 }
 
 function getFilteredClientsForModal() {
@@ -5831,10 +5873,12 @@ function initClientsModalProvenanceFilter() {
         optIncomplete.textContent = 'Contacts à compléter';
         sel.appendChild(optIncomplete);
         const optNone = document.createElement('option');
-        optNone.value = '__none__';
-        optNone.textContent = 'Sans provenance';
+        optNone.value = '__autres__';
+        optNone.textContent = 'Autres';
         sel.appendChild(optNone);
         CLIENT_PROVENANCE_OPTIONS.forEach(function (o) {
+            // « Autre » est déjà couvert par le filtre « Autres » ci-dessus.
+            if (o.value === 'autre') return;
             const opt = document.createElement('option');
             opt.value = o.value;
             opt.textContent = o.label;
@@ -6559,7 +6603,8 @@ function exportClientsToExcel() {
         '</tr></thead><tbody>';
 
     clientsToExport.forEach(function (client) {
-        const prov = client.provenance ? getClientProvenanceLabel(client.provenance) : '';
+        const provCode = normalizeClientProvenance(client.provenance);
+        const prov = !provCode ? 'Autres' : getClientProvenanceLabel(provCode);
         const created = client.createdAt
             ? new Date(client.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '';
@@ -6729,6 +6774,10 @@ function clearAllClients() {
 }
 
 function maybeImportClientsFromTransactions() {
+    // Mode Django : les clients viennent de l'API. Cet import legacy créait des
+    // doublons SANS provenance dès que cachedClients était encore vide (course
+    // avec loadClientsFromApi) — ex. après changement de compte.
+    if (window.XALISS_DJANGO) return;
     if (clientsImportAttempted || cachedClients.length > 0) return;
     clientsImportAttempted = true;
     const names = new Set();
@@ -7045,9 +7094,38 @@ function loadTransactions() {
 
 // Charger depuis localStorage (fallback)
 function loadFromLocalStorage() {
-    const saved = localStorage.getItem('kaayprint_transactions');
+    // En mode Django, le cache local ne doit jamais masquer une API en échec
+    // avec un tableau vide (clé legacy globale = source classique du « compte vide »
+    // après connexion d'un autre compte sans données sur le même navigateur).
+    if (window.XALISS_DJANGO && window.XALISS_DJANGO.orgSlug) {
+        try {
+            localStorage.removeItem('kaayprint_transactions');
+        } catch (e) { /* ignore */ }
+        const scoped = localStorage.getItem(transactionsLocalStorageKey());
+        if (scoped) {
+            try {
+                transactions = JSON.parse(scoped);
+            } catch (e) {
+                transactions = [];
+            }
+        } else {
+            transactions = [];
+        }
+        hydrateTransactionClientLinks();
+        updateDisplay();
+        return;
+    }
+    const key = transactionsLocalStorageKey();
+    let saved = localStorage.getItem(key);
+    if (!saved) {
+        saved = localStorage.getItem('kaayprint_transactions');
+    }
     if (saved) {
-        transactions = JSON.parse(saved);
+        try {
+            transactions = JSON.parse(saved);
+        } catch (e) {
+            transactions = [];
+        }
     }
     hydrateTransactionClientLinks();
     updateDisplay();
@@ -7065,8 +7143,8 @@ function saveTransactions() {
         // On ne fait rien ici car Firestore met à jour automatiquement
         return;
     } else {
-        // Sauvegarder dans localStorage
-        localStorage.setItem('kaayprint_transactions', JSON.stringify(transactions));
+        // Sauvegarder dans localStorage (clé scoped par organisation)
+        localStorage.setItem(transactionsLocalStorageKey(), JSON.stringify(transactions));
         updateDisplay();
     }
 }
@@ -8165,7 +8243,12 @@ function getClientProvenancesData() {
     const byProvenance = {};
     (cachedClients || []).forEach(function (client) {
         const code = normalizeClientProvenance(client && client.provenance);
-        const label = (code && getClientProvenanceLabel(code)) || 'Sans provenance';
+        // Prestataire : hors graphe d'acquisition clients.
+        if (code === 'prestataire') return;
+        // Vide + « autre » → bucket « Autres ».
+        const label = (!code || code === 'autre')
+            ? 'Autres'
+            : (getClientProvenanceLabel(code) || 'Autres');
         if (!byProvenance[label]) byProvenance[label] = 0;
         byProvenance[label] += 1;
     });
@@ -8173,8 +8256,8 @@ function getClientProvenancesData() {
         .map(function (label) { return { label: label, value: byProvenance[label] }; })
         .filter(function (row) { return row.value > 0; })
         .sort(function (a, b) {
-            if (a.label === 'Sans provenance') return 1;
-            if (b.label === 'Sans provenance') return -1;
+            if (a.label === 'Autres') return 1;
+            if (b.label === 'Autres') return -1;
             return b.value - a.value;
         });
     return {
@@ -9521,10 +9604,10 @@ function deleteTransaction(id) {
                         console.error('Erreur lors de la suppression:', error);
                         switchToLocalMode(error);
                         showNotification('Synchronisation indisponible. Suppression en local.', 'error');
-                        localStorage.setItem('kaayprint_transactions', JSON.stringify(transactions));
+                        localStorage.setItem(transactionsLocalStorageKey(), JSON.stringify(transactions));
                     });
             } else {
-                localStorage.setItem('kaayprint_transactions', JSON.stringify(transactions));
+                localStorage.setItem(transactionsLocalStorageKey(), JSON.stringify(transactions));
             }
             updateDisplay();
         }
@@ -10629,10 +10712,10 @@ function attachEventListeners() {
     
     const wasNewExpenseClient = wasNewInvoiceClientFromControl('expenseInvoiceClient');
     const expenseInvoiceClientSel = getInvoiceClientSelectionFromControl('expenseInvoiceClient');
-    resolveInvoiceClientSelectionForTransaction(expenseInvoiceClientSel, 'neant').then(function (resolvedClient) {
+    resolveInvoiceClientSelectionForTransaction(expenseInvoiceClientSel, 'prestataire').then(function (resolvedClient) {
         addTransaction('expense', amount, description, date, remaining, resolvedClient.name, resolvedClient.id);
         if (resolvedClient.name) {
-            ensureClientSavedAndSyncTransactions(resolvedClient.name, 'neant').then(function (client) {
+            ensureClientSavedAndSyncTransactions(resolvedClient.name, 'prestataire').then(function (client) {
                 if (wasNewExpenseClient && client) addClientProfileReminder(client.name);
             });
         }
@@ -10807,7 +10890,7 @@ function attachEventListeners() {
             const wasNewEditClient = wasNewInvoiceClientFromControl('editInvoiceClient');
             const editInvoiceClientSel = getInvoiceClientSelectionFromControl('editInvoiceClient');
             const editingTx = transactions.find(function (t) { return String(t.id) === String(editingTransactionId); });
-            const editDefaultProvenance = editingTx && editingTx.type === 'expense' ? 'neant' : 'autre';
+            const editDefaultProvenance = editingTx && editingTx.type === 'expense' ? 'prestataire' : 'autre';
             const remainingNum = remainingValue === '' || remainingValue == null ? 0 : parseFloat(remainingValue);
             const orderedTotal = (parseFloat(amount) || 0) + (isNaN(remainingNum) ? 0 : remainingNum);
             let savedLinesPromise = Promise.resolve(undefined);
@@ -11314,17 +11397,39 @@ function exportToPDF() {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
         doc.text('Détail des Transactions', margin, yPos);
-        yPos += 6;
+        yPos += 5;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Montants et créances en ' + getCurrencyLabel(), margin, yPos);
+        yPos += 5;
 
-        // Colonnes (total ≈ contentWidth mm)
+        // Colonnes depuis la droite pour un espacement stable :
+        // [… Montant | Créance |  gap  | Date | Heure→]
+        const tableRight = margin + contentWidth;
+        const timeW = 14;
+        const dateW = 23;
+        const gapDateTime = 2;
+        const gapCreanceDate = 7;
+        const remainingW = 26;
+        const amountW = 26;
+        const numW = 8;
+        const typeW = 15;
+        const timeX = tableRight - timeW;
+        const dateX = timeX - gapDateTime - dateW;
+        const remainingX = dateX - gapCreanceDate - remainingW;
+        const amountX = remainingX - amountW;
+        const typeX = margin + numW;
+        const descX = typeX + typeW;
+        const descW = Math.max(36, amountX - descX);
         const cols = {
-            num: { x: margin, w: 9 },
-            type: { x: margin + 9, w: 16 },
-            desc: { x: margin + 25, w: 52 },
-            amount: { x: margin + 77, w: 28 },
-            remaining: { x: margin + 105, w: 28 },
-            date: { x: margin + 133, w: 22 },
-            time: { x: margin + 155, w: contentWidth - 155 },
+            num: { x: margin, w: numW },
+            type: { x: typeX, w: typeW },
+            desc: { x: descX, w: descW },
+            amount: { x: amountX, w: amountW },
+            remaining: { x: remainingX, w: remainingW },
+            date: { x: dateX, w: dateW },
+            time: { x: timeX, w: timeW },
         };
         const tableFontSize = 8;
         const lineH = 4.2;
@@ -11332,6 +11437,15 @@ function exportToPDF() {
         const headerH = 8;
         const bottomSafe = 20;
         const amber = [217, 119, 6];
+
+        function formatPdfTableAmount(value) {
+            const n = Number(value);
+            const safe = Number.isFinite(n) ? n : 0;
+            return safe
+                .toLocaleString('fr-FR', { maximumFractionDigits: 0 })
+                .replace(/\u202f/g, ' ')
+                .replace(/\u00a0/g, ' ');
+        }
 
         function drawPdfTableHeader(startY) {
             doc.setFillColor(...violetDark);
@@ -11346,7 +11460,7 @@ function exportToPDF() {
             doc.text('Montant', cols.amount.x + cols.amount.w - 1, hy, { align: 'right' });
             doc.text('Créance', cols.remaining.x + cols.remaining.w - 1, hy, { align: 'right' });
             doc.text('Date', cols.date.x + 1, hy);
-            doc.text('Heure', cols.time.x + 1, hy);
+            doc.text('Heure', tableRight - 1, hy, { align: 'right' });
             return startY + headerH;
         }
 
@@ -11360,9 +11474,9 @@ function exportToPDF() {
 
         sortedTransactions.forEach((transaction, index) => {
             const type = transaction.type === 'income' ? 'Entrant' : 'Sortant';
-            const amount = formatAmount(transaction.amount);
+            const amount = formatPdfTableAmount(transaction.amount);
             const remainingValue = exportRemainingValue(transaction);
-            const remaining = remainingValue > 0 ? formatAmount(remainingValue) : '—';
+            const remaining = remainingValue > 0 ? formatPdfTableAmount(remainingValue) : '—';
             const transactionDate = new Date(transaction.date);
             const date = transactionDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const time = transactionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -11420,7 +11534,7 @@ function exportToPDF() {
             doc.setFont('helvetica', 'normal');
             doc.text(descriptionLines, cols.desc.x + 1, textY);
 
-            // Montant aligné à droite (seul élément en gras de la ligne)
+            // Montant aligné à droite (chiffres seuls — devise dans le sous-titre)
             if (transaction.type === 'income') {
                 doc.setTextColor(...green);
             } else {
@@ -11429,7 +11543,7 @@ function exportToPDF() {
             doc.setFont('helvetica', 'bold');
             doc.text(amount, cols.amount.x + cols.amount.w - 1, textY, { align: 'right' });
 
-            // Créance
+            // Créance (compacte, séparée de la date par gapCreanceDate)
             if (remainingValue > 0) {
                 doc.setTextColor(...amber);
                 doc.setFont('helvetica', 'bold');
@@ -11440,11 +11554,11 @@ function exportToPDF() {
             doc.text(remaining, cols.remaining.x + cols.remaining.w - 1, textY, { align: 'right' });
             doc.setFont('helvetica', 'normal');
 
-            // Date / heure
+            // Date puis Heure groupées à droite
             doc.setTextColor(55, 65, 81);
             doc.setFont('helvetica', 'normal');
             doc.text(date, cols.date.x + 1, textY);
-            doc.text(time, cols.time.x + 1, textY);
+            doc.text(time, tableRight - 1, textY, { align: 'right' });
 
             yPos += rowHeight;
         });

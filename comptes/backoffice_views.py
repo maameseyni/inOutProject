@@ -1,5 +1,6 @@
 """Compat — préférer comptes.backoffice.views."""
 from comptes.backoffice.views import (
+    backoffice_acces_action,
     backoffice_charge_action,
     backoffice_dashboard,
     backoffice_export_charges_excel,
@@ -11,6 +12,7 @@ from comptes.backoffice.views import (
 )
 
 __all__ = [
+    'backoffice_acces_action',
     'backoffice_charge_action',
     'backoffice_dashboard',
     'backoffice_export_charges_excel',

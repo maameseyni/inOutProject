@@ -123,11 +123,35 @@ def _slug_organisation_unique(nom: str) -> str:
 
 
 def provisionner_organisation_si_absente(utilisateur):
-    """Crée une organisation minimale (ex. première connexion Google)."""
+    """Crée une organisation minimale (ex. première connexion Google).
+
+    Si le compte a déjà des memberships inactives, on réactive celle qui a
+    le plus de données — on ne crée JAMAIS une org vide par-dessus.
+    """
     if utilisateur.membres_organisations.filter(actif=True).exists():
         return False
 
-    nom = utilisateur.get_full_name().strip() or utilisateur.email.split('@')[0]
+    inactifs = list(
+        utilisateur.membres_organisations
+        .select_related('organisation')
+        .order_by('id')
+    )
+    if inactifs:
+        try:
+            from finances.models import Transaction
+        except Exception:
+            Transaction = None
+        def _score(m):
+            if Transaction is None:
+                return 0
+            return Transaction.objects.filter(organisation_id=m.organisation_id).count()
+        best = max(inactifs, key=_score)
+        if not best.actif:
+            best.actif = True
+            best.save(update_fields=['actif'])
+        return False
+
+    nom = utilisateur.get_full_name().strip() or (utilisateur.email or 'entreprise').split('@')[0]
     organisation = Organisation.objects.create(
         slug=_slug_organisation_unique(nom),
         nom=nom,
@@ -144,18 +168,37 @@ def provisionner_organisation_si_absente(utilisateur):
 
 
 def get_organisation_active(request):
-    """Organisation active de l'utilisateur connecté (première pour l'instant)."""
+    """Organisation active de l'utilisateur connecté.
+
+    S'il y a plusieurs memberships actives, on préfère celle qui a le plus
+    de transactions (évite d'afficher une org vide créée par erreur).
+    """
     if not request.user.is_authenticated:
         return None, None
-    membre = (
+    membres = list(
         request.user.membres_organisations
         .filter(actif=True)
         .select_related('organisation')
-        .first()
+        .order_by('id')
     )
-    if not membre:
+    if not membres:
         return None, None
-    return membre.organisation, membre
+    if len(membres) == 1:
+        return membres[0].organisation, membres[0]
+
+    try:
+        from finances.models import Transaction
+    except Exception:
+        return membres[0].organisation, membres[0]
+
+    best = membres[0]
+    best_n = -1
+    for m in membres:
+        n = Transaction.objects.filter(organisation_id=m.organisation_id).count()
+        if n > best_n:
+            best_n = n
+            best = m
+    return best.organisation, best
 
 
 def utilisateur_a_organisation(request):
@@ -171,8 +214,7 @@ def assurer_espace_utilisateur(utilisateur) -> bool:
     """Crée une organisation minimale si besoin. Retourne True si créée à l'instant."""
     if MembreOrganisation.objects.filter(utilisateur=utilisateur, actif=True).exists():
         return False
-    provisionner_organisation_si_absente(utilisateur)
-    return True
+    return bool(provisionner_organisation_si_absente(utilisateur))
 
 
 def nom_affichage_utilisateur(user):

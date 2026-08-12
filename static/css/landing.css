@@ -295,7 +295,7 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    padding: calc(var(--lp-nav-h) + 1rem) 0 3rem;
+    padding: calc(var(--lp-nav-h) + 3.25rem) 0 2.25rem;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(246, 242, 251, 0.35) 55%, rgba(239, 232, 248, 0.25) 100%);
     color: var(--lp-ink);

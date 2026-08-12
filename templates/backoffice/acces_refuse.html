@@ -1,0 +1,186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès refusé · Backoffice Xaliss</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bo-primary: #43277d;
+            --bo-primary-soft: #6b4c9e;
+            --bo-danger: #e72060;
+            --bo-text: #2f2a3c;
+            --bo-muted: #6b6578;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 28px 18px;
+            font-family: Outfit, system-ui, sans-serif;
+            color: var(--bo-text);
+            background: url("{% static 'images/fond.png' %}") center center / cover no-repeat fixed;
+            background-color: var(--bo-primary);
+        }
+        .bo-deny {
+            width: min(460px, 100%);
+            padding: 36px 32px 28px;
+            border-radius: 20px;
+            background: linear-gradient(165deg, #fff 70%, rgba(231, 32, 96, 0.05) 100%);
+            border: 1px solid rgba(67, 39, 125, 0.14);
+            border-left: 3px solid var(--bo-danger);
+            box-shadow: 0 24px 60px rgba(28, 18, 52, 0.28);
+            animation: boDenyIn 0.35s ease both;
+        }
+        @keyframes boDenyIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+        .bo-deny-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 22px;
+            text-decoration: none;
+            color: var(--bo-primary);
+        }
+        .bo-deny-brand img {
+            width: auto;
+            height: 28px;
+            display: block;
+        }
+        .bo-deny-brand span {
+            font-family: Unbounded, Outfit, sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+        .bo-deny-kicker {
+            margin: 0 0 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--bo-danger);
+        }
+        .bo-deny-title {
+            margin: 0 0 12px;
+            font-family: Unbounded, Outfit, sans-serif;
+            font-size: clamp(1.35rem, 4vw, 1.65rem);
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--bo-primary);
+        }
+        .bo-deny-text {
+            margin: 0 0 18px;
+            font-size: 1rem;
+            line-height: 1.55;
+            color: var(--bo-muted);
+        }
+        .bo-deny-email {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 26px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(67, 39, 125, 0.06);
+            border: 1px solid rgba(67, 39, 125, 0.1);
+        }
+        .bo-deny-email-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--bo-primary-soft);
+        }
+        .bo-deny-email strong {
+            font-size: 0.95rem;
+            font-weight: 600;
+            word-break: break-all;
+            color: var(--bo-text);
+        }
+        .bo-deny-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .bo-deny-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: transform 0.12s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+        .bo-deny-btn:hover { transform: translateY(-1px); }
+        .bo-deny-btn--primary {
+            color: #fff;
+            background: linear-gradient(135deg, var(--bo-primary) 0%, var(--bo-primary-soft) 100%);
+            box-shadow: 0 4px 14px rgba(67, 39, 125, 0.28);
+        }
+        .bo-deny-btn--ghost {
+            color: var(--bo-primary);
+            background: rgba(67, 39, 125, 0.06);
+            border-color: rgba(67, 39, 125, 0.16);
+        }
+        .bo-deny-hint {
+            margin: 22px 0 0;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: #8a8496;
+        }
+        @media (max-width: 480px) {
+            .bo-deny { padding: 28px 20px 22px; }
+            .bo-deny-actions { flex-direction: column; }
+            .bo-deny-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <main class="bo-deny" role="alert" aria-labelledby="bo-deny-title">
+        <a class="bo-deny-brand" href="{% url 'accueil' %}">
+            <img src="{% static 'images/logo.png' %}" alt="" width="120" height="40">
+            <span>Xaliss</span>
+        </a>
+
+        <p class="bo-deny-kicker">Erreur 403</p>
+        <h1 class="bo-deny-title" id="bo-deny-title">Accès réservé</h1>
+        <p class="bo-deny-text">
+            Ce compte n’est pas autorisé à ouvrir le backoffice.
+            Seuls les opérateurs validés peuvent y accéder.
+        </p>
+
+        {% if email %}
+        <div class="bo-deny-email">
+            <span class="bo-deny-email-label">Compte connecté</span>
+            <strong>{{ email }}</strong>
+        </div>
+        {% endif %}
+
+        <div class="bo-deny-actions">
+            <a class="bo-deny-btn bo-deny-btn--primary" href="{% url 'finances:application' %}">Retour à l’application</a>
+            <a class="bo-deny-btn bo-deny-btn--ghost" href="{% url 'accueil' %}">Accueil</a>
+        </div>
+
+        <p class="bo-deny-hint">
+            Besoin d’un accès&nbsp;? Demandez à un opérateur de vous ajouter depuis
+            <strong>Outils → Accès backoffice</strong>.
+        </p>
+    </main>
+</body>
+</html>

@@ -214,7 +214,15 @@
                                                 <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </button>
-                                        <form method="post" action="{% url 'backoffice_charge_action' %}" class="bo-inline-delete" onsubmit="return confirm('Supprimer cette charge ?');">
+                                        <form method="post"
+                                              action="{% url 'backoffice_charge_action' %}"
+                                              class="bo-inline-delete"
+                                              data-bo-confirm
+                                              data-bo-confirm-title="Supprimer la charge"
+                                              data-bo-confirm-message="Cette charge sera définitivement retirée des finances Xaliss."
+                                              data-bo-confirm-detail="{{ row.libelle|escapejs }} · {{ row.montant }}"
+                                              data-bo-confirm-ok="Supprimer"
+                                              data-bo-confirm-tone="danger">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="charge_id" value="{{ row.id }}">

@@ -6,6 +6,70 @@
 
     const cfg = window.XALISS_DJANGO;
     const offline = window.XalissOffline;
+    const IDENTITY_STORAGE_KEY = 'xaliss_last_session_identity';
+    let accountSwitchedThisBoot = false;
+
+    function currentSessionIdentity() {
+        return [
+            cfg.userEmail || '',
+            cfg.orgSlug || '',
+            cfg.userId != null ? String(cfg.userId) : '',
+        ].join('|');
+    }
+
+    /**
+     * Changement de compte sur le même navigateur : ne jamais appeler
+     * purgeSensitiveClientData() ici (deleteDatabase IndexedDB peut rester
+     * bloqué et empêcher tout chargement API → écran vide).
+     */
+    function guardAccountSwitchOnBoot() {
+        let previous = '';
+        try {
+            previous = localStorage.getItem(IDENTITY_STORAGE_KEY) || '';
+        } catch (e) {
+            previous = '';
+        }
+        const current = currentSessionIdentity();
+        const switched = !!(previous && current && previous !== current);
+
+        try {
+            localStorage.removeItem('kaayprint_transactions');
+        } catch (e) { /* ignore */ }
+
+        if (switched) {
+            // Nettoyage léger uniquement (pas de deleteDatabase).
+            try {
+                if (typeof window.xalissResetNotificationCache === 'function') {
+                    window.xalissResetNotificationCache();
+                }
+            } catch (e) { /* ignore */ }
+            try {
+                const prefixes = ['kaayprint_transactions_', 'kaayprint_clients_', 'kaayprint_notes_', 'kaayprint_product_categories_', 'kaayprint_company_profile_', 'kaayprint_app_settings_', 'xaliss_notifications_'];
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i += 1) {
+                    keys.push(localStorage.key(i));
+                }
+                keys.forEach(function (key) {
+                    if (!key || key === IDENTITY_STORAGE_KEY) return;
+                    if (key === 'kaayprint_sidebar_collapsed') return;
+                    if (prefixes.some(function (p) { return key.indexOf(p) === 0; })) {
+                        localStorage.removeItem(key);
+                    }
+                });
+            } catch (e) { /* ignore */ }
+            try {
+                if (offline && typeof offline.clearSnapshot === 'function') {
+                    Promise.resolve(offline.clearSnapshot()).catch(function () { /* ignore */ });
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        try {
+            localStorage.setItem(IDENTITY_STORAGE_KEY, current);
+        } catch (e) { /* ignore */ }
+        accountSwitchedThisBoot = switched;
+        return Promise.resolve(switched);
+    }
 
     function isNetworkError(error) {
         if (!offline || !offline.isOnline()) return true;
@@ -287,7 +351,12 @@
 
     function applySnapshotToUI(snapshot) {
         if (!snapshot) return false;
-        transactions = (snapshot.transactions || []).slice();
+        const snapTx = Array.isArray(snapshot.transactions) ? snapshot.transactions : [];
+        // Ne jamais écraser des données déjà affichées / chargées avec un snapshot vide.
+        if (snapTx.length === 0 && Array.isArray(transactions) && transactions.length > 0) {
+            return false;
+        }
+        transactions = snapTx.slice();
         hydrateTransactionClientLinks();
         const accountId = getCurrentAccountId();
         persistClientsLocal(accountId, { clients: snapshot.clients || [] });
@@ -303,7 +372,6 @@
         }
         updateDisplay();
         syncTransactionClientLinks();
-        maybeImportClientsFromTransactions();
         if (typeof renderClientsList === 'function') renderClientsList();
         return true;
     }
@@ -938,7 +1006,6 @@
         if (!unchanged) {
             updateDisplay();
             syncTransactionClientLinks();
-            maybeImportClientsFromTransactions();
         }
         await persistOfflineSnapshot();
         await refreshOfflineConnectionStatus();
@@ -1020,17 +1087,24 @@
     }
 
     async function loadNotificationsFromApi() {
+        if (typeof window.xalissResetNotificationCache === 'function') {
+            window.xalissResetNotificationCache();
+        }
+
         const data = await apiFetch('/notifications/');
         const remote = Array.isArray(data.notifications) ? data.notifications : [];
         const ignored = Array.isArray(data.ignoredSystemIds) ? data.ignoredSystemIds : [];
 
         const migrationKey = getLocalNotificationsMigrationKey();
         const alreadyMigrated = localStorage.getItem(migrationKey) === '1';
-        const localList = typeof window.xalissGetNotifications === 'function'
-            ? window.xalissGetNotifications()
+        // Lire uniquement le localStorage de CE compte (pas le cache mémoire d'un autre).
+        const localList = typeof window.xalissGetNotificationsFromStorage === 'function'
+            ? window.xalissGetNotificationsFromStorage()
             : [];
 
-        if (!alreadyMigrated && localList.length && remote.length === 0) {
+        // Migration one-shot uniquement si le serveur est vide ET pas de changement de compte
+        // (sinon on risque d'injecter les notifs du compte précédent).
+        if (!accountSwitchedThisBoot && !alreadyMigrated && localList.length && remote.length === 0) {
             try {
                 const migrated = await apiFetchNetwork('/notifications/', {
                     method: 'POST',
@@ -1053,6 +1127,7 @@
             localStorage.setItem(migrationKey, '1');
         }
         if (typeof window.xalissReplaceNotifications === 'function') {
+            // Source de vérité = serveur pour ce user/org.
             window.xalissReplaceNotifications(remote, ignored);
         }
     }
@@ -1136,18 +1211,22 @@
         if (typeof showFlashMessageFromStorage === 'function') {
             showFlashMessageFromStorage();
         }
+        const accountSwitched = await guardAccountSwitchOnBoot();
         if (offline) {
-            await offline.init(cfg.orgSlug);
+            try {
+                await offline.init(cfg.orgSlug);
+            } catch (e) { /* IndexedDB indisponible : on continue en mode réseau */ }
             bindOfflineLifecycle();
         }
         try {
+            // Transactions d'abord pour peupler l'UI même si un autre endpoint échoue.
+            await loadTransactionsFromApi();
             await Promise.all([
                 loadProfileFromApi(),
                 loadUserProfileFromApi(),
                 loadClientsFromApi(),
                 loadNotesFromApi(),
                 loadCategoriesFromApi(),
-                loadTransactionsFromApi(),
                 loadNotificationsFromApi()
             ]);
             const syncData = await apiFetch('/sync/');
@@ -1172,32 +1251,63 @@
             if (typeof window.xalissCheckScheduledNotifications === 'function') {
                 window.xalissCheckScheduledNotifications();
             }
+            if (accountSwitched) {
+                showNotification('Compte changé — données rechargées depuis le serveur', 'success', {
+                    transient: true,
+                    duration: 2800,
+                });
+            }
         } catch (error) {
-            if (offline) {
-                const snapshot = await offline.loadSnapshot();
-                if (applySnapshotToUI(snapshot)) {
-                    showNotification('Mode hors ligne — données du cache local', 'warning', {
-                        transient: true,
-                        duration: 2800,
-                    });
-                    await refreshOfflineConnectionStatus();
-                    connectSyncEvents();
-                    patchEditModalsForLocks();
-                    if (typeof window.xalissCheckScheduledNotifications === 'function') {
-                        window.xalissCheckScheduledNotifications();
+            // Si les transactions sont déjà là, on ne bascule pas sur un cache vide.
+            if (Array.isArray(transactions) && transactions.length > 0) {
+                updateDisplay();
+                notifyApiError(error, 'Certaines données n\'ont pas pu être chargées.');
+                return;
+            }
+            if (offline && !accountSwitched) {
+                try {
+                    const snapshot = await offline.loadSnapshot();
+                    if (applySnapshotToUI(snapshot)) {
+                        showNotification('Mode hors ligne — données du cache local', 'warning', {
+                            transient: true,
+                            duration: 2800,
+                        });
+                        await refreshOfflineConnectionStatus();
+                        connectSyncEvents();
+                        patchEditModalsForLocks();
+                        if (typeof window.xalissCheckScheduledNotifications === 'function') {
+                            window.xalissCheckScheduledNotifications();
+                        }
+                        return;
                     }
-                    return;
-                }
+                } catch (e) { /* ignore */ }
             }
             notifyApiError(error, 'Impossible de charger les données.');
         }
     };
 
-    const originalLoadTransactions = loadTransactions;
     loadTransactions = function () {
-        loadTransactionsFromApi().catch(function (error) {
+        loadTransactionsFromApi().catch(async function (error) {
             notifyApiError(error, 'Impossible de charger les transactions.');
-            originalLoadTransactions();
+            // Ne jamais retomber sur le localStorage legacy (clé globale) :
+            // un cache vide efface l'UI alors que les données existent encore côté serveur.
+            if (offline) {
+                try {
+                    const snapshot = await offline.loadSnapshot();
+                    if (applySnapshotToUI(snapshot)) {
+                        showNotification('Mode hors ligne — transactions du cache local', 'warning', {
+                            transient: true,
+                            duration: 2800,
+                        });
+                        return;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+            // Garder l'affichage actuel s'il y a déjà des données ; sinon tableau vide
+            // sans écraser via le chargeur legacy Firebase / localStorage.
+            if (!Array.isArray(transactions) || !transactions.length) {
+                updateDisplay();
+            }
         });
     };
 

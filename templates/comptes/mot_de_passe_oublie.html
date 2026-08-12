@@ -1,24 +1,31 @@
 {% extends 'comptes/base_auth.html' %}
 {% block title %}Mot de passe oublié — Xaliss{% endblock %}
+{% block auth_card_class %} auth-card--narrow{% endblock %}
 {% block content %}
-<a class="auth-back-link" href="{% url 'connexion' %}">← Retour à la connexion</a>
+<a class="auth-back-link" href="{% url 'connexion' %}">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Connexion
+</a>
 
-<div class="auth-header">
-    <div class="auth-avatar" aria-hidden="true">
+<div class="auth-header auth-header--compact">
+    <div class="auth-avatar auth-avatar--lock" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/>
             <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
     </div>
+    <p class="auth-kicker">Sécurité du compte</p>
     <h1>Mot de passe oublié</h1>
-    <p class="auth-subtitle">Indiquez votre e-mail pour recevoir un lien de réinitialisation.</p>
+    <p class="auth-subtitle">Recevez un lien de réinitialisation sur votre e-mail.</p>
 </div>
 
 {% if form.non_field_errors %}
 <div class="non-field-errors">{{ form.non_field_errors }}</div>
 {% endif %}
 
-<form method="post" novalidate class="auth-form-stack">
+<form method="post" novalidate class="auth-form-stack auth-form-stack--narrow">
     {% csrf_token %}
     <div class="form-group">
         <label class="auth-label" for="{{ form.email.id_for_label }}">E-mail</label>

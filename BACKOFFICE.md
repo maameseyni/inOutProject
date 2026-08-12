@@ -11,12 +11,18 @@
 |---------|--------|
 | **URL** | http://127.0.0.1:8000/backoffice/ |
 | **Auth** | Compte Django connecté (session) |
-| **Autorisation** | E-mail listé dans `BACKOFFICE_ALLOWED_EMAILS` (`.env`) |
+| **Autorisation** | E-mail listé dans `BACKOFFICE_ALLOWED_EMAILS` (`.env`) **ou** dans la table `AccesBackoffice` (gérée depuis **Outils**) |
 | **Refus** | HTTP 403 si connecté mais e-mail non autorisé |
 
 ```env
-BACKOFFICE_ALLOWED_EMAILS=votre@email.com,autre@email.com
+# Bootstrap / filet de secours (premier admin). Les suivants s’ajoutent dans Outils.
+BACKOFFICE_ALLOWED_EMAILS=votre@email.com
 ```
+
+Dans le backoffice → **Outils** → **Accès backoffice** : ajouter / révoquer / supprimer des opérateurs sans toucher au déploiement.  
+- **Révoquer** : désactive l’accès (réactivable)  
+- **Supprimer** : efface l’entrée définitivement  
+Les e-mails du `.env` restent protégés (non révocables / non suppressibles depuis l’UI s’ils n’ont pas d’entrée en base).
 
 ---
 

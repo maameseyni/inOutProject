@@ -673,6 +673,37 @@ class ChargePlateforme(models.Model):
         return f'{self.libelle} — {self.montant} {self.devise} ({self.date_charge})'
 
 
+class AccesBackoffice(models.Model):
+    """E-mails autorisés au backoffice (en plus de BACKOFFICE_ALLOWED_EMAILS)."""
+
+    email = models.EmailField(max_length=254, unique=True, db_index=True)
+    actif = models.BooleanField(default=True, db_index=True)
+    note = models.CharField(max_length=200, blank=True, default='')
+    ajoute_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acces_backoffice_ajoutes',
+    )
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'acces_backoffice'
+        verbose_name = 'accès backoffice'
+        verbose_name_plural = 'accès backoffice'
+        ordering = ['email']
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or '').strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        etat = 'actif' if self.actif else 'inactif'
+        return f'{self.email} ({etat})'
+
+
 class ProfilUtilisateur(models.Model):
     """Données personnelles complémentaires (hors modèle User Django)."""
 

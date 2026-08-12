@@ -10,10 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-finances-9">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-acces-2">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
+    {% include 'backoffice/partials/bo_confirm_modal.html' %}
     <div class="bo-shell">
         <div class="bo-top-chrome">
             <nav class="bo-top-nav" aria-label="Sections backoffice" role="tablist">
@@ -226,7 +227,121 @@
             <div class="bo-intro">
                 <p class="bo-intro-kicker">Administration</p>
                 <h2 class="bo-intro-title">Outils</h2>
-                <p class="bo-intro-sub">Raccourcis admin, exports et accès rapides</p>
+            </div>
+
+            <div class="bo-card bo-card--acces" id="bo-acces">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Sécurité</p>
+                        <h2>Accès backoffice</h2>
+                        <p class="bo-card-subhint">
+                            {{ acces_backoffice.n_actifs }} opérateur{{ acces_backoffice.n_actifs|pluralize }}
+                            · le .env reste un filet de secours pour le premier admin
+                        </p>
+                    </div>
+                </div>
+
+                <form class="bo-acces-form"
+                      method="post"
+                      action="{% url 'backoffice_acces_action' %}"
+                      data-bo-confirm
+                      data-bo-confirm-title="Accorder l’accès"
+                      data-bo-confirm-message="Cette personne pourra ouvrir le backoffice Xaliss dès qu’elle se connecte avec cet e-mail."
+                      data-bo-confirm-ok="Accorder"
+                      data-bo-confirm-tone="warning">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
+                    <label class="bo-abo-field">
+                        <span>E-mail</span>
+                        <input type="email" name="email" required maxlength="254" placeholder="ops@exemple.com" autocomplete="off">
+                    </label>
+                    <label class="bo-abo-field">
+                        <span>Note (optionnel)</span>
+                        <input type="text" name="note" maxlength="200" placeholder="Ex. co-fondateur, support…">
+                    </label>
+                    <button type="submit" class="bo-abo-submit">Ajouter</button>
+                </form>
+
+                <div class="bo-acces-list" role="list">
+                    {% for row in acces_backoffice.lignes %}
+                    <div class="bo-acces-row{% if not row.actif %} is-revoked{% endif %}" role="listitem">
+                        <div class="bo-acces-main">
+                            <strong class="bo-acces-email">{{ row.email }}</strong>
+                            <span class="bo-acces-meta">
+                                <span class="bo-badge {% if row.actif %}is-actif{% else %}is-expire{% endif %}">{{ row.source_label }}</span>
+                                {% if row.is_self %}<span class="bo-acces-you">Vous</span>{% endif %}
+                                {% if row.user_label %}<span class="bo-muted">{{ row.user_label }}</span>{% endif %}
+                                {% if row.note %}<span class="bo-muted">· {{ row.note }}</span>{% endif %}
+                            </span>
+                        </div>
+                        <div class="bo-acces-side">
+                            {% if row.user_id %}
+                            <a class="bo-alerte-link" href="{% url 'backoffice_user_detail' row.user_id %}">Fiche</a>
+                            {% endif %}
+                            {% if row.can_reactivate %}
+                            <form method="post"
+                                  action="{% url 'backoffice_acces_action' %}"
+                                  class="bo-inline-delete"
+                                  data-bo-confirm
+                                  data-bo-confirm-title="Réactiver l’accès"
+                                  data-bo-confirm-message="Cette personne pourra à nouveau ouvrir le backoffice."
+                                  data-bo-confirm-detail="{{ row.email|escapejs }}"
+                                  data-bo-confirm-ok="Réactiver"
+                                  data-bo-confirm-tone="info">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reactivate">
+                                <input type="hidden" name="email" value="{{ row.email }}">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
+                                <button type="submit" class="bo-acces-btn bo-acces-btn--reactivate">Réactiver</button>
+                            </form>
+                            {% endif %}
+                            {% if row.can_revoke %}
+                            <form method="post"
+                                  action="{% url 'backoffice_acces_action' %}"
+                                  class="bo-inline-delete"
+                                  data-bo-confirm
+                                  data-bo-confirm-title="Révoquer l’accès"
+                                  data-bo-confirm-message="L’accès sera désactivé. L’entrée reste dans la liste et pourra être réactivée."
+                                  data-bo-confirm-detail="{{ row.email|escapejs }}"
+                                  data-bo-confirm-ok="Révoquer"
+                                  data-bo-confirm-tone="warning">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="revoke">
+                                <input type="hidden" name="email" value="{{ row.email }}">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
+                                <button type="submit" class="bo-acces-btn bo-acces-btn--revoke">Révoquer</button>
+                            </form>
+                            {% endif %}
+                            {% if row.can_delete %}
+                            <form method="post"
+                                  action="{% url 'backoffice_acces_action' %}"
+                                  class="bo-inline-delete"
+                                  data-bo-confirm
+                                  data-bo-confirm-title="Supprimer l’accès"
+                                  data-bo-confirm-message="Suppression définitive de l’entrée. À refaire via « Ajouter » si besoin."
+                                  data-bo-confirm-detail="{{ row.email|escapejs }}"
+                                  data-bo-confirm-ok="Supprimer"
+                                  data-bo-confirm-tone="danger">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="email" value="{{ row.email }}">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
+                                <button type="submit" class="bo-acces-btn bo-acces-btn--delete">Supprimer</button>
+                            </form>
+                            {% elif row.via_env and not row.db_id %}
+                            <span class="bo-muted" title="Modifiable uniquement dans BACKOFFICE_ALLOWED_EMAILS">Protégé .env</span>
+                            {% elif row.is_self %}
+                            <span class="bo-muted">Votre accès</span>
+                            {% endif %}
+                        </div>                    </div>
+                    {% empty %}
+                    <p class="bo-empty">
+                        <span class="bo-empty-title">Aucun opérateur</span>
+                        <span class="bo-empty-sub">Ajoutez un e-mail ou configurez BACKOFFICE_ALLOWED_EMAILS.</span>
+                    </p>
+                    {% endfor %}
+                </div>
             </div>
 
             <div class="bo-tools-grid">
@@ -302,12 +417,11 @@
             </div>
         </section>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/kp-date.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-soft-3"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-acces-2"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {

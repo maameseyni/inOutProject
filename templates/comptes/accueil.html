@@ -168,7 +168,7 @@
                                                         <div class="benefit-controls benefit-controls-row stats-filter-day-row">
                                                             <div class="benefit-input-wrap">
                                                                 <label for="lpFilterDay">Jour</label>
-                                                                <input type="date" id="lpFilterDay" class="date-input" value="2026-08-09">
+                                                                <input type="date" id="lpFilterDay" class="date-input" value="">
                                                             </div>
                                                             <button type="button" class="clear-benefit-btn" id="lpFilterClearDay" title="Effacer le filtre">Effacer</button>
                                                         </div>
@@ -177,23 +177,23 @@
                                                         <div class="benefit-controls period benefit-controls-row">
                                                             <div class="benefit-input-wrap">
                                                                 <label for="lpFilterFrom">Du</label>
-                                                                <input type="date" id="lpFilterFrom" class="date-input" value="2026-08-09">
+                                                                <input type="date" id="lpFilterFrom" class="date-input" value="">
                                                             </div>
                                                             <div class="benefit-input-wrap">
                                                                 <label for="lpFilterTo">Au</label>
-                                                                <input type="date" id="lpFilterTo" class="date-input" value="2026-08-09">
+                                                                <input type="date" id="lpFilterTo" class="date-input" value="">
                                                             </div>
                                                             <button type="button" class="clear-benefit-btn" id="lpFilterClearRange" title="Effacer les filtres">Effacer</button>
                                                         </div>
                                                     </div>
                                                     <div class="stats-period-presets" role="group" aria-label="Périodes rapides">
-                                                        <button type="button" class="period-preset-btn is-active" data-period-preset="today">Aujourd’hui</button>
+                                                        <button type="button" class="period-preset-btn" data-period-preset="today">Aujourd’hui</button>
                                                         <button type="button" class="period-preset-btn" data-period-preset="month">Ce mois</button>
                                                         <button type="button" class="period-preset-btn" data-period-preset="quarter">Ce trimestre</button>
                                                         <button type="button" class="period-preset-btn" data-period-preset="year">Cette année</button>
-                                                        <button type="button" class="period-preset-btn" data-period-preset="all">Tout</button>
+                                                        <button type="button" class="period-preset-btn is-active" data-period-preset="all">Tout</button>
                                                     </div>
-                                                    <p class="charts-filter-period-label" id="lpChartsFilterPeriodLabel">Aujourd’hui · 9 août 2026</p>
+                                                    <p class="charts-filter-period-label" id="lpChartsFilterPeriodLabel">Toutes les données</p>
                                                 </div>
                                                 <div class="benefit-card benefit-main">
                                                     <h3>
@@ -772,7 +772,7 @@
 
             var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             var chartMap = {};
-            var lastPreset = 'today';
+            var lastPreset = 'all';
             var countsAnimatedOnce = false;
 
             /* "Aujourd'hui" figé pour la démo (cohérent partout) */
@@ -1652,11 +1652,11 @@
                 if (started) return;
                 started = true;
                 root.classList.add('is-live');
-                /* défaut : Aujourd’hui (démo 9 août 2026) */
-                if (dayEl) dayEl.value = toIso(DEMO_TODAY);
-                if (fromEl) fromEl.value = toIso(DEMO_TODAY);
-                if (toEl) toEl.value = toIso(DEMO_TODAY);
-                setFilterMode('day', true);
+                /* défaut : Tout */
+                if (dayEl) dayEl.value = '';
+                if (fromEl) fromEl.value = '';
+                if (toEl) toEl.value = '';
+                lastPreset = 'all';
                 syncPresetButtons();
                 window.setTimeout(function () {
                     refreshAll(true);

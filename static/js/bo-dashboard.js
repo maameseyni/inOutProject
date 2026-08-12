@@ -16,6 +16,343 @@
     };
 
     var navToken = 0;
+    var boConfirmCallback = null;
+    var boConfirmBound = false;
+
+    var BO_CONFIRM_ICONS = {
+        danger:
+            '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+        warning:
+            '<path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+            '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+        info:
+            '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>' +
+            '<path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    };
+
+    var BO_TOAST_ICONS = {
+        success:
+            '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+        error:
+            '<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+        warning:
+            '<path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+            '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+        info:
+            '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>' +
+            '<path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    };
+
+    var BO_TOAST_KICKERS = {
+        success: 'Succès',
+        error: 'Erreur',
+        warning: 'Attention',
+        info: 'Info',
+    };
+
+    function ensureConfirmModal() {
+        var modal = document.getElementById('boConfirmModal');
+        if (modal) return modal;
+        var wrap = document.createElement('div');
+        wrap.innerHTML =
+            '<div id="boConfirmModal" class="bo-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="boConfirmTitle" hidden>' +
+            '<div class="bo-confirm-dialog">' +
+            '<h2 class="bo-confirm-title">' +
+            '<svg id="boConfirmIcon" class="bo-confirm-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"></svg>' +
+            '<span id="boConfirmTitle">Confirmer</span></h2>' +
+            '<p id="boConfirmMessage" class="bo-confirm-message"></p>' +
+            '<p id="boConfirmDetail" class="bo-confirm-detail" hidden></p>' +
+            '<div class="bo-confirm-actions">' +
+            '<button type="button" class="bo-confirm-btn bo-confirm-btn--cancel" id="boConfirmCancel">Annuler</button>' +
+            '<button type="button" class="bo-confirm-btn bo-confirm-btn--ok" id="boConfirmOk">' +
+            '<span id="boConfirmOkLabel">Confirmer</span></button>' +
+            '</div></div></div>';
+        document.body.appendChild(wrap.firstElementChild);
+        return document.getElementById('boConfirmModal');
+    }
+
+    function closeBoConfirm() {
+        var modal = document.getElementById('boConfirmModal');
+        if (!modal) return;
+        modal.hidden = true;
+        modal.style.display = 'none';
+        boConfirmCallback = null;
+        document.body.classList.remove('bo-confirm-open');
+    }
+
+    function showBoConfirm(options) {
+        options = options || {};
+        var modal = ensureConfirmModal();
+        var titleEl = document.getElementById('boConfirmTitle');
+        var messageEl = document.getElementById('boConfirmMessage');
+        var detailEl = document.getElementById('boConfirmDetail');
+        var okLabelEl = document.getElementById('boConfirmOkLabel');
+        var iconEl = document.getElementById('boConfirmIcon');
+        var cancelBtn = document.getElementById('boConfirmCancel');
+        if (!modal || !titleEl || !messageEl) return;
+
+        var tone = options.tone || 'danger';
+        if (tone !== 'warning' && tone !== 'info' && tone !== 'danger') tone = 'danger';
+        modal.setAttribute('data-tone', tone);
+
+        titleEl.textContent = options.title || 'Confirmer';
+        messageEl.textContent = options.message || 'Confirmez-vous cette action ?';
+        if (detailEl) {
+            if (options.detail) {
+                detailEl.textContent = options.detail;
+                detailEl.hidden = false;
+            } else {
+                detailEl.textContent = '';
+                detailEl.hidden = true;
+            }
+        }
+        if (okLabelEl) okLabelEl.textContent = options.confirmLabel || 'Confirmer';
+        if (iconEl) {
+            iconEl.innerHTML = BO_CONFIRM_ICONS[tone] || BO_CONFIRM_ICONS.danger;
+        }
+        boConfirmCallback = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+
+        modal.hidden = false;
+        modal.style.display = 'flex';
+        document.body.classList.add('bo-confirm-open');
+        if (cancelBtn) cancelBtn.focus();
+    }
+
+    function initBoConfirmModal() {
+        if (boConfirmBound) return;
+        ensureConfirmModal();
+        var modal = document.getElementById('boConfirmModal');
+        var cancelBtn = document.getElementById('boConfirmCancel');
+        var okBtn = document.getElementById('boConfirmOk');
+        if (!modal) return;
+        boConfirmBound = true;
+
+        if (cancelBtn) cancelBtn.addEventListener('click', closeBoConfirm);
+        if (okBtn) {
+            okBtn.addEventListener('click', function () {
+                var cb = boConfirmCallback;
+                closeBoConfirm();
+                if (typeof cb === 'function') cb();
+            });
+        }
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeBoConfirm();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            if (!modal.hidden) closeBoConfirm();
+        });
+    }
+
+    function formFieldValue(form, name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (!el) return '';
+        if (el.tagName === 'SELECT') {
+            var opt = el.options[el.selectedIndex];
+            return {
+                value: el.value || '',
+                label: opt ? (opt.textContent || '').trim() : (el.value || ''),
+            };
+        }
+        return { value: el.value || '', label: el.value || '' };
+    }
+
+    function pluralJours(n) {
+        var num = parseInt(n, 10);
+        if (!num || num < 1) return '';
+        return num + ' jour' + (num > 1 ? 's' : '');
+    }
+
+    function optionsFromAboForm(form) {
+        var actionEl = form.querySelector('[name="action"]');
+        var action = actionEl ? String(actionEl.value || '').trim() : '';
+        var jours = formFieldValue(form, 'jours');
+        var statut = formFieldValue(form, 'statut');
+        var plan = formFieldValue(form, 'plan');
+        var renouv = formFieldValue(form, 'value');
+        var ctx = form.closest('[data-bo-org], [data-bo-jours-defaut]') || form;
+        var orgDetail =
+            form.getAttribute('data-bo-org') ||
+            form.getAttribute('data-bo-confirm-detail') ||
+            (ctx.getAttribute && ctx.getAttribute('data-bo-org')) ||
+            '';
+        var defautJours =
+            form.getAttribute('data-bo-jours-defaut') ||
+            (ctx.getAttribute && ctx.getAttribute('data-bo-jours-defaut')) ||
+            '';
+        var joursLabel = pluralJours(jours.value) || pluralJours(defautJours);
+        var titleEl = form.querySelector('.bo-abo-action-title');
+        var titleText = titleEl ? String(titleEl.textContent || '').trim() : '';
+        var isDemarrer = /Démarrer/.test(titleText);
+
+        var presets = {
+            prolonger_essai: {
+                title: 'Prolonger l’essai',
+                message: joursLabel
+                    ? 'Prolonger l’essai de ' + joursLabel + ' ?'
+                    : 'Prolonger l’essai avec la durée indiquée ?',
+                confirmLabel: 'Prolonger',
+                tone: 'info',
+            },
+            redemarrer_essai: {
+                title: isDemarrer ? 'Démarrer un essai' : 'Redémarrer l’essai',
+                message: isDemarrer
+                    ? (joursLabel
+                        ? 'Créer l’abonnement et démarrer un essai de ' + joursLabel + ' ?'
+                        : 'Créer l’abonnement et démarrer un essai standard ?')
+                    : (joursLabel
+                        ? 'Remplacer l’essai en cours par un nouvel essai de ' + joursLabel + ' ?'
+                        : 'Remplacer l’essai en cours par un nouvel essai ?'),
+                confirmLabel: isDemarrer ? 'Démarrer' : 'Redémarrer',
+                tone: 'warning',
+            },
+            prolonger_periode: {
+                title: 'Prolonger le payant',
+                message: joursLabel
+                    ? 'Prolonger la période payante de ' + joursLabel + ' ?'
+                    : 'Prolonger la période payante ?',
+                confirmLabel: 'Prolonger',
+                tone: 'info',
+            },
+            activer_payant: {
+                title: 'Activer le payant',
+                message: joursLabel
+                    ? 'Activer une période payante de ' + joursLabel + ' ?'
+                    : 'Activer une période payante ?',
+                confirmLabel: 'Activer',
+                tone: 'warning',
+            },
+            definir_statut: {
+                title: 'Changer le statut',
+                message: statut.label
+                    ? 'Passer le statut à « ' + statut.label + ' » ?'
+                    : 'Appliquer le nouveau statut ?',
+                confirmLabel: 'Appliquer',
+                tone: 'warning',
+            },
+            changer_plan: {
+                title: 'Changer le plan',
+                message: plan.label
+                    ? 'Basculer vers le plan « ' + plan.label + ' » ?'
+                    : 'Changer le plan d’abonnement ?',
+                confirmLabel: 'Changer',
+                tone: 'warning',
+            },
+            renouvellement: {
+                title: 'Renouvellement auto',
+                message: renouv.value === '0' || renouv.value === 'false'
+                    ? 'Désactiver le renouvellement automatique ?'
+                    : 'Activer le renouvellement automatique ?',
+                confirmLabel: renouv.value === '0' || renouv.value === 'false' ? 'Désactiver' : 'Activer',
+                tone: 'info',
+            },
+            synchroniser: {
+                title: 'Synchroniser le statut',
+                message: 'Réaligner le statut sur les dates d’essai / période ?',
+                confirmLabel: 'Synchroniser',
+                tone: 'info',
+            },
+        };
+
+        var preset = presets[action] || {
+            title: 'Confirmer l’action',
+            message: 'Confirmez-vous cette action d’abonnement ?',
+            confirmLabel: 'Confirmer',
+            tone: 'info',
+        };
+
+        var detailParts = [];
+        if (orgDetail) detailParts.push(orgDetail);
+        if (action === 'definir_statut' && pluralJours(jours.value)) {
+            detailParts.push('Jours si dates manquantes : ' + pluralJours(jours.value));
+        }
+        return {
+            title: preset.title,
+            message: preset.message,
+            detail: detailParts.join(' · '),
+            confirmLabel: preset.confirmLabel,
+            tone: preset.tone,
+        };
+    }
+
+    function optionsFromConfirmForm(form) {
+        if (form.classList.contains('bo-abo-action')) {
+            var aboOpts = optionsFromAboForm(form);
+            // Attributs data-* optionnels pour surcharger
+            if (form.hasAttribute('data-bo-confirm-title')) {
+                aboOpts.title = form.getAttribute('data-bo-confirm-title');
+            }
+            if (form.hasAttribute('data-bo-confirm-message')) {
+                aboOpts.message = form.getAttribute('data-bo-confirm-message');
+            }
+            if (form.hasAttribute('data-bo-confirm-ok')) {
+                aboOpts.confirmLabel = form.getAttribute('data-bo-confirm-ok');
+            }
+            if (form.hasAttribute('data-bo-confirm-tone')) {
+                aboOpts.tone = form.getAttribute('data-bo-confirm-tone');
+            }
+            if (form.hasAttribute('data-bo-confirm-detail')) {
+                aboOpts.detail = form.getAttribute('data-bo-confirm-detail');
+            }
+            return aboOpts;
+        }
+        var opts = {
+            title: form.getAttribute('data-bo-confirm-title') || 'Confirmer',
+            message: form.getAttribute('data-bo-confirm-message') || 'Confirmez-vous cette action ?',
+            detail: form.getAttribute('data-bo-confirm-detail') || '',
+            confirmLabel: form.getAttribute('data-bo-confirm-ok') || 'Confirmer',
+            tone: form.getAttribute('data-bo-confirm-tone') || 'danger',
+        };
+        // Si pas de détail fourni, reprendre l’e-mail du formulaire (ex. ajout d’accès).
+        if (!opts.detail) {
+            var emailField = form.querySelector('input[name="email"]');
+            if (emailField && emailField.value) {
+                opts.detail = String(emailField.value || '').trim();
+            }
+        }
+        return opts;
+    }
+
+    function bindConfirmForms() {
+        document.addEventListener(
+            'submit',
+            function (e) {
+                var form = e.target;
+                if (!form || form.tagName !== 'FORM') return;
+                var needsConfirm =
+                    form.hasAttribute('data-bo-confirm') ||
+                    form.classList.contains('bo-abo-action');
+                if (!needsConfirm) return;
+                if (form.dataset.boConfirmed === '1') {
+                    delete form.dataset.boConfirmed;
+                    return;
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var opts = optionsFromConfirmForm(form);
+                opts.onConfirm = function () {
+                    if (form.classList.contains('bo-abo-action')) {
+                        softAboAction(form);
+                        return;
+                    }
+                    form.dataset.boConfirmed = '1';
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                    else form.submit();
+                };
+                showBoConfirm(opts);
+            },
+            true
+        );
+    }
+
+    function normalizeToastLevel(level) {
+        var raw = String(level || 'info').toLowerCase();
+        if (raw.indexOf('success') !== -1) return 'success';
+        if (raw.indexOf('error') !== -1 || raw.indexOf('danger') !== -1) return 'error';
+        if (raw.indexOf('warn') !== -1) return 'warning';
+        return 'info';
+    }
 
     function qsFromUrl(url) {
         try {
@@ -303,27 +640,43 @@
 
     function showToast(message, level) {
         if (!message) return;
-        if (typeof global.showNotification === 'function') {
-            global.showNotification(message, level || 'info', { duration: 5000 });
-            return;
-        }
-        var stack = document.querySelector('.bo-flash-stack');
+        var tone = normalizeToastLevel(level);
+        var stack = document.querySelector('.bo-toast-stack');
         if (!stack) {
             stack = document.createElement('div');
-            stack.className = 'bo-flash-stack';
-            stack.setAttribute('role', 'status');
-            var shell = document.querySelector('.bo-shell--detail') || document.querySelector('.bo-shell');
-            if (shell) shell.prepend(stack);
-            else document.body.prepend(stack);
+            stack.className = 'bo-toast-stack';
+            stack.setAttribute('aria-live', 'polite');
+            document.body.appendChild(stack);
         }
         var el = document.createElement('div');
-        el.className = 'bo-flash bo-flash--' + (level || 'info');
-        el.textContent = message;
+        el.className = 'bo-toast bo-toast--' + tone;
+        el.setAttribute('role', 'status');
+        el.innerHTML =
+            '<span class="bo-toast-icon" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="none">' + (BO_TOAST_ICONS[tone] || BO_TOAST_ICONS.info) + '</svg>' +
+            '</span>' +
+            '<span class="bo-toast-body">' +
+            '<p class="bo-toast-kicker">' + (BO_TOAST_KICKERS[tone] || BO_TOAST_KICKERS.info) + '</p>' +
+            '<p class="bo-toast-text"></p>' +
+            '</span>';
+        var textEl = el.querySelector('.bo-toast-text');
+        if (textEl) textEl.textContent = message;
         stack.appendChild(el);
         setTimeout(function () {
             el.classList.add('is-leaving');
-            setTimeout(function () { el.remove(); }, 320);
-        }, 4200);
+            setTimeout(function () { el.remove(); }, 300);
+        }, 4600);
+    }
+
+    function installBoToastBridge() {
+        window.showNotification = function (message, type, options) {
+            showToast(message, type || 'info');
+            if (options && options.history === true && typeof window.addNotificationToHistory === 'function') {
+                try {
+                    window.addNotificationToHistory(message, type || 'info', { silent: true, toast: false });
+                } catch (e) { /* ignore */ }
+            }
+        };
     }
 
     function bindDetailActions() {
@@ -441,9 +794,16 @@
         softAboAction: softAboAction,
         bindDetailActions: bindDetailActions,
         setLoading: setLoading,
+        showToast: showToast,
+        showConfirm: showBoConfirm,
     };
 
-    document.addEventListener('DOMContentLoaded', function () {
+    // Avant DOMContentLoaded : remplace les toasts génériques pour les messages Django.
+    installBoToastBridge();
+    bindConfirmForms();
+
+    function bootBoUi() {
+        initBoConfirmModal();
         if (document.body.classList.contains('bo-body--detail')) {
             bindDetailActions();
         }
@@ -455,5 +815,11 @@
                 window.location.reload();
             }
         });
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootBoUi);
+    } else {
+        bootBoUi();
+    }
 })(window, document);

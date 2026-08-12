@@ -8,10 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-soft-1">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-alerts-1">
 </head>
 <body class="bo-body bo-body--detail">
     {% include 'partials/django_messages_data.html' %}
+    {% include 'backoffice/partials/bo_confirm_modal.html' %}
     <div class="bo-shell bo-shell--detail">
         <header class="bo-detail-top">
             <a class="bo-detail-back" href="{{ retour_url }}">
@@ -301,7 +302,9 @@
                         <h3>Actions admin</h3>
                         <p>Prolonger l’accès, changer le statut ou le plan de cette organisation.</p>
                     </div>
-                    <div class="bo-abo-actions-grid">
+                    <div class="bo-abo-actions-grid"
+                         data-bo-org="{% if org.nom %}{{ org.nom|escapejs }}{% endif %}"
+                         data-bo-jours-defaut="{{ abo.jours_defaut_essai }}">
                         <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ fiche_self_url }}">
@@ -320,7 +323,7 @@
                             <input type="hidden" name="action" value="redemarrer_essai">
                             <span class="bo-abo-action-title">Redémarrer l’essai</span>
                             <p class="bo-abo-action-hint">Nouvel essai de {{ abo.jours_defaut_essai }} jours à partir d’aujourd’hui.</p>
-                            <button type="submit" class="bo-abo-submit" onclick="return confirm('Redémarrer un essai complet ?');">Redémarrer</button>
+                            <button type="submit" class="bo-abo-submit">Redémarrer</button>
                         </form>
 
                         <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
@@ -417,7 +420,9 @@
                         <h3>Actions admin</h3>
                         <p>Créer / démarrer un abonnement pour cette organisation.</p>
                     </div>
-                    <div class="bo-abo-actions-grid">
+                    <div class="bo-abo-actions-grid"
+                         data-bo-org="{% if org.nom %}{{ org.nom|escapejs }}{% endif %}"
+                         data-bo-jours-defaut="{{ abo.jours_defaut_essai|default:14 }}">
                         <form class="bo-abo-action" method="post" action="{{ org.abo_action_url }}">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ fiche_self_url }}">
@@ -544,6 +549,6 @@
         </div>
     </div>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-soft-3"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-alerts-2"></script>
 </body>
 </html>

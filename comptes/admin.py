@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    AccesBackoffice,
     AbonnementOrganisation,
     ChargePlateforme,
     MembreOrganisation,
@@ -147,3 +148,12 @@ class ChargePlateformeAdmin(admin.ModelAdmin):
     date_hierarchy = 'date_charge'
     readonly_fields = ('cree_le', 'modifie_le')
     autocomplete_fields = ('cree_par',)
+
+
+@admin.register(AccesBackoffice)
+class AccesBackofficeAdmin(admin.ModelAdmin):
+    list_display = ('email', 'actif', 'ajoute_par', 'cree_le', 'note')
+    list_filter = ('actif',)
+    search_fields = ('email', 'note')
+    readonly_fields = ('cree_le', 'modifie_le')
+    autocomplete_fields = ('ajoute_par',)

@@ -16,6 +16,8 @@
     var pendingToastBatch = [];
     var toastBatchTimer = null;
     var memoryCache = null;
+    /** Clé localStorage liée au cache mémoire — invalide si le compte change. */
+    var memoryCacheKey = null;
     var ignoredSystemIds = {};
 
     function getNotificationStorageKey() {
@@ -31,6 +33,12 @@
 
     function getWelcomeNotificationFlagKey() {
         return getNotificationStorageKey() + '_welcome_v1';
+    }
+
+    function resetNotificationCacheForAccount() {
+        memoryCache = null;
+        memoryCacheKey = null;
+        ignoredSystemIds = {};
     }
 
     function loadIgnoredFromStorage() {
@@ -88,10 +96,12 @@
     }
 
     function readNotificationHistory() {
-        if (memoryCache) {
+        var key = getNotificationStorageKey();
+        if (memoryCache && memoryCacheKey === key) {
             return memoryCache.slice();
         }
-        var raw = global.localStorage.getItem(getNotificationStorageKey());
+        memoryCacheKey = key;
+        var raw = global.localStorage.getItem(key);
         if (!raw) {
             memoryCache = [];
             return [];
@@ -111,10 +121,11 @@
     }
 
     function writeNotificationHistory(list) {
+        memoryCacheKey = getNotificationStorageKey();
         memoryCache = (Array.isArray(list) ? list : []).map(normalizeItem).filter(Boolean)
             .slice(0, MAX_NOTIFICATION_HISTORY);
         global.localStorage.setItem(
-            getNotificationStorageKey(),
+            memoryCacheKey,
             JSON.stringify(memoryCache)
         );
         global.dispatchEvent(new CustomEvent('xaliss:notifications-updated'));
@@ -129,6 +140,19 @@
             persistIgnored();
         }
         writeNotificationHistory(list || []);
+    }
+
+    /** Lecture stricte localStorage (ignore le cache mémoire d'un autre compte). */
+    function readNotificationsFromLocalStorageOnly() {
+        try {
+            var raw = global.localStorage.getItem(getNotificationStorageKey());
+            if (!raw) return [];
+            var list = JSON.parse(raw);
+            if (!Array.isArray(list)) return [];
+            return list.map(normalizeItem).filter(Boolean);
+        } catch (e) {
+            return [];
+        }
     }
 
     function playNotificationSound() {
@@ -214,12 +238,29 @@
 
     function showNotification(message, type, options) {
         if (!message) return;
-        injectNotificationStyles();
 
         var opts = options && typeof options === 'object' ? options : {};
+        var notifType = type || 'error';
+
+        // Backoffice : toast personnalisé (icône + kicker), sans boîte générique.
+        if (
+            document.body &&
+            document.body.classList.contains('bo-body') &&
+            global.BoSoft &&
+            typeof global.BoSoft.showToast === 'function'
+        ) {
+            if (opts.history === true) {
+                saveNotificationToHistory(message, notifType);
+                alertNewNotification();
+            }
+            global.BoSoft.showToast(message, notifType);
+            return;
+        }
+
+        injectNotificationStyles();
+
         var transient = opts.transient === true || isTransientConcurrencyMessage(message);
         var duration = opts.duration != null ? opts.duration : (transient ? 2500 : 4000);
-        var notifType = type || 'error';
         var bg = NOTIFICATION_COLORS[notifType] || NOTIFICATION_COLORS.error;
         if (opts.history === true) {
             saveNotificationToHistory(message, notifType);
@@ -404,6 +445,14 @@
     }
 
     function bootFlashMessages() {
+        // En mode Django, l'historique cloche vient de l'API (django-bridge).
+        // Ne pas hydrater/migrer le cache local ici : risque de mélanger les comptes.
+        if (global.XALISS_DJANGO) {
+            resetNotificationCacheForAccount();
+            showFlashMessageFromStorage();
+            showDjangoMessages();
+            return;
+        }
         loadIgnoredFromStorage();
         readNotificationHistory();
         ensureWelcomeNotification();
@@ -413,6 +462,8 @@
 
     global.showNotification = showNotification;
     global.xalissGetNotifications = readNotificationHistory;
+    global.xalissGetNotificationsFromStorage = readNotificationsFromLocalStorageOnly;
+    global.xalissResetNotificationCache = resetNotificationCacheForAccount;
     global.xalissAddNotification = addNotificationToHistory;
     global.xalissEnsureWelcomeNotification = ensureWelcomeNotification;
     global.xalissPlayNotificationSound = playNotificationSound;
