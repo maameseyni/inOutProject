@@ -9,6 +9,12 @@
         </h2>
         <p id="boConfirmMessage" class="bo-confirm-message"></p>
         <p id="boConfirmDetail" class="bo-confirm-detail" hidden></p>
+        <div id="boConfirmPhraseWrap" class="bo-confirm-phrase" hidden>
+            <label for="boConfirmPhraseInput" class="bo-confirm-phrase-label">
+                Pour confirmer, tapez <strong id="boConfirmPhraseExpected"></strong>
+            </label>
+            <input type="text" id="boConfirmPhraseInput" class="bo-confirm-phrase-input" autocomplete="off" spellcheck="false" placeholder="">
+        </div>
         <div class="bo-confirm-actions">
             <button type="button" class="bo-confirm-btn bo-confirm-btn--cancel" id="boConfirmCancel">Annuler</button>
             <button type="button" class="bo-confirm-btn bo-confirm-btn--ok" id="boConfirmOk">

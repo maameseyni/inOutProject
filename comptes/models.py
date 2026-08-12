@@ -165,6 +165,23 @@ class AbonnementOrganisation(models.Model):
             dt = timezone.make_aware(dt, timezone.get_current_timezone())
         return dt
 
+    @classmethod
+    def date_lancement_effective(cls):
+        """
+        Date de lancement pour les nouvelles inscriptions :
+        1) XALISS_LANCEMENT_LE si défini
+        2) sinon première date lancement_applique_le (lancement via backoffice)
+        """
+        env = cls.date_lancement_officielle()
+        if env is not None:
+            return env
+        return (
+            cls.objects.filter(lancement_applique_le__isnull=False)
+            .order_by('lancement_applique_le')
+            .values_list('lancement_applique_le', flat=True)
+            .first()
+        )
+
     def _now(self):
         return timezone.now()
 
@@ -547,7 +564,7 @@ class AbonnementOrganisation(models.Model):
             plan=plan_pro,
             statut=cls.STATUT_PRELAUNCH,
         )
-        lancement = cls.date_lancement_officielle()
+        lancement = cls.date_lancement_effective()
         maintenant = timezone.now()
         if lancement is not None:
             debut = max(maintenant, lancement)

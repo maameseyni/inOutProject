@@ -18,6 +18,7 @@
     var navToken = 0;
     var boConfirmCallback = null;
     var boConfirmBound = false;
+    var boConfirmPhraseExpected = '';
 
     var BO_CONFIRM_ICONS = {
         danger:
@@ -29,6 +30,9 @@
         info:
             '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>' +
             '<path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+        launch:
+            '<path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M5 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     };
 
     var BO_TOAST_ICONS = {
@@ -63,6 +67,11 @@
             '<span id="boConfirmTitle">Confirmer</span></h2>' +
             '<p id="boConfirmMessage" class="bo-confirm-message"></p>' +
             '<p id="boConfirmDetail" class="bo-confirm-detail" hidden></p>' +
+            '<div id="boConfirmPhraseWrap" class="bo-confirm-phrase" hidden>' +
+            '<label for="boConfirmPhraseInput" class="bo-confirm-phrase-label">' +
+            'Pour confirmer, tapez <strong id="boConfirmPhraseExpected"></strong></label>' +
+            '<input type="text" id="boConfirmPhraseInput" class="bo-confirm-phrase-input" autocomplete="off" spellcheck="false">' +
+            '</div>' +
             '<div class="bo-confirm-actions">' +
             '<button type="button" class="bo-confirm-btn bo-confirm-btn--cancel" id="boConfirmCancel">Annuler</button>' +
             '<button type="button" class="bo-confirm-btn bo-confirm-btn--ok" id="boConfirmOk">' +
@@ -72,13 +81,36 @@
         return document.getElementById('boConfirmModal');
     }
 
+    function normalizeConfirmPhrase(value) {
+        return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function syncConfirmPhraseOk() {
+        var okBtn = document.getElementById('boConfirmOk');
+        var input = document.getElementById('boConfirmPhraseInput');
+        if (!okBtn) return;
+        if (!boConfirmPhraseExpected) {
+            okBtn.disabled = false;
+            return;
+        }
+        var typed = input ? normalizeConfirmPhrase(input.value) : '';
+        okBtn.disabled = typed !== boConfirmPhraseExpected;
+    }
+
     function closeBoConfirm() {
         var modal = document.getElementById('boConfirmModal');
         if (!modal) return;
         modal.hidden = true;
         modal.style.display = 'none';
         boConfirmCallback = null;
+        boConfirmPhraseExpected = '';
         document.body.classList.remove('bo-confirm-open');
+        var phraseWrap = document.getElementById('boConfirmPhraseWrap');
+        var phraseInput = document.getElementById('boConfirmPhraseInput');
+        if (phraseWrap) phraseWrap.hidden = true;
+        if (phraseInput) phraseInput.value = '';
+        var okBtn = document.getElementById('boConfirmOk');
+        if (okBtn) okBtn.disabled = false;
     }
 
     function showBoConfirm(options) {
@@ -90,10 +122,14 @@
         var okLabelEl = document.getElementById('boConfirmOkLabel');
         var iconEl = document.getElementById('boConfirmIcon');
         var cancelBtn = document.getElementById('boConfirmCancel');
+        var phraseWrap = document.getElementById('boConfirmPhraseWrap');
+        var phraseExpectedEl = document.getElementById('boConfirmPhraseExpected');
+        var phraseInput = document.getElementById('boConfirmPhraseInput');
+        var okBtn = document.getElementById('boConfirmOk');
         if (!modal || !titleEl || !messageEl) return;
 
         var tone = options.tone || 'danger';
-        if (tone !== 'warning' && tone !== 'info' && tone !== 'danger') tone = 'danger';
+        if (tone !== 'warning' && tone !== 'info' && tone !== 'danger' && tone !== 'launch') tone = 'danger';
         modal.setAttribute('data-tone', tone);
 
         titleEl.textContent = options.title || 'Confirmer';
@@ -111,12 +147,33 @@
         if (iconEl) {
             iconEl.innerHTML = BO_CONFIRM_ICONS[tone] || BO_CONFIRM_ICONS.danger;
         }
+
+        boConfirmPhraseExpected = normalizeConfirmPhrase(options.confirmPhrase || '');
+        if (phraseWrap && phraseExpectedEl && phraseInput) {
+            if (boConfirmPhraseExpected) {
+                phraseExpectedEl.textContent = boConfirmPhraseExpected;
+                phraseInput.value = '';
+                phraseInput.placeholder = boConfirmPhraseExpected;
+                phraseWrap.hidden = false;
+                modal.classList.add('has-phrase');
+            } else {
+                phraseWrap.hidden = true;
+                phraseInput.value = '';
+                modal.classList.remove('has-phrase');
+            }
+        }
+        syncConfirmPhraseOk();
+
         boConfirmCallback = typeof options.onConfirm === 'function' ? options.onConfirm : null;
 
         modal.hidden = false;
         modal.style.display = 'flex';
         document.body.classList.add('bo-confirm-open');
-        if (cancelBtn) cancelBtn.focus();
+        if (boConfirmPhraseExpected && phraseInput) {
+            phraseInput.focus();
+        } else if (cancelBtn) {
+            cancelBtn.focus();
+        }
     }
 
     function initBoConfirmModal() {
@@ -125,15 +182,26 @@
         var modal = document.getElementById('boConfirmModal');
         var cancelBtn = document.getElementById('boConfirmCancel');
         var okBtn = document.getElementById('boConfirmOk');
+        var phraseInput = document.getElementById('boConfirmPhraseInput');
         if (!modal) return;
         boConfirmBound = true;
 
         if (cancelBtn) cancelBtn.addEventListener('click', closeBoConfirm);
         if (okBtn) {
             okBtn.addEventListener('click', function () {
+                if (okBtn.disabled) return;
                 var cb = boConfirmCallback;
+                var typed = phraseInput ? normalizeConfirmPhrase(phraseInput.value) : '';
                 closeBoConfirm();
-                if (typeof cb === 'function') cb();
+                if (typeof cb === 'function') cb(typed);
+            });
+        }
+        if (phraseInput) {
+            phraseInput.addEventListener('input', syncConfirmPhraseOk);
+            phraseInput.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                if (okBtn && !okBtn.disabled) okBtn.click();
             });
         }
         modal.addEventListener('click', function (e) {
@@ -303,6 +371,7 @@
             detail: form.getAttribute('data-bo-confirm-detail') || '',
             confirmLabel: form.getAttribute('data-bo-confirm-ok') || 'Confirmer',
             tone: form.getAttribute('data-bo-confirm-tone') || 'danger',
+            confirmPhrase: form.getAttribute('data-bo-confirm-phrase') || '',
         };
         // Si pas de détail fourni, reprendre l’e-mail du formulaire (ex. ajout d’accès).
         if (!opts.detail) {
@@ -331,7 +400,11 @@
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 var opts = optionsFromConfirmForm(form);
-                opts.onConfirm = function () {
+                opts.onConfirm = function (typedPhrase) {
+                    if (opts.confirmPhrase) {
+                        var hidden = form.querySelector('input[name="confirmation"]');
+                        if (hidden) hidden.value = typedPhrase || '';
+                    }
                     if (form.classList.contains('bo-abo-action')) {
                         softAboAction(form);
                         return;

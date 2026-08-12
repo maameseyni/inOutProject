@@ -492,6 +492,44 @@ body.bo-body.is-bo-loading .bo-shell {
     grid-column: span 1;
 }
 
+.bo-tool-card--launch {
+    --bo-tool-accent: #be123c;
+    --bo-tool-accent-soft: rgba(190, 18, 60, 0.12);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.bo-tool-card--launch-done {
+    --bo-tool-accent: #0f9f6e;
+    --bo-tool-accent-soft: rgba(15, 159, 110, 0.12);
+    cursor: default;
+    pointer-events: none;
+}
+
+.bo-tool-card--launch-idle {
+    --bo-tool-accent: #94a3b8;
+    --bo-tool-accent-soft: rgba(148, 163, 184, 0.14);
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.88;
+}
+
+.bo-tool-launch-form {
+    margin: 0;
+    display: block;
+    min-width: 0;
+}
+
+.bo-tool-launch-form .bo-tool-card {
+    width: 100%;
+    height: 100%;
+}
+
 .bo-tool-head {
     display: flex;
     align-items: center;
@@ -3276,6 +3314,8 @@ body.bo-body.is-bo-loading .bo-shell {
     box-shadow: 0 22px 50px rgba(28, 18, 52, 0.28);
     font-family: Outfit, system-ui, sans-serif;
     animation: boConfirmIn 0.22s ease;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .bo-confirm-modal[data-tone="warning"] .bo-confirm-dialog {
@@ -3304,6 +3344,30 @@ body.bo-body.is-bo-loading .bo-shell {
 .bo-confirm-modal[data-tone="info"] .bo-confirm-btn--ok {
     background: linear-gradient(135deg, #43277d 0%, #6b4c9e 100%);
     box-shadow: 0 3px 12px rgba(67, 39, 125, 0.32);
+}
+
+.bo-confirm-modal[data-tone="launch"] .bo-confirm-dialog {
+    border-left-color: #be123c;
+    background: linear-gradient(165deg, #fff 70%, rgba(190, 18, 60, 0.05) 100%);
+}
+
+.bo-confirm-modal[data-tone="launch"] .bo-confirm-icon {
+    color: #be123c;
+}
+
+.bo-confirm-modal[data-tone="launch"] .bo-confirm-btn--ok {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+    box-shadow: 0 3px 12px rgba(190, 18, 60, 0.28);
+}
+
+.bo-confirm-modal[data-tone="launch"] .bo-confirm-detail {
+    color: #9f1239;
+    background: rgba(190, 18, 60, 0.07);
+}
+
+.bo-confirm-modal[data-tone="info"] .bo-confirm-detail {
+    color: #43277d;
+    background: rgba(67, 39, 125, 0.07);
 }
 
 @keyframes boConfirmIn {
@@ -3340,12 +3404,14 @@ body.bo-body.is-bo-loading .bo-shell {
 .bo-confirm-detail {
     margin: 10px 0 0;
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.84rem;
     line-height: 1.45;
     font-weight: 600;
     color: #7a2e4a;
     background: rgba(231, 32, 96, 0.06);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .bo-confirm-modal[data-tone="warning"] .bo-confirm-detail {
@@ -3353,12 +3419,85 @@ body.bo-body.is-bo-loading .bo-shell {
     background: rgba(217, 119, 6, 0.08);
 }
 
+.bo-confirm-phrase {
+    margin: 16px 0 0;
+    display: grid;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.bo-confirm-phrase-label {
+    margin: 0;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: #6b6280;
+    line-height: 1.4;
+}
+
+.bo-confirm-phrase-label strong {
+    color: #43277d;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.bo-confirm-phrase-input {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    margin: 0;
+    padding: 0 0.9rem;
+    border-radius: 10px;
+    border: 1px solid rgba(67, 39, 125, 0.18);
+    background: #f7f5fb;
+    font-family: Outfit, system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #2a2140;
+    line-height: 38px;
+    outline: none;
+    box-sizing: border-box;
+    box-shadow: inset 0 1px 2px rgba(28, 18, 52, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.bo-confirm-phrase-input::placeholder {
+    color: #a89bb8;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    opacity: 1;
+}
+
+.bo-confirm-phrase-input:focus {
+    border-color: rgba(67, 39, 125, 0.45);
+    background: #fff;
+    box-shadow:
+        0 0 0 3px rgba(67, 39, 125, 0.1),
+        inset 0 1px 2px rgba(28, 18, 52, 0.03);
+}
+
+.bo-confirm-modal.has-phrase .bo-confirm-dialog {
+    width: min(420px, 100%);
+}
+
+.bo-confirm-btn--ok:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
 .bo-confirm-actions {
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 10px;
-    margin-top: 24px;
+    margin-top: 18px;
 }
 
 .bo-confirm-btn {

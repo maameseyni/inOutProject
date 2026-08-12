@@ -1222,6 +1222,9 @@ STATUT_ABO_AIDE = {
     ),
 }
 
+# Phrase exacte à taper pour confirmer le lancement global (anti-erreur).
+LANCEMENT_CONFIRM_PHRASE = 'LANCER XALISS'
+
 
 def _statut_effectif(abo, maintenant=None):
     """
@@ -2631,6 +2634,16 @@ def backoffice_dashboard(request):
         'stats_totaux': charts_data.get('totaux') or {},
         'geo_utilisateurs': geo_data,
         'acces_backoffice': _liste_acces_backoffice(request.user),
+        'lancement_bo': {
+            'nb_prelaunch': par_statut[AbonnementOrganisation.STATUT_PRELAUNCH],
+            'disponible': par_statut[AbonnementOrganisation.STATUT_PRELAUNCH] > 0,
+            'deja_lance': AbonnementOrganisation.objects.filter(
+                lancement_applique_le__isnull=False,
+            ).exists(),
+            'date_effective': AbonnementOrganisation.date_lancement_effective(),
+            'jours_essai': AbonnementOrganisation.duree_essai().days,
+            'phrase_confirm': LANCEMENT_CONFIRM_PHRASE,
+        },
         'charts_json': json.dumps(
             {
                 **charts_data,
@@ -3204,6 +3217,89 @@ def _safe_bo_next(next_url, fallback):
     if nxt.startswith('/') and not nxt.startswith('//'):
         return nxt
     return fallback
+
+
+@backoffice_required
+@require_POST
+def backoffice_lancement_action(request):
+    """
+    Jour J : passe toutes les orgs encore en prélaunch en essai Pro (3 mois).
+    Ne touche aucune donnée métier (transactions, clients, notes…) — statut abo seulement.
+    Les nouvelles inscriptions démarreront ensuite directement en essai
+    (via date_lancement_effective).
+    """
+    fallback = reverse('backoffice') + '#outils'
+    next_url = _safe_bo_next(request.POST.get('next'), fallback)
+    if '#' not in next_url:
+        next_url = f'{next_url}#outils'
+
+    ok = True
+    level = 'success'
+    msg_text = ''
+    updated = 0
+
+    try:
+        phrase = (request.POST.get('confirmation') or '').strip().upper()
+        if phrase != LANCEMENT_CONFIRM_PHRASE:
+            raise ValueError(
+                f'Confirmation incorrecte. Tapez exactement « {LANCEMENT_CONFIRM_PHRASE} ».'
+            )
+
+        debut = timezone.now()
+        qs = (
+            AbonnementOrganisation.objects.filter(
+                lancement_applique_le__isnull=True,
+                statut=AbonnementOrganisation.STATUT_PRELAUNCH,
+            )
+            .select_related('organisation', 'plan')
+            .order_by('pk')
+        )
+        total = qs.count()
+        if total == 0:
+            raise ValueError('Aucune organisation en prélaunch à activer.')
+
+        for abo in qs.iterator():
+            abo.demarrer_essai(debut=debut, save=True)
+            updated += 1
+
+        # Orgs sans abonnement : créer + démarrer l’essai (plateforme déjà lancée).
+        for org in Organisation.objects.filter(abonnement__isnull=True).iterator():
+            AbonnementOrganisation.creer_pour_organisation(org, save=True)
+            updated += 1
+
+        jours = AbonnementOrganisation.duree_essai().days
+        msg_text = (
+            f'Lancement activé : {updated} organisation(s) passée(s) en essai Pro '
+            f'({jours} jours). Aucune donnée métier n’a été modifiée.'
+        )
+    except ValueError as exc:
+        ok = False
+        level = 'error'
+        msg_text = str(exc)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('backoffice_lancement_action failed')
+        ok = False
+        level = 'error'
+        msg_text = 'Impossible d’activer le lancement. Réessayez.'
+
+    if level == 'success':
+        messages.success(request, msg_text)
+    else:
+        messages.error(request, msg_text)
+
+    if _request_wants_ajax(request):
+        return JsonResponse(
+            {
+                'ok': ok,
+                'level': level,
+                'message': msg_text,
+                'next': next_url,
+                'updated': updated,
+            }
+        )
+
+    return redirect(next_url)
 
 
 @backoffice_required

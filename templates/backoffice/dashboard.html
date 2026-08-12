@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-acces-2">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-lancement-5">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
@@ -345,6 +345,64 @@
             </div>
 
             <div class="bo-tools-grid">
+                {% if lancement_bo.disponible %}
+                <form method="post"
+                      action="{% url 'backoffice_lancement_action' %}"
+                      class="bo-tool-launch-form"
+                      data-bo-confirm
+                      data-bo-confirm-title="Lancer Xaliss"
+                      data-bo-confirm-message="Toutes les organisations encore en prélaunch passeront en essai Pro ({{ lancement_bo.jours_essai }} jours) à partir de maintenant. Les inscriptions suivantes démarreront directement en essai. Aucune donnée (transactions, clients, notes…) ne sera modifiée."
+                      data-bo-confirm-detail="{{ lancement_bo.nb_prelaunch }} organisation{{ lancement_bo.nb_prelaunch|pluralize }} en prélaunch"
+                      data-bo-confirm-ok="Lancer maintenant"
+                      data-bo-confirm-tone="launch"
+                      data-bo-confirm-phrase="{{ lancement_bo.phrase_confirm }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'backoffice' %}#outils">
+                    <input type="hidden" name="confirmation" value="" class="js-bo-confirm-phrase-value">
+                    <button type="submit" class="bo-tool-card bo-tool-card--launch">
+                        <span class="bo-tool-head">
+                            <span class="bo-tool-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="bo-tool-arrow" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </span>
+                        </span>
+                        <span class="bo-tool-tag">Jour J</span>
+                        <strong class="bo-tool-title">Lancer Xaliss</strong>
+                        <span class="bo-tool-desc">Activer l’essai Pro pour {{ lancement_bo.nb_prelaunch }} org. en prélaunch — sans toucher aux données</span>
+                    </button>
+                </form>
+                {% elif lancement_bo.deja_lance %}
+                <div class="bo-tool-card bo-tool-card--launch-done" aria-live="polite">
+                    <span class="bo-tool-head">
+                        <span class="bo-tool-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                    </span>
+                    <span class="bo-tool-tag">Jour J</span>
+                    <strong class="bo-tool-title">Xaliss est lancé</strong>
+                    <span class="bo-tool-desc">
+                        {% if lancement_bo.date_effective %}
+                        Depuis le {{ lancement_bo.date_effective|date:"d/m/Y H:i" }} · nouvelles inscriptions en essai Pro
+                        {% else %}
+                        Lancement déjà appliqué · nouvelles inscriptions en essai Pro
+                        {% endif %}
+                    </span>
+                </div>
+                {% else %}
+                <div class="bo-tool-card bo-tool-card--launch-idle">
+                    <span class="bo-tool-head">
+                        <span class="bo-tool-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/></svg>
+                        </span>
+                    </span>
+                    <span class="bo-tool-tag">Jour J</span>
+                    <strong class="bo-tool-title">Lancer Xaliss</strong>
+                    <span class="bo-tool-desc">Aucune organisation en prélaunch pour l’instant</span>
+                </div>
+                {% endif %}
+
                 <a class="bo-tool-card bo-tool-card--violet" href="{% url 'admin:index' %}">
                     <span class="bo-tool-head">
                         <span class="bo-tool-icon" aria-hidden="true">
@@ -421,7 +479,7 @@
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/kp-date.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-acces-2"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-lancement-2"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {
