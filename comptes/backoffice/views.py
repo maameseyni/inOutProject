@@ -10,6 +10,7 @@ from .core import (
     backoffice_org_abo_action,
     backoffice_org_detail,
     backoffice_prolonger_tous_action,
+    backoffice_sondage_action,
     backoffice_required,
     backoffice_user_detail,
 )
@@ -25,6 +26,7 @@ __all__ = [
     'backoffice_org_abo_action',
     'backoffice_org_detail',
     'backoffice_prolonger_tous_action',
+    'backoffice_sondage_action',
     'backoffice_required',
     'backoffice_user_detail',
 ]

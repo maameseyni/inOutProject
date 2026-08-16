@@ -1291,6 +1291,13 @@
         });
     };
 
+    window.xalissVotePoll = function (pollId, optionId) {
+        return apiFetchNetwork('/sondages/' + encodeURIComponent(pollId) + '/repondre/', {
+            method: 'POST',
+            body: JSON.stringify({ optionId: optionId }),
+        });
+    };
+
     window.xalissNotificationsRemoteRemovePrefix = function (prefix) {
         if (!prefix) return;
         enqueueNotifRemote(function () {

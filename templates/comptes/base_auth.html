@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
-    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
-    <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=auth-narrow-4">
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=responsive-8">
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=auth-nav-1">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="auth-page"{% block body_attrs %}{% endblock %}>
@@ -37,6 +37,13 @@
         window.addEventListener('scroll', onScroll, { passive: true });
         onScroll();
 
+        function closeMenu() {
+            menu.classList.remove('is-open');
+            document.body.classList.remove('lp-menu-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.setAttribute('aria-label', 'Ouvrir le menu');
+        }
+
         toggle.addEventListener('click', function () {
             var open = !menu.classList.contains('is-open');
             menu.classList.toggle('is-open', open);
@@ -46,12 +53,22 @@
         });
 
         menu.querySelectorAll('a').forEach(function (link) {
-            link.addEventListener('click', function () {
-                menu.classList.remove('is-open');
-                document.body.classList.remove('lp-menu-open');
-                toggle.setAttribute('aria-expanded', 'false');
-                toggle.setAttribute('aria-label', 'Ouvrir le menu');
-            });
+            link.addEventListener('click', closeMenu);
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!menu.classList.contains('is-open') || nav.contains(event.target)) return;
+            closeMenu();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape' || !menu.classList.contains('is-open')) return;
+            closeMenu();
+            toggle.focus();
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 1100) closeMenu();
         });
     })();
     </script>

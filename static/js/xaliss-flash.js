@@ -88,6 +88,34 @@
             read: item.read === true,
         };
         if (item.systemId) next.systemId = String(item.systemId);
+        if (item.poll && typeof item.poll === 'object') {
+            var pollId = Number(item.poll.id);
+            var selectedOptionId = item.poll.selectedOptionId == null
+                ? null
+                : Number(item.poll.selectedOptionId);
+            var options = Array.isArray(item.poll.options)
+                ? item.poll.options.map(function (option) {
+                    return {
+                        id: Number(option && option.id),
+                        text: String((option && option.text) || ''),
+                    };
+                }).filter(function (option) {
+                    return Number.isFinite(option.id) && option.text;
+                })
+                : [];
+            if (Number.isFinite(pollId) && options.length) {
+                next.poll = {
+                    id: pollId,
+                    question: String(item.poll.question || next.message),
+                    active: item.poll.active === true,
+                    answered: item.poll.answered === true,
+                    selectedOptionId: Number.isFinite(selectedOptionId)
+                        ? selectedOptionId
+                        : null,
+                    options: options,
+                };
+            }
+        }
         if (next.systemId === 'welcome-v1' && next.type !== 'success') {
             next.type = 'success';
         }

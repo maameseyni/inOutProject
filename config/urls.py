@@ -12,6 +12,7 @@ from comptes.backoffice.views import (
     backoffice_org_abo_action,
     backoffice_org_detail,
     backoffice_prolonger_tous_action,
+    backoffice_sondage_action,
     backoffice_user_detail,
 )
 from config.pwa_views import service_worker
@@ -25,6 +26,11 @@ urlpatterns = [
         'backoffice/notifications/broadcast/',
         backoffice_broadcast_notif_action,
         name='backoffice_broadcast_notif_action',
+    ),
+    path(
+        'backoffice/sondages/envoyer/',
+        backoffice_sondage_action,
+        name='backoffice_sondage_action',
     ),
     path(
         'backoffice/abonnements/prolonger-tous/',

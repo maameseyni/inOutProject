@@ -405,7 +405,70 @@ function updateNotificationsBadge() {
 
 function isOfficialXalissBroadcast(item) {
     const sid = item && item.systemId ? String(item.systemId) : '';
-    return sid.indexOf('bo_bcast_') === 0;
+    return sid.indexOf('bo_bcast_') === 0 || sid.indexOf('bo_poll:') === 0;
+}
+
+const pollsBeingEdited = {};
+
+function renderNotificationPoll(item) {
+    const poll = item && item.poll;
+    if (!poll || !Array.isArray(poll.options)) return '';
+
+    const selected = poll.options.find(function (option) {
+        return Number(option.id) === Number(poll.selectedOptionId);
+    });
+    const isEditing = !!pollsBeingEdited[poll.id];
+
+    if (!poll.active) {
+        return '<div class="notification-poll notification-poll--answered">'
+            + '<p class="notification-poll-status">Ce sondage est terminé.</p>'
+            + (selected
+                ? '<span class="notification-poll-choice">'
+                    + '<span aria-hidden="true">✓</span> ' + escapeHtml(selected.text)
+                    + '</span>'
+                : '')
+            + '</div>';
+    }
+
+    if (poll.answered && !isEditing) {
+        return '<div class="notification-poll notification-poll--answered" data-poll-id="'
+            + Number(poll.id) + '">'
+            + '<p class="notification-poll-status">Merci, votre réponse est enregistrée.</p>'
+            + '<div class="notification-poll-answered-row">'
+            + (selected
+                ? '<span class="notification-poll-choice">'
+                    + '<span aria-hidden="true">✓</span> ' + escapeHtml(selected.text)
+                    + '</span>'
+                : '')
+            + '<button type="button" class="notification-poll-edit" data-poll-edit="'
+            + Number(poll.id) + '">Modifier</button>'
+            + '</div>'
+            + '</div>';
+    }
+
+    return '<div class="notification-poll" data-poll-id="' + Number(poll.id) + '">'
+        + '<p class="notification-poll-hint">'
+        + (poll.answered ? 'Choisissez une autre réponse :' : 'Choisissez une réponse :')
+        + '</p>'
+        + '<div class="notification-poll-options">'
+        + poll.options.map(function (option) {
+            const isSelected = Number(option.id) === Number(poll.selectedOptionId);
+            return '<button type="button" class="notification-poll-option'
+                + (isSelected ? ' is-selected' : '') + '"'
+                + ' data-poll-option-id="' + Number(option.id) + '"'
+                + ' aria-pressed="' + (isSelected ? 'true' : 'false') + '">'
+                + '<span class="notification-poll-check" aria-hidden="true">'
+                + (isSelected ? '✓' : '') + '</span>'
+                + '<span>' + escapeHtml(option.text) + '</span>'
+                + '</button>';
+        }).join('')
+        + '</div>'
+        + (poll.answered
+            ? '<button type="button" class="notification-poll-cancel" data-poll-cancel="'
+                + Number(poll.id) + '">Annuler</button>'
+            : '')
+        + '<p class="notification-poll-feedback" role="status" aria-live="polite"></p>'
+        + '</div>';
 }
 
 function renderNotificationsModal() {
@@ -433,6 +496,7 @@ function renderNotificationsModal() {
         const type = item && item.type ? item.type : 'info';
         const isUnread = !(item && item.read === true);
         const isOfficial = isOfficialXalissBroadcast(item);
+        const isPoll = !!(item && item.poll);
         const fromHtml = isOfficial
             ? '<p class="notification-item-from">Équipe Xaliss</p>'
             : '';
@@ -445,11 +509,13 @@ function renderNotificationsModal() {
             '<div class="notification-item-copy">' +
             fromHtml +
             '<div class="notification-item-message">' + escapeHtml(item.message || '') + '</div>' +
+            (isPoll ? renderNotificationPoll(item) : '') +
             '</div>' +
-            '<span class="notification-item-badge">' + escapeHtml(getNotificationTypeLabel(type)) + '</span>' +
+            '<span class="notification-item-badge">'
+            + (isPoll ? 'Sondage' : escapeHtml(getNotificationTypeLabel(type))) + '</span>' +
             '</div>' +
             '<div class="notification-item-meta">'
-            + (isOfficial ? 'Annonce officielle · ' : '')
+            + (isPoll ? 'Question de l’équipe Xaliss · ' : (isOfficial ? 'Annonce officielle · ' : ''))
             + escapeHtml(getNotificationTypeLabel(type))
             + (item.createdAt ? ' · ' + escapeHtml(formatNotificationDate(item.createdAt)) : '')
             + '</div>' +
@@ -507,7 +573,68 @@ function initNotificationsUI() {
     const deleteAllBtn = document.getElementById('notificationsDeleteAllBtn');
     if (btn) btn.addEventListener('click', openNotificationsModal);
     if (modal) {
-        modal.addEventListener('click', function (e) {
+        modal.addEventListener('click', async function (e) {
+            const editButton = e.target.closest && e.target.closest('[data-poll-edit]');
+            if (editButton) {
+                const pollId = Number(editButton.dataset.pollEdit);
+                if (Number.isFinite(pollId)) {
+                    pollsBeingEdited[pollId] = true;
+                    renderNotificationsModal();
+                }
+                return;
+            }
+
+            const cancelButton = e.target.closest && e.target.closest('[data-poll-cancel]');
+            if (cancelButton) {
+                const pollId = Number(cancelButton.dataset.pollCancel);
+                if (Number.isFinite(pollId)) {
+                    delete pollsBeingEdited[pollId];
+                    renderNotificationsModal();
+                }
+                return;
+            }
+
+            const optionButton = e.target.closest && e.target.closest('[data-poll-option-id]');
+            if (optionButton) {
+                const pollEl = optionButton.closest('[data-poll-id]');
+                const pollId = pollEl ? Number(pollEl.dataset.pollId) : NaN;
+                const optionId = Number(optionButton.dataset.pollOptionId);
+                if (!Number.isFinite(pollId) || !Number.isFinite(optionId)
+                    || typeof window.xalissVotePoll !== 'function') return;
+
+                const optionButtons = pollEl.querySelectorAll('[data-poll-option-id]');
+                const feedback = pollEl.querySelector('.notification-poll-feedback');
+                optionButtons.forEach(function (button) { button.disabled = true; });
+                if (feedback) feedback.textContent = 'Enregistrement…';
+                try {
+                    const result = await window.xalissVotePoll(pollId, optionId);
+                    delete pollsBeingEdited[pollId];
+                    const notifications = getNotificationHistory().map(function (item) {
+                        if (!item.poll || Number(item.poll.id) !== pollId) return item;
+                        return Object.assign({}, item, {
+                            poll: Object.assign({}, item.poll, {
+                                answered: true,
+                                selectedOptionId: Number(result.selectedOptionId),
+                            }),
+                        });
+                    });
+                    if (typeof window.xalissReplaceNotifications === 'function') {
+                        window.xalissReplaceNotifications(notifications, null);
+                    }
+                    showNotification(result.message || 'Merci, réponse enregistrée.', 'success', {
+                        transient: true,
+                        duration: 3200,
+                    });
+                } catch (error) {
+                    optionButtons.forEach(function (button) { button.disabled = false; });
+                    if (feedback) {
+                        feedback.textContent = (error && error.message)
+                            ? error.message
+                            : 'Impossible d’enregistrer la réponse.';
+                    }
+                }
+                return;
+            }
             if (e.target === modal) closeNotificationsModal();
         });
     }

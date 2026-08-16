@@ -291,10 +291,18 @@ class Notification(models.Model):
 
     class Meta:
         db_table = 'notifications'
+        verbose_name = 'notification'
+        verbose_name_plural = 'notifications'
         ordering = ['-cree_le']
         indexes = [
-            models.Index(fields=['organisation', 'utilisateur', '-cree_le']),
-            models.Index(fields=['organisation', 'utilisateur', 'system_id']),
+            models.Index(
+                fields=['organisation', 'utilisateur', '-cree_le'],
+                name='notificatio_organis_0c8b1a_idx',
+            ),
+            models.Index(
+                fields=['organisation', 'utilisateur', 'system_id'],
+                name='notificatio_organis_1a2b3c_idx',
+            ),
         ]
 
     def __str__(self):
@@ -318,6 +326,8 @@ class NotificationIgnoree(models.Model):
 
     class Meta:
         db_table = 'notifications_ignorees'
+        verbose_name = 'notification ignorée'
+        verbose_name_plural = 'notifications ignorées'
         constraints = [
             models.UniqueConstraint(
                 fields=['organisation', 'utilisateur', 'system_id'],
@@ -327,3 +337,76 @@ class NotificationIgnoree(models.Model):
 
     def __str__(self):
         return self.system_id
+
+
+class Sondage(models.Model):
+    """Sondage ponctuel envoyé depuis le backoffice."""
+
+    question = models.CharField(max_length=300)
+    actif = models.BooleanField(default=True)
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='sondages_crees',
+    )
+    cree_le = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'sondages'
+        ordering = ['-cree_le']
+
+    def __str__(self):
+        return self.question
+
+
+class SondageOption(models.Model):
+    sondage = models.ForeignKey(
+        Sondage,
+        on_delete=models.CASCADE,
+        related_name='options',
+    )
+    texte = models.CharField(max_length=160)
+    ordre = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = 'sondage_options'
+        ordering = ['ordre', 'pk']
+
+    def __str__(self):
+        return self.texte
+
+
+class SondageReponse(models.Model):
+    sondage = models.ForeignKey(
+        Sondage,
+        on_delete=models.CASCADE,
+        related_name='reponses',
+    )
+    option = models.ForeignKey(
+        SondageOption,
+        on_delete=models.CASCADE,
+        related_name='reponses',
+    )
+    utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reponses_sondages',
+    )
+    repondu_le = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'sondage_reponses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['sondage', 'utilisateur'],
+                name='uniq_reponse_sondage_utilisateur',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['sondage', 'option']),
+        ]
+
+    def __str__(self):
+        return f'{self.utilisateur_id} → {self.option_id}'

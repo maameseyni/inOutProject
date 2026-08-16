@@ -1,0 +1,73 @@
+<div class="bo-poll-results" id="bo-sondage-results">
+    <div class="bo-poll-results-head">
+        <h3>Résultats récents</h3>
+        <span>{{ nb_sondages }} sondage{{ nb_sondages|pluralize }}</span>
+    </div>
+    {% for sondage in sondages %}
+    <article class="bo-poll-result">
+        <div class="bo-poll-result-head">
+            <div>
+                <p>{{ sondage.question }}</p>
+                <span>{{ sondage.cree_le|date:"d/m/Y H:i" }}</span>
+            </div>
+            <strong>{{ sondage.nb_reponses }} réponse{{ sondage.nb_reponses|pluralize }}</strong>
+        </div>
+        <div class="bo-poll-result-options">
+            {% for option in sondage.options %}
+            <div class="bo-poll-result-option">
+                <div class="bo-poll-result-label">
+                    <span>{{ option.texte }}</span>
+                    <strong>{{ option.pourcentage|stringformat:".1f" }} % · {{ option.nb_reponses }}</strong>
+                </div>
+                <div class="bo-poll-result-track" aria-hidden="true">
+                    <span style="width: {{ option.pourcentage|stringformat:'.1f' }}%"></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+    {% empty %}
+    <p class="bo-empty">
+        <span class="bo-empty-title">Aucun sondage envoyé</span>
+        <span class="bo-empty-sub">Les résultats apparaîtront ici après le premier envoi.</span>
+    </p>
+    {% endfor %}
+
+    {% if sondage_page_obj and sondage_page_obj.paginator.num_pages > 1 %}
+    <nav class="bo-pagination" aria-label="Pagination des sondages">
+        {% if sondage_page_obj.has_previous %}
+        <a class="bo-pagination-btn" href="?{% if query_suffix_sondage_pages %}{{ query_suffix_sondage_pages }}&{% endif %}sondage_page={{ sondage_page_obj.previous_page_number }}#bo-sondages">Précédent</a>
+        {% else %}
+        <span class="bo-pagination-btn is-disabled" aria-disabled="true">Précédent</span>
+        {% endif %}
+
+        <div class="bo-page-numbers">
+            {% if sondage_page_numbers|first > 1 %}
+            <a class="bo-page-num" href="?{% if query_suffix_sondage_pages %}{{ query_suffix_sondage_pages }}&{% endif %}sondage_page=1#bo-sondages">1</a>
+            {% if sondage_page_numbers|first > 2 %}<span class="bo-page-ellipsis">…</span>{% endif %}
+            {% endif %}
+
+            {% for num in sondage_page_numbers %}
+            {% if num == sondage_page_obj.number %}
+            <span class="bo-page-num is-current" aria-current="page">{{ num }}</span>
+            {% else %}
+            <a class="bo-page-num" href="?{% if query_suffix_sondage_pages %}{{ query_suffix_sondage_pages }}&{% endif %}sondage_page={{ num }}#bo-sondages">{{ num }}</a>
+            {% endif %}
+            {% endfor %}
+
+            {% if sondage_page_numbers|last < sondage_page_obj.paginator.num_pages %}
+            {% if sondage_page_numbers|last < sondage_page_obj.paginator.num_pages|add:"-1" %}<span class="bo-page-ellipsis">…</span>{% endif %}
+            <a class="bo-page-num" href="?{% if query_suffix_sondage_pages %}{{ query_suffix_sondage_pages }}&{% endif %}sondage_page={{ sondage_page_obj.paginator.num_pages }}#bo-sondages">{{ sondage_page_obj.paginator.num_pages }}</a>
+            {% endif %}
+        </div>
+
+        <span class="bo-pagination-info">Page {{ sondage_page_obj.number }} sur {{ sondage_page_obj.paginator.num_pages }}</span>
+
+        {% if sondage_page_obj.has_next %}
+        <a class="bo-pagination-btn" href="?{% if query_suffix_sondage_pages %}{{ query_suffix_sondage_pages }}&{% endif %}sondage_page={{ sondage_page_obj.next_page_number }}#bo-sondages">Suivant</a>
+        {% else %}
+        <span class="bo-pagination-btn is-disabled" aria-disabled="true">Suivant</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>

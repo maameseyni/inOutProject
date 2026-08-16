@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-prolonger-2">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-sondage-1">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
@@ -389,6 +389,62 @@
                 </form>
             </div>
 
+            <div class="bo-card bo-card--poll" id="bo-sondages">
+                <div class="bo-card-head">
+                    <div class="bo-card-head-text">
+                        <p class="bo-card-kicker">Écoute utilisateurs</p>
+                        <h2>Sondage rapide</h2>
+                        <p class="bo-card-subhint">
+                            Une question, 2 à 5 choix et une réponse modifiable par utilisateur.
+                        </p>
+                    </div>
+                </div>
+
+                <form class="bo-poll-form"
+                      method="post"
+                      action="{% url 'backoffice_sondage_action' %}"
+                      data-bo-confirm
+                      data-bo-confirm-title="Envoyer le sondage"
+                      data-bo-confirm-message="La question apparaîtra dans la cloche de tous les utilisateurs actifs. Chaque personne pourra modifier son choix."
+                      data-bo-confirm-detail="{{ notif_broadcast.nb_destinataires }} destinataire{{ notif_broadcast.nb_destinataires|pluralize }}"
+                      data-bo-confirm-ok="Envoyer le sondage"
+                      data-bo-confirm-tone="warning">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'backoffice' %}#outils">
+                    <label class="bo-abo-field bo-poll-question">
+                        <span>Question</span>
+                        <textarea name="question" required maxlength="300" rows="2" placeholder="Ex. Quelle fonctionnalité souhaitez-vous en priorité ?"></textarea>
+                    </label>
+                    <div class="bo-poll-options" aria-label="Choix de réponse">
+                        <label class="bo-abo-field">
+                            <span>Choix 1</span>
+                            <input type="text" name="options" required maxlength="160" placeholder="Ex. Suivi des stocks">
+                        </label>
+                        <label class="bo-abo-field">
+                            <span>Choix 2</span>
+                            <input type="text" name="options" required maxlength="160" placeholder="Ex. Relances clients">
+                        </label>
+                        <label class="bo-abo-field">
+                            <span>Choix 3 <small>(facultatif)</small></span>
+                            <input type="text" name="options" maxlength="160">
+                        </label>
+                        <label class="bo-abo-field">
+                            <span>Choix 4 <small>(facultatif)</small></span>
+                            <input type="text" name="options" maxlength="160">
+                        </label>
+                        <label class="bo-abo-field">
+                            <span>Choix 5 <small>(facultatif)</small></span>
+                            <input type="text" name="options" maxlength="160">
+                        </label>
+                    </div>
+                    <button type="submit" class="bo-abo-submit" {% if notif_broadcast.nb_destinataires < 1 %}disabled{% endif %}>
+                        Envoyer le sondage
+                    </button>
+                </form>
+
+                {% include 'backoffice/partials/panel_sondages.html' %}
+            </div>
+
             <div class="bo-tools-grid">
                 {% if lancement_bo.disponible %}
                 <form method="post"
@@ -562,7 +618,7 @@
     <script src="{% static 'js/kp-select.js' %}"></script>
     <script src="{% static 'js/kp-date.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}"></script>
-    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-prolonger-1"></script>
+    <script src="{% static 'js/bo-dashboard.js' %}?v=bo-sondage-soft-2"></script>
     <script>
         (function () {
             if ('scrollRestoration' in history) {
@@ -582,6 +638,9 @@
                 'bo-finances': 'finances',
                 'bo-charges': 'finances',
                 'bo-charts': 'stats',
+                'bo-sondages': 'outils',
+                sondages: 'outils',
+                'bo-outils': 'outils',
                 admin: 'outils'
             };
             var LABELS = {
@@ -1686,6 +1745,7 @@
                     || (mode === 'users' ? 'utilisateurs' : null)
                     || (mode === 'payments' ? 'paiements' : null)
                     || (mode === 'finances' ? 'finances' : null)
+                    || (mode === 'polls' ? 'outils' : null)
                     || (document.body.getAttribute('data-bo-tab') || 'vue');
                 setTab(tab, false, { scrollTop: false, keepView: true });
             };
@@ -1708,7 +1768,9 @@
             var initial = normalizeTab(location.hash);
             if (!initial) {
                 var params = new URLSearchParams(location.search);
-                if (params.has('pay_q') || params.has('pay_statut') ||
+                if (params.has('sondage_page')) {
+                    initial = 'outils';
+                } else if (params.has('pay_q') || params.has('pay_statut') ||
                     params.has('pay_page') || params.has('pay_all')) {
                     initial = 'paiements';
                 } else if (params.has('q') || params.has('statut') || params.has('plan') ||

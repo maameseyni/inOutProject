@@ -1996,11 +1996,56 @@ def _date_excel(dt):
     return local.strftime('%d/%m/%Y')
 
 
+def _sondages_backoffice(page_number=1, per_page=2):
+    from finances.models import Sondage, SondageOption
+
+    option_qs = SondageOption.objects.annotate(
+        nb_reponses=Count('reponses')
+    ).order_by('ordre', 'pk')
+    polls_qs = (
+        Sondage.objects.select_related('cree_par')
+        .prefetch_related(Prefetch('options', queryset=option_qs))
+        .annotate(nb_reponses=Count('reponses', distinct=True))
+        .order_by('-cree_le', '-pk')
+    )
+    paginator = Paginator(polls_qs, per_page)
+    page_obj = paginator.get_page(page_number)
+    current = page_obj.number
+    total_pages = paginator.num_pages
+    page_numbers = list(range(max(1, current - 2), min(total_pages, current + 2) + 1))
+
+    rows = []
+    for poll in page_obj.object_list:
+        total = int(poll.nb_reponses or 0)
+        options = []
+        for option in poll.options.all():
+            count = int(option.nb_reponses or 0)
+            options.append({
+                'texte': option.texte,
+                'nb_reponses': count,
+                'pourcentage': round((count * 100 / total), 1) if total else 0,
+            })
+        rows.append({
+            'id': poll.pk,
+            'question': poll.question,
+            'actif': poll.actif,
+            'cree_le': poll.cree_le,
+            'nb_reponses': total,
+            'options': options,
+        })
+    return {
+        'rows': rows,
+        'page_obj': page_obj,
+        'page_numbers': page_numbers,
+        'total': paginator.count,
+    }
+
+
 @backoffice_required
 def backoffice_dashboard(request):
     maintenant = timezone.now()
     partial = _partial_kind(request)
-    light_partial = partial in ('users', 'payments', 'finances')
+    light_partial = partial in ('users', 'payments', 'finances', 'polls')
     periode = _periode_depuis_request(request)
     periode_key = periode['key']
     periode_debut = periode['debut']
@@ -2163,9 +2208,9 @@ def backoffice_dashboard(request):
 
     # ── Liste utilisateurs : période (activité) + recherche + abo ──────────
     # partial=payments|finances : on saute l’annuaire (soft-nav listes)
-    skip_users = partial in ('payments', 'finances')
-    skip_payments = partial in ('users', 'finances')
-    skip_finances = partial in ('users', 'payments')
+    skip_users = partial in ('payments', 'finances', 'polls')
+    skip_payments = partial in ('users', 'finances', 'polls')
+    skip_finances = partial in ('users', 'payments', 'polls')
 
     p_debut, p_fin, scope_effectif = _params_liste_utilisateurs(
         filtre_actif, periode_debut, periode_fin, user_scope,
@@ -2397,6 +2442,25 @@ def backoffice_dashboard(request):
             charge_all=False,
         )
     )
+    query_suffix_sondage_pages = urlencode(
+        _query_params(
+            **q_kwargs,
+            vue_complete=vue_complete,
+            pay_all=pay_vue_complete,
+            charge_all=charge_vue_complete,
+        )
+    )
+    if light_partial and partial != 'polls':
+        sondages_data = {
+            'rows': [],
+            'page_obj': None,
+            'page_numbers': [],
+            'total': 0,
+        }
+    else:
+        sondages_data = _sondages_backoffice(
+            page_number=request.GET.get('sondage_page') or 1,
+        )
 
     def _href_pay_statut(code=''):
         qs = urlencode(
@@ -2656,6 +2720,11 @@ def backoffice_dashboard(request):
                 .count()
             ),
         },
+        'sondages': sondages_data['rows'],
+        'sondage_page_obj': sondages_data['page_obj'],
+        'sondage_page_numbers': sondages_data['page_numbers'],
+        'nb_sondages': sondages_data['total'],
+        'query_suffix_sondage_pages': query_suffix_sondage_pages,
         'prolongation_bo': {
             'nb_abonnements': AbonnementOrganisation.objects.count(),
             'jours_defaut': 30,
@@ -2694,6 +2763,12 @@ def backoffice_dashboard(request):
     if partial == 'finances':
         html = render_to_string(
             'backoffice/partials/panel_finances.html', context, request=request
+        )
+        return HttpResponse(html)
+
+    if partial == 'polls':
+        html = render_to_string(
+            'backoffice/partials/panel_sondages.html', context, request=request
         )
         return HttpResponse(html)
 
@@ -3385,6 +3460,64 @@ def backoffice_broadcast_notif_action(request):
             }
         )
 
+    return redirect(next_url)
+
+
+@backoffice_required
+@require_POST
+def backoffice_sondage_action(request):
+    """Crée un sondage à choix unique et le diffuse dans la cloche."""
+    from finances.services.notifications import (
+        NotificationServiceError,
+        create_poll_and_broadcast,
+    )
+
+    fallback = reverse('backoffice') + '#outils'
+    next_url = _safe_bo_next(request.POST.get('next'), fallback)
+    if '#' not in next_url:
+        next_url = f'{next_url}#outils'
+
+    ok = True
+    level = 'success'
+    created = 0
+    poll_id = None
+    try:
+        result = create_poll_and_broadcast(
+            question=request.POST.get('question'),
+            choices=request.POST.getlist('options'),
+            created_by=request.user,
+        )
+        created = int(result.get('created') or 0)
+        poll_id = result.get('poll_id')
+        msg_text = (
+            f'Sondage envoyé à {created} utilisateur'
+            f'{"s" if created > 1 else ""}.'
+        )
+    except NotificationServiceError as exc:
+        ok = False
+        level = 'error'
+        msg_text = exc.message
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('backoffice_sondage_action failed')
+        ok = False
+        level = 'error'
+        msg_text = 'Impossible d’envoyer le sondage. Réessayez.'
+
+    if ok:
+        messages.success(request, msg_text)
+    else:
+        messages.error(request, msg_text)
+
+    if _request_wants_ajax(request):
+        return JsonResponse({
+            'ok': ok,
+            'level': level,
+            'message': msg_text,
+            'next': next_url,
+            'created': created,
+            'poll_id': poll_id,
+        })
     return redirect(next_url)
 
 

@@ -475,6 +475,25 @@
         return true;
     }
 
+    /** Swap sûr : on extrait l'élément #id de la réponse (fragment ou page complète). */
+    function replaceOuterById(id, html) {
+        var current = document.getElementById(id);
+        if (!current || !html) return false;
+        var neu = null;
+        try {
+            neu = new DOMParser().parseFromString(String(html), 'text/html').getElementById(id);
+        } catch (e) {}
+        if (!neu) {
+            var wrap = document.createElement('div');
+            wrap.innerHTML = String(html).trim();
+            var first = wrap.firstElementChild;
+            if (first && first.id === id) neu = first;
+        }
+        if (!neu) return false;
+        current.replaceWith(document.importNode(neu, true));
+        return true;
+    }
+
     function replaceByIdFromDoc(id, doc) {
         var oldEl = document.getElementById(id);
         var neu = doc.getElementById(id);
@@ -513,6 +532,7 @@
             if (hash === 'utilisateurs' || hash === 'users') mode = 'users';
             else if (hash === 'paiements' || hash === 'payments') mode = 'payments';
             else if (hash === 'finances' || hash === 'finance' || hash === 'charges') mode = 'finances';
+            else if (hash === 'bo-sondages' || parsed.searchParams.has('sondage_page')) mode = 'polls';
             else mode = 'refresh';
         }
 
@@ -535,9 +555,12 @@
         }
 
         try {
-            if (mode === 'users' || mode === 'payments' || mode === 'finances') {
+            if (mode === 'users' || mode === 'payments' || mode === 'finances' || mode === 'polls') {
                 var listParams = new URLSearchParams(parsed.search);
-                var partialName = mode === 'users' ? 'users' : (mode === 'payments' ? 'payments' : 'finances');
+                var partialName = mode === 'users' ? 'users'
+                    : mode === 'payments' ? 'payments'
+                    : mode === 'polls' ? 'polls'
+                    : 'finances';
                 listParams.set('partial', partialName);
                 var listUrl = parsed.pathname + '?' + listParams.toString();
                 var listRes = await fetch(listUrl, {
@@ -550,10 +573,11 @@
                 if (!listRes.ok) throw new Error('partial ' + mode + ' ' + listRes.status);
                 if (token !== navToken) return false;
                 var listHtml = await listRes.text();
-                var targetId = mode === 'users'
-                    ? 'panel-utilisateurs'
-                    : (mode === 'payments' ? 'panel-paiements' : 'panel-finances');
-                if (!replaceOuter(targetId, listHtml)) throw new Error('swap ' + targetId);
+                var targetId = mode === 'users' ? 'panel-utilisateurs'
+                    : mode === 'payments' ? 'panel-paiements'
+                    : mode === 'polls' ? 'bo-sondage-results'
+                    : 'panel-finances';
+                if (!replaceOuterById(targetId, listHtml)) throw new Error('swap ' + targetId);
 
                 if (typeof window.boAfterPanelSwap === 'function') {
                     window.boAfterPanelSwap(mode, opts);
@@ -840,9 +864,17 @@
                     return;
                 }
 
-                if (hash === 'outils') return;
+                var isPollNav = abs.searchParams.has('sondage_page');
+                if (!isPollNav && (hash === 'outils' || hash === 'bo-sondages')) return;
 
                 e.preventDefault();
+                if (isPollNav) {
+                    softNavigate(abs.pathname + abs.search + abs.hash, {
+                        mode: 'polls',
+                        tab: 'outils',
+                    });
+                    return;
+                }
                 var mode = 'refresh';
                 if (hash === 'utilisateurs' || hash === 'users' || hash === 'bo-users') mode = 'users';
                 else if (hash === 'paiements' || hash === 'payments' || hash === 'bo-paiements') mode = 'payments';

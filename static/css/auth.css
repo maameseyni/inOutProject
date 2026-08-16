@@ -17,6 +17,7 @@
     --auth-control-h: 48px;
     --auth-shadow-card: 0 20px 56px rgba(0, 0, 0, 0.2);
     --auth-shadow-btn: 0 4px 14px rgba(67, 39, 125, 0.32);
+    --auth-btn-fill: linear-gradient(180deg, #4d2d8f 0%, #43277d 48%, #2f1a5c 100%);
     --auth-focus-ring: 0 0 0 3px rgba(67, 39, 125, 0.12);
 
     /* Tokens alignés landing (footer + nav) */
@@ -37,6 +38,7 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
+    margin: 0;
     padding: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -145,8 +147,11 @@
     background: var(--lp-primary);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
     .auth-page .lp-nav-menu {
+        left: auto;
+        right: 0;
+        width: min(17.5rem, 100%);
         background:
             linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, transparent 42%),
             linear-gradient(160deg, #ffffff 0%, #ebe3f6 45%, #d4c6ea 100%);
@@ -341,7 +346,7 @@
     height: var(--auth-control-h);
     width: 0;
     border-radius: var(--auth-radius-pill);
-    background: linear-gradient(135deg, var(--auth-primary) 0%, var(--auth-primary-dark) 100%);
+    background: var(--auth-btn-fill);
     box-shadow: var(--auth-shadow-btn);
     transform: translateX(0);
     transition:
@@ -681,7 +686,7 @@
     min-height: var(--auth-control-h);
     padding: 0 20px;
     margin-top: 12px;
-    background: linear-gradient(135deg, var(--auth-primary) 0%, var(--auth-primary-dark) 100%);
+    background: var(--auth-btn-fill);
     color: #fff;
     border: none;
     border-radius: var(--auth-radius-control);
@@ -1217,5 +1222,25 @@
         height: var(--auth-control-h);
         font-size: 0.84rem;
         padding: 0 14px;
+    }
+}
+
+/* ——— Tablette : mêmes gouttières latérales que la landing ——— */
+@media (min-width: 981px) and (max-width: 1100px) {
+    .auth-page .lp-footer .lp-wrap {
+        width: min(1120px, calc(100% - var(--lp-gutter) * 2));
+    }
+}
+
+@media (min-width: 721px) and (max-width: 980px) {
+    /* Carte et pied de page calés sur la colonne commune (--lp-mobile-col) */
+    .auth-card {
+        box-sizing: border-box;
+        width: min(100%, var(--lp-mobile-col));
+        margin-inline: auto;
+    }
+
+    .auth-page .lp-footer .lp-wrap {
+        width: var(--lp-mobile-col);
     }
 }

@@ -33,6 +33,11 @@ urlpatterns = [
         api_views.notification_detail,
         name='api_notification_detail',
     ),
+    path(
+        'api/sondages/<int:poll_id>/repondre/',
+        api_views.sondage_vote,
+        name='api_sondage_vote',
+    ),
     path('api/categories/', api_views.categories_list_replace, name='api_categories'),
     path('api/organisation/profil/', api_views.organisation_profil, name='api_organisation_profil'),
     path('api/utilisateur/profil/', api_views.utilisateur_profil, name='api_utilisateur_profil'),

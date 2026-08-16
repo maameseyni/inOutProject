@@ -16,7 +16,7 @@ def request_wants_ajax(request):
 def partial_kind(request):
     """
     Kind de fragment demandé :
-    - users / payments : partials légers (listes seules)
+    - users / payments / finances / polls : partials légers (blocs seuls)
     - refresh : tous les panneaux (changement de période)
     - '' : page HTML complète
     """
@@ -27,6 +27,8 @@ def partial_kind(request):
         return 'payments'
     if raw in ('finances', 'finance', 'charges', 'charge'):
         return 'finances'
+    if raw in ('polls', 'poll', 'sondages', 'sondage'):
+        return 'polls'
     if raw in ('refresh', 'main', '1', 'all', 'shell'):
         return 'refresh'
     if (request.headers.get('X-BO-Partial') or '').strip() in ('1', 'true', 'yes'):

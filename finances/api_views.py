@@ -311,6 +311,34 @@ def notification_detail(request, notif_id):
 @organisation_required
 @csrf_protect
 @require_http_methods(['POST'])
+def sondage_vote(request, poll_id):
+    from finances.services import notifications as notif_service
+
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
+
+    try:
+        option_id = int(data.get('optionId'))
+    except (TypeError, ValueError):
+        return JsonResponse({'erreur': 'Choix invalide.'}, status=400)
+
+    try:
+        result = notif_service.vote_poll(
+            org=request.organisation,
+            user=request.user,
+            poll_id=poll_id,
+            option_id=option_id,
+        )
+    except notif_service.NotificationServiceError as exc:
+        return _service_error_response(exc)
+    return JsonResponse(result)
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['POST'])
 def notifications_remove_by_prefix(request):
     from finances.services import notifications as notif_service
 

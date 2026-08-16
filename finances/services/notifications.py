@@ -1,10 +1,17 @@
 import secrets
 import time
 
+from django.db import IntegrityError
 from django.db import transaction as db_transaction
 from django.utils import timezone
 
-from finances.models import Notification, NotificationIgnoree
+from finances.models import (
+    Notification,
+    NotificationIgnoree,
+    Sondage,
+    SondageOption,
+    SondageReponse,
+)
 from finances.serializers import format_iso_date
 
 MAX_NOTIFICATIONS = 60
@@ -29,8 +36,11 @@ def _generate_id() -> str:
     return f'notif_{ts}_{rnd}'
 
 
-def notification_to_js(notif: Notification) -> dict:
-    return {
+POLL_SYSTEM_PREFIX = 'bo_poll:'
+
+
+def notification_to_js(notif: Notification, poll_data=None) -> dict:
+    data = {
         'id': notif.id,
         'message': notif.message,
         'type': notif.type_notif,
@@ -38,13 +48,56 @@ def notification_to_js(notif: Notification) -> dict:
         'createdAt': format_iso_date(notif.cree_le),
         'read': bool(notif.lu),
     }
+    if poll_data is not None:
+        data['poll'] = poll_data
+    return data
 
 
 def list_notifications(org, user) -> dict:
-    qs = (
+    notifications = list(
         Notification.objects.filter(organisation=org, utilisateur=user)
         .order_by('-cree_le')[:MAX_NOTIFICATIONS]
     )
+    poll_ids = []
+    for notif in notifications:
+        if notif.system_id.startswith(POLL_SYSTEM_PREFIX):
+            raw_id = notif.system_id[len(POLL_SYSTEM_PREFIX):]
+            if raw_id.isdigit():
+                poll_ids.append(int(raw_id))
+
+    polls = {
+        poll.pk: poll
+        for poll in Sondage.objects.filter(pk__in=poll_ids).prefetch_related('options')
+    }
+    answers = {
+        answer.sondage_id: answer.option_id
+        for answer in SondageReponse.objects.filter(
+            sondage_id__in=poll_ids,
+            utilisateur=user,
+        )
+    }
+
+    serialized = []
+    for notif in notifications:
+        poll_data = None
+        if notif.system_id.startswith(POLL_SYSTEM_PREFIX):
+            raw_id = notif.system_id[len(POLL_SYSTEM_PREFIX):]
+            poll = polls.get(int(raw_id)) if raw_id.isdigit() else None
+            if poll:
+                selected_option_id = answers.get(poll.pk)
+                poll_data = {
+                    'id': poll.pk,
+                    'question': poll.question,
+                    'active': bool(poll.actif),
+                    'answered': selected_option_id is not None,
+                    'selectedOptionId': selected_option_id,
+                    'options': [
+                        {'id': option.pk, 'text': option.texte}
+                        for option in poll.options.all()
+                    ],
+                }
+        serialized.append(notification_to_js(notif, poll_data))
+
     ignored = list(
         NotificationIgnoree.objects.filter(
             organisation=org,
@@ -52,7 +105,7 @@ def list_notifications(org, user) -> dict:
         ).values_list('system_id', flat=True)
     )
     return {
-        'notifications': [notification_to_js(n) for n in qs],
+        'notifications': serialized,
         'ignoredSystemIds': ignored,
     }
 
@@ -199,23 +252,11 @@ def migrate_notifications(org, user, items: list) -> dict:
     return list_notifications(org, user) | {'migrated': created}
 
 
-def broadcast_notification_to_all_users(*, message: str, type_notif: str = 'info') -> dict:
-    """
-    Crée une notification in-app pour chaque utilisateur actif membre d’une org.
-    Une notif par user (org « principale » : propriétaire > admin > membre).
-    """
+def _active_notification_targets():
+    """Retourne une organisation principale par utilisateur actif."""
     from django.db.models import Case, IntegerField, When
 
     from comptes.models import MembreOrganisation
-
-    text = str(message or '').strip()
-    if not text:
-        raise NotificationServiceError('Le message est obligatoire.')
-    text = text[:2000]
-
-    kind = str(type_notif or Notification.TYPE_INFO).strip().lower()
-    if kind not in ALLOWED_TYPES:
-        kind = Notification.TYPE_INFO
 
     membres = (
         MembreOrganisation.objects.filter(
@@ -243,6 +284,24 @@ def broadcast_notification_to_all_users(*, message: str, type_notif: str = 'info
             continue
         seen_users.add(uid)
         targets.append((membre.organisation_id, uid))
+    return targets
+
+
+def broadcast_notification_to_all_users(*, message: str, type_notif: str = 'info') -> dict:
+    """
+    Crée une notification in-app pour chaque utilisateur actif membre d’une org.
+    Une notif par user (org « principale » : propriétaire > admin > membre).
+    """
+    text = str(message or '').strip()
+    if not text:
+        raise NotificationServiceError('Le message est obligatoire.')
+    text = text[:2000]
+
+    kind = str(type_notif or Notification.TYPE_INFO).strip().lower()
+    if kind not in ALLOWED_TYPES:
+        kind = Notification.TYPE_INFO
+
+    targets = _active_notification_targets()
 
     if not targets:
         return {'created': 0, 'destinataires': 0}
@@ -267,3 +326,135 @@ def broadcast_notification_to_all_users(*, message: str, type_notif: str = 'info
         Notification.objects.bulk_create(rows, batch_size=200)
 
     return {'created': len(rows), 'destinataires': len(targets), 'batch_id': batch_id}
+
+
+def create_poll_and_broadcast(*, question: str, choices, created_by=None) -> dict:
+    """Crée un sondage à choix unique et sa notification pour chaque utilisateur."""
+    text = str(question or '').strip()
+    if not text:
+        raise NotificationServiceError('La question est obligatoire.')
+    if len(text) > 300:
+        raise NotificationServiceError('La question ne peut pas dépasser 300 caractères.')
+
+    cleaned_choices = []
+    seen = set()
+    for raw_choice in choices or []:
+        choice = str(raw_choice or '').strip()
+        if not choice:
+            continue
+        if len(choice) > 160:
+            raise NotificationServiceError(
+                'Chaque choix ne peut pas dépasser 160 caractères.'
+            )
+        normalized = choice.casefold()
+        if normalized in seen:
+            raise NotificationServiceError('Les choix doivent être différents.')
+        seen.add(normalized)
+        cleaned_choices.append(choice)
+
+    if not 2 <= len(cleaned_choices) <= 5:
+        raise NotificationServiceError('Ajoutez entre 2 et 5 choix.')
+
+    targets = _active_notification_targets()
+    if not targets:
+        raise NotificationServiceError('Aucun destinataire actif trouvé.')
+
+    now = timezone.now()
+    with db_transaction.atomic():
+        poll = Sondage.objects.create(
+            question=text,
+            cree_par=created_by,
+            cree_le=now,
+        )
+        SondageOption.objects.bulk_create(
+            [
+                SondageOption(sondage=poll, texte=choice, ordre=index)
+                for index, choice in enumerate(cleaned_choices, start=1)
+            ]
+        )
+        system_id = f'{POLL_SYSTEM_PREFIX}{poll.pk}'
+        rows = [
+            Notification(
+                id=f'bo_poll_{poll.pk}_{uid}_{_generate_id()[-8:]}',
+                organisation_id=org_id,
+                utilisateur_id=uid,
+                message=text,
+                type_notif=Notification.TYPE_INFO,
+                system_id=system_id,
+                lu=False,
+                cree_le=now,
+            )
+            for org_id, uid in targets
+        ]
+        Notification.objects.bulk_create(rows, batch_size=200)
+
+    return {
+        'poll_id': poll.pk,
+        'created': len(rows),
+        'destinataires': len(targets),
+    }
+
+
+def vote_poll(*, org, user, poll_id, option_id) -> dict:
+    """Crée ou modifie la réponse si le sondage a été reçu par ce compte."""
+    notification_exists = Notification.objects.filter(
+        organisation=org,
+        utilisateur=user,
+        system_id=f'{POLL_SYSTEM_PREFIX}{poll_id}',
+    ).exists()
+    if not notification_exists:
+        raise NotificationServiceError('Sondage introuvable.', status=404)
+
+    poll = Sondage.objects.filter(pk=poll_id).first()
+    if not poll:
+        raise NotificationServiceError('Sondage introuvable.', status=404)
+    if not poll.actif:
+        raise NotificationServiceError('Ce sondage est terminé.')
+
+    option = SondageOption.objects.filter(pk=option_id, sondage=poll).first()
+    if not option:
+        raise NotificationServiceError('Choix invalide.')
+
+    existing = SondageReponse.objects.filter(
+        sondage=poll,
+        utilisateur=user,
+    ).select_related('option').first()
+    if existing:
+        modified = existing.option_id != option.pk
+        if modified:
+            existing.option = option
+            existing.repondu_le = timezone.now()
+            existing.save(update_fields=['option', 'repondu_le'])
+        return {
+            'pollId': poll.pk,
+            'answered': True,
+            'selectedOptionId': existing.option_id,
+            'modified': modified,
+            'message': (
+                'Votre réponse a été modifiée.'
+                if modified
+                else 'Cette réponse est déjà sélectionnée.'
+            ),
+        }
+
+    try:
+        with db_transaction.atomic():
+            answer = SondageReponse.objects.create(
+                sondage=poll,
+                option=option,
+                utilisateur=user,
+            )
+    except IntegrityError:
+        answer = SondageReponse.objects.get(sondage=poll, utilisateur=user)
+        if answer.option_id != option.pk:
+            answer.option = option
+            answer.repondu_le = timezone.now()
+            answer.save(update_fields=['option', 'repondu_le'])
+
+    return {
+        'pollId': poll.pk,
+        'answered': True,
+        'selectedOptionId': answer.option_id,
+        'modified': False,
+        'message': 'Merci, votre réponse a été enregistrée.',
+    }
