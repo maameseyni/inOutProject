@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'partials/pwa_head.html' %}
     <title>Xaliss - Gestion Financière</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=sondage-4">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=logo-xaliss2-5">
     <!-- jsPDF pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Chart.js pour les graphiques -->
@@ -25,7 +25,7 @@
         userEmail: '{{ request.user.email|escapejs }}',
         userId: {{ request.user.id }},
         orgSlug: '{{ organisation.slug|escapejs }}',
-        logoUrl: '{% static "images/logo.png" %}',
+        logoUrl: '{% static "images/xaliss2.png" %}',
         permissions: {{ permissions_json|safe }}
     };
     </script>
@@ -74,7 +74,7 @@
         <div class="app-main">
     <div class="container">
         <header>
-            <img src="{% static 'images/logo.png' %}" alt="Xaliss" class="logo">
+            <img src="{% static 'images/xaliss2.png' %}" alt="Xaliss" class="logo">
             <button type="button" class="app-notifications-btn" id="notificationsBtn" title="Notifications" aria-label="Ouvrir les notifications">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

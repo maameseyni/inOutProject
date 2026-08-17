@@ -9876,7 +9876,7 @@ function preloadInvoiceLogo() {
     if (invoiceLogoDataUrlCache) return Promise.resolve(invoiceLogoDataUrlCache);
     var logoUrl = (window.XALISS_DJANGO && window.XALISS_DJANGO.logoUrl)
         ? window.XALISS_DJANGO.logoUrl
-        : new URL('images/logo.png', getAppBaseUrl()).href;
+        : new URL('images/xaliss2.png', getAppBaseUrl()).href;
     var isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
     return new Promise(function (resolve) {
         var img = new Image();
@@ -9915,7 +9915,7 @@ function openInvoiceModal(id) {
     const dateFormatted = formatDate(transaction.date);
     const hasRemaining = transaction.remainingAmount != null && transaction.remainingAmount > 0;
     const factureNum = getInvoiceDocumentNumPrefix(transaction) + String(transaction.id).slice(-8).toUpperCase();
-    var logoSrc = invoiceLogoDataUrlCache || 'images/logo.png';
+    var logoSrc = invoiceLogoDataUrlCache || 'images/xaliss2.png';
 
     const company = loadCompanyProfile();
     const addressLines = formatAddressLines(company.address);
@@ -10023,7 +10023,7 @@ function printInvoice() {
     if (!paper) return;
     const win = window.open('', '_blank');
     const base = getAppBaseUrl();
-    const printHtml = paper.outerHTML.replace('src="images/logo.png"', 'src="' + new URL('images/logo.png', base).href + '"');
+    const printHtml = paper.outerHTML.replace('src="images/xaliss2.png"', 'src="' + new URL('images/xaliss2.png', base).href + '"');
     const printStyles = getInvoicePaperCssString();
     const printTitle = getInvoiceDocumentTitle(currentInvoiceTransaction);
     win.document.write('<html><head><title>' + printTitle + '</title><base href="' + base + '"><style>' + printStyles + '</style></head><body>' + printHtml + '</body></html>');
@@ -11453,7 +11453,7 @@ function exportToPDF() {
         try {
             const logoImg = new Image();
             logoImg.crossOrigin = 'anonymous';
-            logoImg.src = 'images/logo.png';
+            logoImg.src = 'images/xaliss2.png';
             
             logoImg.onload = function() {
                 try {

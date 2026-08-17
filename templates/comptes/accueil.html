@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=responsive-8">
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=responsive-19">
 </head>
 <body class="landing">
     <div class="lp-page-grid" aria-hidden="true"></div>
@@ -108,7 +108,7 @@
                                 <div class="lp-app-main">
                                     <div class="lp-app-container">
                                         <header class="lp-app-header">
-                                            <img src="{% static 'images/logo.png' %}" alt="Xaliss" class="lp-app-logo" width="240" height="80">
+                                            <img src="{% static 'images/xaliss2.png' %}" alt="Xaliss" class="lp-app-logo">
                                             <button type="button" class="app-notifications-btn has-new-notification lp-app-notif" tabindex="-1" title="2 notifications" aria-label="2 notifications">
                                                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                                     <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -618,7 +618,7 @@
         </section>
     </main>
 
-    {% include 'partials/landing_footer.html' %}
+    {% include 'partials/landing_footer.html' with footer_logo='images/xaliss3_bleuslogan.png' %}
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>

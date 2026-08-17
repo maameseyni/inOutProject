@@ -50,16 +50,12 @@
             text-decoration: none;
             color: var(--bo-primary);
         }
-        .bo-deny-brand img {
+        .bo-deny-brand img,
+        .bo-deny-brand .bo-access-logo {
             width: auto;
-            height: 28px;
+            height: 40px;
+            max-width: 200px;
             display: block;
-        }
-        .bo-deny-brand span {
-            font-family: Unbounded, Outfit, sans-serif;
-            font-size: 0.95rem;
-            font-weight: 600;
-            letter-spacing: 0.01em;
         }
         .bo-deny-kicker {
             margin: 0 0 8px;
@@ -154,8 +150,7 @@
 <body>
     <main class="bo-deny" role="alert" aria-labelledby="bo-deny-title">
         <a class="bo-deny-brand" href="{% url 'accueil' %}">
-            <img src="{% static 'images/logo.png' %}" alt="" width="120" height="40">
-            <span>Xaliss</span>
+            <img src="{% static 'images/xaliss2.png' %}" alt="Xaliss" class="bo-access-logo">
         </a>
 
         <p class="bo-deny-kicker">Erreur 403</p>

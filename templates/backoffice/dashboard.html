@@ -10,12 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/kp-select.css' %}">
     <link rel="stylesheet" href="{% static 'css/kp-date.css' %}">
-    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-sondage-1">
+    <link rel="stylesheet" href="{% static 'css/backoffice.css' %}?v=bo-brand-2">
 </head>
 <body class="bo-body" data-bo-tab="vue">
     {% include 'partials/django_messages_data.html' %}
     {% include 'backoffice/partials/bo_confirm_modal.html' %}
     <div class="bo-shell">
+        {% include 'backoffice/partials/bo_brand.html' %}
         <div class="bo-top-chrome">
             <nav class="bo-top-nav" aria-label="Sections backoffice" role="tablist">
                 <button type="button" class="bo-tab is-active" data-tab="vue" role="tab" aria-selected="true" aria-controls="panel-vue" title="Vue d'ensemble">
@@ -87,9 +88,9 @@
                     <div class="bo-period-mode" role="group" aria-label="Mode de filtre">
                         <button type="button" class="bo-period-mode-btn{% if periode_mode == 'day' %} is-active{% endif %}" data-period-mode="day">Jour</button>
                         <button type="button" class="bo-period-mode-btn{% if periode_mode != 'day' %} is-active{% endif %}" data-period-mode="range">Période</button>
-                    </div>
-                    <p class="bo-period-active-label" id="bo-period-active-label">{{ periode_label }}</p>
                 </div>
+                    <p class="bo-period-active-label" id="bo-period-active-label">{{ periode_label }}</p>
+            </div>
 
                 <div class="bo-period-row bo-period-row--calendar">
                     <div class="bo-period-day-fields{% if periode_mode != 'day' %} is-hidden{% endif %}" id="boPeriodDayFields">
@@ -102,7 +103,7 @@
                                         <svg class="note-reminder-trigger-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v3M16 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                         <span class="note-reminder-trigger-text{% if not periode_du %} is-placeholder{% endif %}" id="boPeriodDayTriggerText">{% if periode_du %}{{ periode_du }}{% else %}Choisir une date{% endif %}</span>
                                     </button>
-                                </div>
+            </div>
                                 <div class="note-reminder-popover note-reminder-popover--date" id="boPeriodDayPopover" role="dialog" aria-label="Choisir une date" hidden>
                                     <div class="note-reminder-body">
                                         <div class="note-reminder-cal">
@@ -110,20 +111,20 @@
                                                 <button type="button" class="note-reminder-nav" id="boPeriodDayPrevMonth" aria-label="Mois précédent">‹</button>
                                                 <span class="note-reminder-month-label" id="boPeriodDayMonthLabel"></span>
                                                 <button type="button" class="note-reminder-nav" id="boPeriodDayNextMonth" aria-label="Mois suivant">›</button>
-                                            </div>
+                </div>
                                             <div class="note-reminder-weekdays" aria-hidden="true">
                                                 <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span>di</span>
-                                            </div>
+            </div>
                                             <div class="note-reminder-days" id="boPeriodDayDays"></div>
-                                        </div>
-                                    </div>
+                </div>
+                </div>
                                     <div class="note-reminder-popover-actions">
                                         <button type="button" class="note-reminder-link-btn" id="boPeriodDayTodayBtn">Aujourd’hui</button>
-                                    </div>
+                </div>
                                 </div>
                             </div>
-                        </label>
-                    </div>
+                    </label>
+                </div>
                     <div class="bo-period-range-fields{% if periode_mode == 'day' %} is-hidden{% endif %}" id="boPeriodRangeFields">
                         <label class="bo-period-field">
                             <span>Du</span>
@@ -227,7 +228,7 @@
             <div class="bo-intro">
                 <p class="bo-intro-kicker">Administration</p>
                 <h2 class="bo-intro-title">Outils</h2>
-            </div>
+                                </div>
 
             <div class="bo-card bo-card--acces" id="bo-acces">
                 <div class="bo-card-head">
@@ -238,8 +239,8 @@
                             {{ acces_backoffice.n_actifs }} opérateur{{ acces_backoffice.n_actifs|pluralize }}
                             · le .env reste un filet de secours pour le premier admin
                         </p>
-                    </div>
-                </div>
+                                </div>
+                                </div>
 
                 <form class="bo-acces-form"
                       method="post"
@@ -278,7 +279,7 @@
                         <div class="bo-acces-side">
                             {% if row.user_id %}
                             <a class="bo-alerte-link" href="{% url 'backoffice_user_detail' row.user_id %}">Fiche</a>
-                            {% endif %}
+                                {% endif %}
                             {% if row.can_reactivate %}
                             <form method="post"
                                   action="{% url 'backoffice_acces_action' %}"
@@ -295,7 +296,7 @@
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
                                 <button type="submit" class="bo-acces-btn bo-acces-btn--reactivate">Réactiver</button>
                             </form>
-                            {% endif %}
+                                {% endif %}
                             {% if row.can_revoke %}
                             <form method="post"
                                   action="{% url 'backoffice_acces_action' %}"
@@ -312,7 +313,7 @@
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}#outils">
                                 <button type="submit" class="bo-acces-btn bo-acces-btn--revoke">Révoquer</button>
                             </form>
-                            {% endif %}
+                                {% endif %}
                             {% if row.can_delete %}
                             <form method="post"
                                   action="{% url 'backoffice_acces_action' %}"
@@ -333,14 +334,14 @@
                             <span class="bo-muted" title="Modifiable uniquement dans BACKOFFICE_ALLOWED_EMAILS">Protégé .env</span>
                             {% elif row.is_self %}
                             <span class="bo-muted">Votre accès</span>
-                            {% endif %}
+                                {% endif %}
                         </div>                    </div>
-                    {% empty %}
+                        {% empty %}
                     <p class="bo-empty">
                         <span class="bo-empty-title">Aucun opérateur</span>
                         <span class="bo-empty-sub">Ajoutez un e-mail ou configurez BACKOFFICE_ALLOWED_EMAILS.</span>
                     </p>
-                    {% endfor %}
+                        {% endfor %}
                 </div>
             </div>
 
@@ -436,7 +437,7 @@
                             <span>Choix 5 <small>(facultatif)</small></span>
                             <input type="text" name="options" maxlength="160">
                         </label>
-                    </div>
+                </div>
                     <button type="submit" class="bo-abo-submit" {% if notif_broadcast.nb_destinataires < 1 %}disabled{% endif %}>
                         Envoyer le sondage
                     </button>
@@ -486,9 +487,9 @@
                     <span class="bo-tool-desc">
                         {% if lancement_bo.date_effective %}
                         Depuis le {{ lancement_bo.date_effective|date:"d/m/Y H:i" }} · nouvelles inscriptions en essai Pro
-                        {% else %}
+                {% else %}
                         Lancement déjà appliqué · nouvelles inscriptions en essai Pro
-                        {% endif %}
+                {% endif %}
                     </span>
                 </div>
                 {% else %}
@@ -502,7 +503,7 @@
                     <strong class="bo-tool-title">Lancer Xaliss</strong>
                     <span class="bo-tool-desc">Aucune organisation en prélaunch pour l’instant</span>
                 </div>
-                {% endif %}
+            {% endif %}
 
                 <a class="bo-tool-card bo-tool-card--violet" href="{% url 'admin:index' %}">
                     <span class="bo-tool-head">
@@ -1457,7 +1458,7 @@
                 function baseParams() {
                     var params = new URLSearchParams();
                     function takeForm(form) {
-                        if (!form) return;
+            if (!form) return;
                         Array.from(new FormData(form).entries()).forEach(function (entry) {
                             var key = entry[0];
                             var value = String(entry[1] == null ? '' : entry[1]).trim();
@@ -1548,31 +1549,31 @@
                 if (!form || form.dataset.boBound === '1') return;
                 form.dataset.boBound = '1';
 
-                function applyFilters() {
+            function applyFilters() {
                     rememberUsersView();
-                    var params = new URLSearchParams();
-                    Array.from(new FormData(form).entries()).forEach(function (entry) {
-                        var key = entry[0];
-                        var value = String(entry[1] == null ? '' : entry[1]).trim();
-                        if (value !== '') params.append(key, value);
-                    });
-                    var qs = params.toString();
+                var params = new URLSearchParams();
+                Array.from(new FormData(form).entries()).forEach(function (entry) {
+                    var key = entry[0];
+                    var value = String(entry[1] == null ? '' : entry[1]).trim();
+                    if (value !== '') params.append(key, value);
+                });
+                var qs = params.toString();
                     softGo(
                         form.action + (qs ? '?' + qs : '') + '#utilisateurs',
                         { mode: 'users', tab: 'utilisateurs', keepFocusSearch: true }
                     );
-                }
+            }
 
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    applyFilters();
-                });
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                applyFilters();
+            });
                 ['bo-statut', 'bo-plan', 'bo-user-scope'].forEach(function (id) {
-                    var el = document.getElementById(id);
-                    if (el) el.addEventListener('change', applyFilters);
-                });
-                var nonVerifies = form.querySelector('input[name="non_verifies"]');
-                if (nonVerifies) nonVerifies.addEventListener('change', applyFilters);
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', applyFilters);
+            });
+            var nonVerifies = form.querySelector('input[name="non_verifies"]');
+            if (nonVerifies) nonVerifies.addEventListener('change', applyFilters);
 
                 var searchInput = document.getElementById('bo-q');
                 var searchTimer = null;

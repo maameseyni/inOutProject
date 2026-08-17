@@ -127,12 +127,15 @@
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
-    font-family: var(--lp-display);
-    font-weight: 700;
-    font-size: 1.3rem;
-    letter-spacing: -0.04em;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff;
+    text-decoration: none;
+    line-height: 0;
+}
+
+.lp-brand-logo {
+    display: block;
+    height: 54px;
+    width: auto;
+    max-width: 248px;
 }
 
 .lp-nav-menu {
@@ -538,16 +541,6 @@
 .lp-app-window.is-live {
     opacity: 1;
     transform: translateY(0) scale(1);
-    animation: lp-app-float 5.5s ease-in-out 0.9s infinite alternate;
-}
-
-@keyframes lp-app-float {
-    from {
-        transform: translateY(0);
-    }
-    to {
-        transform: translateY(-8px);
-    }
 }
 
 .lp-app-window .stat-card,
@@ -785,7 +778,7 @@
 
 .lp-app-logo {
     display: inline-block;
-    max-width: 150px;
+    max-width: 180px;
     width: auto;
     height: auto;
     margin-bottom: 4px;
@@ -1544,6 +1537,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
     border-top: 1px solid rgba(67, 39, 125, 0.12);
+    border-bottom: 1px solid rgba(67, 39, 125, 0.12);
 }
 
 .lp-features li {
@@ -1626,13 +1620,8 @@
     padding-right: 0;
 }
 
-.lp-features li:nth-child(3n + 1) {
-    padding-left: 0;
-}
-
 .lp-features li:nth-last-child(-n + 3) {
     border-bottom: 0;
-    padding-bottom: 0;
 }
 
 .lp-feature-top {
@@ -2361,7 +2350,7 @@
 .lp-footer {
     position: relative;
     z-index: 1;
-    padding: 4rem 0 1.75rem;
+    padding: 2.25rem 0 1.75rem;
     background: transparent;
     color: var(--lp-ink-soft);
     border-top: 0;
@@ -2398,6 +2387,44 @@
 
 .lp-footer-wrap {
     position: relative;
+}
+
+.lp-footer-brand {
+    display: flex;
+    justify-content: center;
+    margin: 0.1rem 0 0.75rem;
+    text-decoration: none;
+    line-height: 0;
+    perspective: 1200px;
+}
+
+.lp-footer-logo {
+    display: block;
+    height: 150px;
+    width: auto;
+    max-width: 680px;
+    transform-origin: 50% 80%;
+    transform: translateY(48px) scale(0.88) rotateX(14deg);
+    opacity: 0;
+    transition:
+        transform 1.25s var(--lp-ease),
+        opacity 0.9s ease;
+    will-change: transform, opacity;
+}
+
+.lp-footer-brand.is-in .lp-footer-logo {
+    transform: translateY(0) scale(1) rotateX(0deg);
+    opacity: 1;
+    animation: lp-footer-logo-float 6.5s ease-in-out 1.2s infinite alternate;
+}
+
+@keyframes lp-footer-logo-float {
+    from {
+        transform: translateY(0) scale(1) rotateX(0deg);
+    }
+    to {
+        transform: translateY(-10px) scale(1.03) rotateX(1deg);
+    }
 }
 
 .lp-footer-grid {
@@ -2701,6 +2728,7 @@
         margin-left: auto;
         margin-right: auto;
         border-top: 1px solid rgba(67, 39, 125, 0.12);
+        border-bottom: 1px solid rgba(67, 39, 125, 0.12);
     }
 
     .lp-features li,
@@ -2849,17 +2877,12 @@
         border-bottom: 1px solid rgba(67, 39, 125, 0.12);
     }
 
-    .lp-features li:nth-child(odd) {
-        padding-left: 0;
-    }
-
     .lp-features li:nth-child(even) {
         padding-right: 0;
         border-right: 0;
     }
 
     .lp-features li:nth-last-child(-n + 2) {
-        padding-bottom: 0;
         border-bottom: 0;
     }
 
@@ -2937,6 +2960,19 @@
         text-align: center;
     }
 
+    .lp-footer {
+        padding: 2rem 0 1.5rem;
+    }
+
+    .lp-footer-brand {
+        margin: 0 0 0.65rem;
+    }
+
+    .lp-footer-logo {
+        height: 100px;
+        max-width: min(92vw, 420px);
+    }
+
     .lp-hero-cta {
         flex-direction: column;
         align-items: stretch;
@@ -2974,8 +3010,9 @@
         min-height: 70px;
     }
 
-    .lp-brand {
-        font-size: 1.12rem;
+    .lp-brand-logo {
+        height: 46px;
+        max-width: 210px;
     }
 
     .lp-nav-toggle {
@@ -3039,6 +3076,13 @@
     .lp-reveal {
         opacity: 1 !important;
         transform: none !important;
+        transition: none !important;
+    }
+
+    .lp-footer-logo {
+        transform: none !important;
+        opacity: 1 !important;
+        animation: none !important;
         transition: none !important;
     }
 

@@ -67,6 +67,22 @@ body.bo-body.is-bo-loading .bo-shell {
     margin: 0 auto;
 }
 
+.bo-brand {
+    display: flex;
+    justify-content: center;
+    max-width: 920px;
+    margin: 0 auto 14px;
+    line-height: 0;
+    text-decoration: none;
+}
+
+.bo-brand-logo {
+    display: block;
+    max-width: 340px;
+    width: min(92vw, 340px);
+    height: auto;
+}
+
 /* Panels (onglets) */
 .bo-panel {
     display: none;
@@ -2393,6 +2409,15 @@ body.bo-body.is-bo-loading .bo-shell {
     .bo-top-chrome {
         max-width: none;
         border-radius: 22px;
+    }
+
+    .bo-brand {
+        margin-bottom: 12px;
+    }
+
+    .bo-brand-logo {
+        max-width: 260px;
+        width: min(78vw, 260px);
     }
 
     .bo-period-bar {

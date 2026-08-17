@@ -1,6 +1,9 @@
+{% load static %}
 <header class="lp-nav" id="landingNav">
     <div class="lp-nav-pill">
-        <a class="lp-brand" href="{% url 'accueil' %}">Xaliss</a>
+        <a class="lp-brand" href="{% url 'accueil' %}">
+            <img src="{% static brand_logo|default:'images/xaliss2.png' %}" alt="Xaliss" class="lp-brand-logo">
+        </a>
 
         <button type="button" class="lp-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="landingNavMenu" aria-label="Ouvrir le menu">
             <span></span><span></span>

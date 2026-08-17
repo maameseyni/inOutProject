@@ -192,9 +192,18 @@
     flex: 0 0 auto;
     width: 100%;
     margin-top: 0;
-    padding: 4rem 0 1.75rem;
+    padding: 2.25rem 0 1.75rem;
     font-family: 'Outfit', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+}
+
+.auth-page .lp-footer-brand {
+    margin: 0.1rem 0 0.75rem;
+}
+
+.auth-page .lp-footer-logo {
+    height: 150px;
+    max-width: 680px;
 }
 
 .auth-page .lp-footer .lp-wrap {
@@ -1207,7 +1216,16 @@
     }
 
     .auth-page .lp-footer {
-        padding: 4rem 0 1.75rem;
+        padding: 2rem 0 1.5rem;
+    }
+
+    .auth-page .lp-footer-brand {
+        margin: 0 0 0.65rem;
+    }
+
+    .auth-page .lp-footer-logo {
+        height: 100px;
+        max-width: min(92vw, 420px);
     }
 
     .auth-page .lp-footer .lp-wrap {
