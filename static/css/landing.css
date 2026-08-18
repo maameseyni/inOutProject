@@ -365,17 +365,18 @@
     width: min(1360px, 94%);
     margin: 0 auto;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.17fr);
     align-items: center;
-    gap: clamp(1.5rem, 3.5vw, 3rem);
+    gap: clamp(2.25rem, 5vw, 4rem);
 }
 
 .lp-hero-top {
     position: relative;
     z-index: 2;
+    min-width: 0;
+    max-width: 100%;
     text-align: left;
-    padding: 1rem 0;
-    max-width: none;
+    padding: 1rem clamp(0.75rem, 2vw, 1.75rem) 1rem 0;
     margin: 0;
     animation: lp-rise 0.9s var(--lp-ease) both;
 }
@@ -391,13 +392,17 @@
 
 .lp-hero-title {
     margin: 0 0 1.1rem;
-    max-width: 14ch;
+    max-width: 100%;
     font-family: var(--lp-display);
-    font-size: clamp(2.6rem, 5.2vw, 4.4rem);
+    font-size: clamp(2.55rem, 5.2vw, 4.3rem);
     font-weight: 800;
     letter-spacing: -0.045em;
     line-height: 1.02;
     color: var(--lp-primary);
+}
+
+.lp-hero-title-line {
+    white-space: nowrap;
 }
 
 .lp-hero-lead {
@@ -3025,7 +3030,7 @@
     }
 
     .lp-hero-title {
-        font-size: 2.15rem;
+        font-size: 2.35rem;
         line-height: 1.06;
     }
 

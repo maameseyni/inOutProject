@@ -1,0 +1,76 @@
+{% load static %}
+{% with url_name=request.resolver_match.url_name %}
+{% static 'images/xaliss2.png' as seo_image_path %}
+{% static 'images/xaliss icone.png' as seo_icon_path %}
+<meta name="description" content="{% if seo_description %}{{ seo_description }}{% elif url_name == 'connexion' %}Connectez-vous à Xaliss, logiciel de gestion financière pour suivre ventes, dépenses, clients, factures et trésorerie.{% elif url_name == 'inscription' %}Créez votre compte Xaliss : suivez ventes, dépenses, clients et factures. Essai Pro 3 mois pour commerçants et PME au Sénégal.{% else %}Xaliss — logiciel de gestion financière pour suivre ventes, dépenses, clients et statistiques sans cahier ni Excel. Factures PDF, exports Excel, trésorerie pour commerçants et PME au Sénégal. Essai Pro 3 mois.{% endif %}">
+<meta name="keywords" content="{% firstof seo_keywords "Xaliss, logiciel gestion financière, suivi des ventes, suivi des dépenses, recettes et sorties, facture PDF, note de paiement, gestion clients, carnet clients, trésorerie, logiciel caisse, alternative Excel, commerçant Sénégal, Dakar, PME, TPE, application finance, export Excel, statistiques, KaayPrint" %}">
+<meta name="author" content="Xaliss">
+<meta name="language" content="French">
+<meta name="geo.region" content="SN">
+<meta name="geo.placename" content="Dakar">
+{% if seo_robots %}
+<meta name="robots" content="{{ seo_robots }}">
+{% elif url_name == 'accueil' or url_name == 'connexion' or url_name == 'inscription' %}
+<meta name="robots" content="index, follow">
+{% else %}
+<meta name="robots" content="noindex, nofollow">
+{% endif %}
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<link rel="alternate" hreflang="fr" href="{{ request.build_absolute_uri }}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Xaliss">
+<meta property="og:title" content="{% if seo_title %}{{ seo_title }}{% elif url_name == 'connexion' %}Connexion — Xaliss{% elif url_name == 'inscription' %}Inscription — Xaliss{% else %}Xaliss — Gestion financière pour votre activité{% endif %}">
+<meta property="og:description" content="{% if seo_description %}{{ seo_description }}{% elif url_name == 'connexion' %}Connectez-vous à Xaliss, logiciel de gestion financière pour suivre ventes, dépenses, clients, factures et trésorerie.{% elif url_name == 'inscription' %}Créez votre compte Xaliss : suivez ventes, dépenses, clients et factures. Essai Pro 3 mois pour commerçants et PME au Sénégal.{% else %}Xaliss — logiciel de gestion financière pour suivre ventes, dépenses, clients et statistiques sans cahier ni Excel. Factures PDF, exports Excel, trésorerie pour commerçants et PME au Sénégal. Essai Pro 3 mois.{% endif %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ seo_image_path }}">
+<meta property="og:image:alt" content="Xaliss — gestion financière">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{% if seo_title %}{{ seo_title }}{% elif url_name == 'connexion' %}Connexion — Xaliss{% elif url_name == 'inscription' %}Inscription — Xaliss{% else %}Xaliss — Gestion financière pour votre activité{% endif %}">
+<meta name="twitter:description" content="{% if seo_description %}{{ seo_description }}{% elif url_name == 'connexion' %}Connectez-vous à Xaliss, logiciel de gestion financière pour suivre ventes, dépenses, clients, factures et trésorerie.{% elif url_name == 'inscription' %}Créez votre compte Xaliss : suivez ventes, dépenses, clients et factures. Essai Pro 3 mois pour commerçants et PME au Sénégal.{% else %}Xaliss — logiciel de gestion financière pour suivre ventes, dépenses, clients et statistiques sans cahier ni Excel. Factures PDF, exports Excel, trésorerie pour commerçants et PME au Sénégal. Essai Pro 3 mois.{% endif %}">
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ seo_image_path }}">
+{% if url_name == 'accueil' %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "{{ request.scheme }}://{{ request.get_host }}/#organization",
+      "name": "Xaliss",
+      "url": "{{ request.scheme }}://{{ request.get_host }}/",
+      "logo": "{{ request.scheme }}://{{ request.get_host }}{{ seo_icon_path }}",
+      "email": "contact@xaliss.com",
+      "areaServed": { "@type": "Country", "name": "Sénégal" },
+      "inLanguage": "fr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "Xaliss",
+      "url": "{{ request.scheme }}://{{ request.get_host }}/",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "fr",
+      "description": "Logiciel de gestion financière pour suivre ventes, dépenses, clients et statistiques. Factures PDF, exports Excel, trésorerie pour commerçants et PME au Sénégal.",
+      "keywords": "Xaliss, gestion financière, ventes, dépenses, factures, clients, trésorerie, Sénégal, PME",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "XOF",
+        "description": "Essai Pro 3 mois offert"
+      },
+      "publisher": { "@id": "{{ request.scheme }}://{{ request.get_host }}/#organization" }
+    },
+    {
+      "@type": "WebSite",
+      "name": "Xaliss",
+      "url": "{{ request.scheme }}://{{ request.get_host }}/",
+      "inLanguage": "fr",
+      "publisher": { "@id": "{{ request.scheme }}://{{ request.get_host }}/#organization" }
+    }
+  ]
+}
+</script>
+{% endif %}
+{% endwith %}

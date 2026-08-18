@@ -12,19 +12,19 @@
   "categories": ["finance", "business", "productivi²ty"],
   "icons": [
     {
-      "src": "/static/images/xaliss2.png",
+      "src": "/static/images/xaliss%20icone.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/xaliss2.png",
+      "src": "/static/images/xaliss%20icone.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/xaliss2.png",
+      "src": "/static/images/xaliss%20icone.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

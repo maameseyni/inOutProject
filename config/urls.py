@@ -15,7 +15,7 @@ from comptes.backoffice.views import (
     backoffice_sondage_action,
     backoffice_user_detail,
 )
-from config.pwa_views import service_worker
+from config.pwa_views import robots_txt, service_worker, sitemap_xml
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -55,6 +55,8 @@ urlpatterns = [
         backoffice_org_abo_action,
         name='backoffice_org_abo_action',
     ),
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     path('service-worker.js', service_worker, name='service_worker'),
     path('auth/', include('allauth.urls')),
     path('app/', include('finances.urls')),

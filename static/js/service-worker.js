@@ -1,5 +1,5 @@
-/* KaayPrint PWA v19 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
-const STATIC_CACHE = 'kaayprint-static-v19';
+/* KaayPrint PWA v20 — assets statiques seulement (pas d'API ni shell /app/ authentifié) */
+const STATIC_CACHE = 'kaayprint-static-v20';
 
 const PRECACHE_URLS = [
     '/static/css/style.css',
@@ -9,6 +9,7 @@ const PRECACHE_URLS = [
     '/static/js/django-bridge.js',
     '/static/js/pwa.js',
     '/static/images/xaliss2.png',
+    '/static/images/xaliss%20icone.png',
     '/static/manifest.webmanifest',
     '/static/offline.html',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',

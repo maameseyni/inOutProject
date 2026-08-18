@@ -16,6 +16,8 @@ class SynchroniserAbonnementMiddleware:
         '/static/',
         '/media/',
         '/favicon',
+        '/robots.txt',
+        '/sitemap.xml',
         '/__debug__/',
     )
 
