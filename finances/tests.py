@@ -280,3 +280,155 @@ class SondageNotificationTest(TestCase):
         self.assertFalse(response.json()['ok'])
         self.assertEqual(response.json()['level'], 'error')
         self.assertEqual(Sondage.objects.count(), 0)
+
+
+class DocumentNumberTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='doc-user',
+            email='doc-user@example.com',
+            password='TestPass123!',
+        )
+        self.org = Organisation.objects.create(slug='doc-org', nom='Doc Org')
+        MembreOrganisation.objects.create(
+            utilisateur=self.user,
+            organisation=self.org,
+            role=MembreOrganisation.ROLE_PROPRIETAIRE,
+        )
+        self.membre = MembreOrganisation.objects.get(
+            utilisateur=self.user,
+            organisation=self.org,
+        )
+
+    def test_allocate_sequential_numbers_per_year_and_type(self):
+        from datetime import datetime, timezone as dt_tz
+
+        from finances.models import Transaction
+        from finances.services.document_numbers import allocate_document_number
+        from finances.services.transactions import create_transaction
+
+        when = datetime(2026, 3, 15, 12, 0, tzinfo=dt_tz.utc)
+        income = create_transaction(
+            self.org,
+            self.user,
+            self.membre,
+            {
+                'type': 'income',
+                'amount': 1000,
+                'description': 'Vente A',
+                'date': when.isoformat(),
+            },
+        )
+        expense = create_transaction(
+            self.org,
+            self.user,
+            self.membre,
+            {
+                'type': 'expense',
+                'amount': 500,
+                'description': 'Achat B',
+                'date': when.isoformat(),
+            },
+        )
+        income2 = create_transaction(
+            self.org,
+            self.user,
+            self.membre,
+            {
+                'type': 'income',
+                'amount': 2000,
+                'description': 'Vente C',
+                'date': when.isoformat(),
+            },
+        )
+
+        self.assertEqual(income['documentNumber'], 'FAC-2026-00001')
+        self.assertEqual(expense['documentNumber'], 'PAY-2026-00001')
+        self.assertEqual(income2['documentNumber'], 'FAC-2026-00002')
+        self.assertEqual(
+            Transaction.objects.filter(organisation=self.org, numero_document='FAC-2026-00001').count(),
+            1,
+        )
+        self.assertEqual(allocate_document_number(self.org, Transaction.TYPE_ENTRANT, when), 'FAC-2026-00003')
+
+    def test_document_number_exposed_in_api_list(self):
+        from datetime import datetime, timezone as dt_tz
+
+        from finances.services.transactions import create_transaction
+
+        when = datetime(2026, 5, 1, 9, 0, tzinfo=dt_tz.utc)
+        create_transaction(
+            self.org,
+            self.user,
+            self.membre,
+            {
+                'type': 'income',
+                'amount': 1500,
+                'description': 'Facture API',
+                'date': when.isoformat(),
+            },
+        )
+        client = Client()
+        client.login(username='doc-user', password='TestPass123!')
+        response = client.get(reverse('finances:api_transactions'))
+        self.assertEqual(response.status_code, 200)
+        txs = response.json()['transactions']
+        self.assertEqual(len(txs), 1)
+        self.assertEqual(txs[0]['documentNumber'], 'FAC-2026-00001')
+
+
+class OrganisationLogoTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='logo-user',
+            email='logo-user@example.com',
+            password='TestPass123!',
+        )
+        self.org = Organisation.objects.create(slug='logo-org', nom='Logo Org')
+        MembreOrganisation.objects.create(
+            utilisateur=self.user,
+            organisation=self.org,
+            role=MembreOrganisation.ROLE_PROPRIETAIRE,
+        )
+        self.client = Client()
+        self.client.login(username='logo-user', password='TestPass123!')
+
+    def _make_png(self, width=240, height=80):
+        from io import BytesIO
+
+        from PIL import Image
+
+        buffer = BytesIO()
+        Image.new('RGBA', (width, height), (67, 39, 125, 255)).save(buffer, format='PNG')
+        buffer.seek(0)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return SimpleUploadedFile('logo.png', buffer.read(), content_type='image/png')
+
+    def test_upload_logo_expose_url_et_sert_image(self):
+        upload = self.client.post(
+            reverse('finances:api_organisation_logo'),
+            {'logo': self._make_png()},
+        )
+        self.assertEqual(upload.status_code, 200)
+        payload = upload.json()
+        self.assertTrue(payload['profil']['hasCustomLogo'])
+        self.assertIn('/app/api/organisation/logo/', payload['profil']['logoUrl'])
+
+        profil = self.client.get(reverse('finances:api_organisation_profil')).json()['profil']
+        self.assertTrue(profil['hasCustomLogo'])
+
+        logo = self.client.get(reverse('finances:api_organisation_logo'))
+        self.assertEqual(logo.status_code, 200)
+        self.assertEqual(logo['Content-Type'], 'image/png')
+
+    def test_delete_logo_retire_le_fichier(self):
+        self.client.post(
+            reverse('finances:api_organisation_logo'),
+            {'logo': self._make_png()},
+        )
+        deleted = self.client.delete(reverse('finances:api_organisation_logo'))
+        self.assertEqual(deleted.status_code, 200)
+        self.assertFalse(deleted.json()['profil']['hasCustomLogo'])
+        self.org.refresh_from_db()
+        self.assertFalse(self.org.logo_facture)

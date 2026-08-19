@@ -63,6 +63,39 @@ class AliasClient(models.Model):
         ]
 
 
+class SequenceDocument(models.Model):
+    PREFIX_FAC = 'fac'
+    PREFIX_PAY = 'pay'
+
+    PREFIX_CHOICES = [
+        (PREFIX_FAC, 'Facture'),
+        (PREFIX_PAY, 'Paiement'),
+    ]
+
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name='sequences_documents',
+    )
+    prefix_type = models.CharField(max_length=8, choices=PREFIX_CHOICES)
+    annee = models.PositiveSmallIntegerField()
+    compteur = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'sequences_documents'
+        verbose_name = 'séquence document'
+        verbose_name_plural = 'séquences documents'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organisation', 'prefix_type', 'annee'],
+                name='uniq_sequence_document_org_prefix_year',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.organisation_id} {self.prefix_type} {self.annee} → {self.compteur}'
+
+
 class Transaction(models.Model):
     TYPE_ENTRANT = 'entrant'
     TYPE_SORTANT = 'sortant'
@@ -108,6 +141,7 @@ class Transaction(models.Model):
     )
     cree_par_nom = models.CharField(max_length=200, blank=True, default='')
     cree_par_role = models.CharField(max_length=20, blank=True, default='')
+    numero_document = models.CharField(max_length=32, blank=True, default='', db_index=True)
     modifie_le = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -115,6 +149,13 @@ class Transaction(models.Model):
         verbose_name = 'transaction'
         verbose_name_plural = 'transactions'
         ordering = ['-date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organisation', 'numero_document'],
+                condition=models.Q(numero_document__gt=''),
+                name='uniq_transaction_numero_document_org',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.get_type_display()} {self.montant} — {self.description[:40]}'

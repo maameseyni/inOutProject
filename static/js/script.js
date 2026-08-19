@@ -34,13 +34,17 @@ let unsubscribeFirestore = null;
 
 let unsubscribeCompanyProfile = null;
 /** Dernières coordonnées facture (Firestore ou cache local), utilisées par la facture. */
-let cachedCompanyProfile = { name: '', address: '', phone: '', email: '', website: '' };
+let cachedCompanyProfile = { name: '', address: '', phone: '', email: '', website: '', logoUrl: '', hasCustomLogo: false };
 
 /** Ancienne clé unique ; conservée pour migration lecture seule. */
 const COMPANY_PROFILE_KEY = 'kaayprint_company_profile';
 
 function companyProfileLocalStorageKey(accountId) {
     return 'kaayprint_company_profile_' + accountId;
+}
+
+function companyLogoDataLocalStorageKey(accountId) {
+    return 'kaayprint_company_logo_data_' + accountId;
 }
 
 /** Identifiant « compte » côté app : org Django si dispo, sinon login legacy. */
@@ -69,8 +73,33 @@ function normalizeCompanyProfilePayload(obj) {
         address: o.address != null ? String(o.address).trim() : '',
         phone: o.phone != null ? String(o.phone).trim() : '',
         email: o.email != null ? String(o.email).trim() : '',
-        website: o.website != null ? String(o.website).trim() : ''
+        website: o.website != null ? String(o.website).trim() : '',
+        logoUrl: o.logoUrl != null ? String(o.logoUrl).trim() : '',
+        hasCustomLogo: o.hasCustomLogo === true || o.hasCustomLogo === 'true',
     };
+}
+
+function loadCompanyLogoDataFromLocalStorage(accountId) {
+    try {
+        const raw = localStorage.getItem(companyLogoDataLocalStorageKey(accountId));
+        if (raw && raw.indexOf('data:image/') === 0) return raw;
+    } catch (e) { /* ignore */ }
+    return '';
+}
+
+function persistCompanyLogoDataLocal(accountId, dataUrl) {
+    const key = companyLogoDataLocalStorageKey(accountId);
+    if (dataUrl && String(dataUrl).indexOf('data:image/') === 0) {
+        localStorage.setItem(key, dataUrl);
+    } else {
+        localStorage.removeItem(key);
+    }
+    invalidateInvoiceLogoCache();
+}
+
+function clearCompanyLogoDataLocal(accountId) {
+    localStorage.removeItem(companyLogoDataLocalStorageKey(accountId));
+    invalidateInvoiceLogoCache();
 }
 
 function loadCompanyProfileFromLocalStorage(accountId) {
@@ -208,7 +237,111 @@ function applyCompanyProfileToForm(p) {
     if (emailEl) emailEl.value = n.email || '';
     if (webEl) webEl.value = n.website || '';
     updateCompanyWebsiteQrPreview();
+    updateCompanyLogoPreview(n);
 }
+
+function getDefaultInvoiceLogoUrl() {
+    return (window.XALISS_DJANGO && window.XALISS_DJANGO.logoUrl)
+        ? window.XALISS_DJANGO.logoUrl
+        : new URL('images/xaliss2.png', getAppBaseUrl()).href;
+}
+
+function resolveInvoiceLogoSource(profile) {
+    const company = normalizeCompanyProfilePayload(profile || loadCompanyProfile());
+    const accountId = getCurrentAccountId();
+    const cachedData = loadCompanyLogoDataFromLocalStorage(accountId);
+    if (company.hasCustomLogo && cachedData) return cachedData;
+    if (company.hasCustomLogo && company.logoUrl) return company.logoUrl;
+    return getDefaultInvoiceLogoUrl();
+}
+
+function invalidateInvoiceLogoCache() {
+    invoiceLogoDataUrlCache = null;
+}
+
+function setCompanyLogoHint(message, tone) {
+    const hint = document.getElementById('companyLogoHint');
+    if (!hint) return;
+    const text = String(message || '').trim();
+    if (!text) {
+        hint.hidden = true;
+        hint.textContent = '';
+        hint.classList.remove('is-error');
+        return;
+    }
+    hint.hidden = false;
+    hint.textContent = text;
+    hint.classList.toggle('is-error', tone === 'error');
+}
+
+function updateCompanyLogoPreview(profile) {
+    const company = normalizeCompanyProfilePayload(profile || loadCompanyProfile());
+    const hasCustom = !!company.hasCustomLogo;
+    const invoiceSrc = resolveInvoiceLogoSource(company);
+    const previewImg = document.getElementById('companyLogoPreview');
+    const previewEmpty = document.getElementById('companyLogoPreviewEmpty');
+    const invoicePreviewImg = document.getElementById('companyLogoInvoicePreviewImg');
+    const removeBtn = document.getElementById('companyLogoRemoveBtn');
+
+    if (previewImg) {
+        previewImg.hidden = true;
+        previewImg.removeAttribute('src');
+    }
+    if (previewEmpty) previewEmpty.hidden = false;
+    if (invoicePreviewImg) {
+        invoicePreviewImg.src = invoiceSrc;
+        invoicePreviewImg.hidden = false;
+    }
+    if (removeBtn) removeBtn.hidden = !hasCustom;
+}
+
+function imageUrlToDataUrl(url) {
+    return new Promise(function (resolve) {
+        if (!url) {
+            resolve(null);
+            return;
+        }
+        if (String(url).indexOf('data:image/') === 0) {
+            resolve(url);
+            return;
+        }
+        var img = new Image();
+        var isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+        if (isHttp) img.crossOrigin = 'anonymous';
+        img.onload = function () {
+            try {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.onerror = function () { resolve(null); };
+        img.src = url;
+    });
+}
+
+function cacheCompanyLogoFromUrl(logoUrl) {
+    if (!logoUrl) return Promise.resolve(null);
+    return imageUrlToDataUrl(logoUrl).then(function (dataUrl) {
+        if (dataUrl) persistCompanyLogoDataLocal(getCurrentAccountId(), dataUrl);
+        updateCompanyLogoPreview(loadCompanyProfile());
+        return dataUrl;
+    });
+}
+
+window.updateCompanyLogoPreview = updateCompanyLogoPreview;
+window.cacheCompanyLogoFromUrl = cacheCompanyLogoFromUrl;
+window.invalidateInvoiceLogoCache = invalidateInvoiceLogoCache;
+window.imageUrlToDataUrl = imageUrlToDataUrl;
+window.resolveInvoiceLogoSource = resolveInvoiceLogoSource;
+window.persistCompanyLogoDataLocal = persistCompanyLogoDataLocal;
+window.clearCompanyLogoDataLocal = clearCompanyLogoDataLocal;
+window.setCompanyLogoHint = setCompanyLogoHint;
 
 let cachedUserProfile = {
     firstName: '',
@@ -1342,7 +1475,31 @@ function getInvoiceDocumentTitleUpper(transaction) {
 }
 
 function getInvoiceDocumentNumPrefix(transaction) {
-    return transaction && transaction.type === 'expense' ? 'NP-' : 'FAC-';
+    return transaction && transaction.type === 'expense' ? 'PAY-' : 'FAC-';
+}
+
+function getInvoiceDocumentNumber(transaction) {
+    if (transaction && transaction.documentNumber) {
+        return String(transaction.documentNumber);
+    }
+    if (!transaction || !transaction.id) return '';
+    return getInvoiceDocumentNumPrefix(transaction) + String(transaction.id).slice(-8).toUpperCase();
+}
+
+function normalizeSearchToken(value) {
+    return String(value || '').toLowerCase().replace(/[\s_-]+/g, '');
+}
+
+function transactionMatchesSearchKeyword(transaction, keyword) {
+    const kw = String(keyword || '').toLowerCase().trim();
+    if (!kw) return true;
+    const normalizedKw = normalizeSearchToken(kw);
+    const descriptionMatch = String(transaction.description || '').toLowerCase().includes(kw);
+    const amountMatch = String(transaction.amount != null ? transaction.amount : '').includes(kw);
+    const documentNumber = getInvoiceDocumentNumber(transaction);
+    const documentMatch = documentNumber.toLowerCase().includes(kw)
+        || normalizeSearchToken(documentNumber).includes(normalizedKw);
+    return descriptionMatch || amountMatch || documentMatch;
 }
 
 let currentInvoiceTransaction = null;
@@ -7127,40 +7284,41 @@ function getInvoicePaperCssString() {
     return 'body{font-family:\'Segoe UI\',Tahoma,Geneva,Verdana,sans-serif;padding:24px;background:#f8f8f8;}' +
         '@media print{@page{margin:12mm;}body{padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-paper{box-shadow:none !important;max-width:100%;}.invoice-header{background:linear-gradient(180deg,#fde8f0 0%,#faf0f5 45%,#f6f4fa 100%) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-num,.invoice-company-block,.invoice-client-row,.invoice-footer-text{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}}' +
         '.invoice-paper{width:420px;max-width:420px;min-width:420px;min-height:580px;box-sizing:border-box;font-size:14px;line-height:1.4;margin:0 auto;display:flex;flex-direction:column;background:#fff;border-radius:12px;padding:20px 28px 20px;box-shadow:0 4px 24px rgba(0,0,0,0.08),0 0 0 1px rgba(67,39,125,0.04);border:1px solid #e8e8e8;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-text-size-adjust:100%;text-size-adjust:100%;}' +
-        '.invoice-logo{max-width:118px;height:auto;display:block;margin:0 auto 10px;}' +
-        '.invoice-header{text-align:center;margin:-20px -28px 14px -28px;padding:18px 28px 14px;border-bottom:2px solid #43277d;border-radius:12px 12px 0 0;background:linear-gradient(180deg,rgba(231,32,96,0.08) 0%,rgba(231,32,96,0.04) 50%,rgba(67,39,125,0.03) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
-        '.invoice-title{font-size:1.05em;font-weight:800;margin:0 0 8px;color:#43277d;letter-spacing:0.14em;}' +
-        '.invoice-num{display:inline-block;font-size:0.76em;color:#5a4a7a;font-weight:600;letter-spacing:0.05em;padding:4px 12px;background:rgba(67,39,125,0.08);border-radius:20px;}' +
-        '.invoice-company-block{margin:0 0 8px;padding:10px 14px;background:#fafafa;border-radius:8px;border:1px solid #eee;font-size:0.82em;color:#555;text-align:center;line-height:1.4;}' +
-        '.invoice-company-name{font-weight:700;color:#43277d;margin:0 0 3px;font-size:0.95em;}' +
-        '.invoice-company-line{margin:1px 0;font-size:0.96em;}' +
+        '.invoice-logo-frame{display:inline-flex;align-items:center;justify-content:center;max-width:168px;min-height:64px;margin:0 auto 6px;padding:0;background:transparent;}' +
+        '.invoice-logo{display:block;max-width:140px;max-height:80px;width:auto;height:auto;object-fit:contain;margin:0;}' +
+        '.invoice-header{text-align:center;margin:-20px -28px 10px -28px;padding:14px 28px 10px;border-bottom:2px solid #43277d;border-radius:12px 12px 0 0;background:linear-gradient(180deg,rgba(231,32,96,0.08) 0%,rgba(231,32,96,0.04) 50%,rgba(67,39,125,0.03) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
+        '.invoice-title{font-size:1.05em;font-weight:800;margin:0 0 6px;color:#43277d;letter-spacing:0.14em;}' +
+        '.invoice-num{display:inline-block;font-size:0.64em;color:#5a4a7a;font-weight:600;letter-spacing:0.04em;padding:3px 10px;background:rgba(67,39,125,0.08);border-radius:20px;}' +
+        '.invoice-company-block{margin:0 0 6px;padding:8px 12px;background:#fafafa;border-radius:8px;border:1px solid #eee;font-size:0.88em;color:#555;text-align:center;line-height:1.35;}' +
+        '.invoice-company-name{font-weight:700;color:#43277d;margin:0 0 3px;font-size:1.22em;line-height:1.2;}' +
+        '.invoice-company-line{margin:0;font-size:1em;}' +
         '.invoice-client-row{margin:10px 0;padding:10px 12px;background:rgba(67,39,125,0.06);border-radius:8px;font-size:0.9em;color:#333;text-align:left;border-left:3px solid #43277d;}' +
         '.invoice-client-label{font-weight:600;color:#43277d;margin-right:6px;}' +
         'table{width:100%;border-collapse:collapse;}' +
-        '.invoice-body{flex:1 1 auto;margin:14px 0 0;min-height:120px;}' +
+        '.invoice-body{flex:1 1 auto;margin:10px 0;min-height:120px;}' +
         '.invoice-table tr{border-bottom:1px solid #f0f0f0;}' +
         '.invoice-table tbody tr:last-child{border-bottom:none;}' +
         '.invoice-table td{padding:9px 0;vertical-align:top;}' +
-        '.invoice-table tbody tr:last-child td{padding-bottom:2px;}' +
         '.invoice-label{color:#777;width:36%;font-size:0.84em;font-weight:600;padding-right:10px;}' +
         '.invoice-value{color:#333;font-size:0.92em;text-align:right;}' +
         '.invoice-row-desc td{padding:8px 0 12px;}' +
         '.invoice-row-desc .invoice-value{font-size:0.84em;line-height:1.52;color:#3d3d3d;text-align:right;word-break:break-word;}' +
-        '.invoice-row-amount td{padding-top:11px;padding-bottom:5px;border-top:2px solid rgba(67,39,125,0.12);border-bottom:none;}' +
+        '.invoice-row-amount td{padding-top:9px;padding-bottom:5px;}' +
         '.invoice-row-amount .invoice-amount{font-size:1.2em;font-weight:700;color:#43277d;text-align:right;letter-spacing:0.02em;}' +
-        '.invoice-row-remaining td{padding-top:5px;padding-bottom:2px;}' +
+        '.invoice-row-remaining td{padding-top:5px;}' +
         '.invoice-row-remaining .invoice-value{font-weight:600;color:#5a4a7a;font-size:0.9em;}' +
         '.invoice-footer{margin-top:auto;flex-shrink:0;padding:0;background:none;border-radius:0;}' +
-        '.invoice-footer--split{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:12px;padding:10px 0 0;border-top:1px solid #eee;}' +
+        '.invoice-footer--split{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:8px;padding:8px 0 0;border-top:1px solid #eee;}' +
         '.invoice-footer-copy{text-align:left;flex:1 1 auto;min-width:0;}' +
         '.invoice-footer-arrow{flex-shrink:0;display:flex;align-items:center;line-height:0;opacity:1;}' +
         '.invoice-footer-arrow svg{display:block;}' +
-        '.invoice-footer--solo{text-align:center;padding:10px 0 0;border-top:1px solid #eee;}' +
-        '.invoice-qr-caption{margin:0 0 5px;font-size:0.82em;font-weight:700;color:#43277d;letter-spacing:0.03em;line-height:1.3;}' +
-        '.invoice-footer-text{margin:0;color:#e72060;font-size:0.72em;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;line-height:1.35;}' +
-        '.invoice-footer--solo .invoice-footer-text{text-transform:none;font-size:0.86em;font-weight:600;letter-spacing:0.04em;}' +
+        '.invoice-footer--solo{text-align:center;padding:8px 0 0;border-top:1px solid #eee;}' +
+        '.invoice-qr-caption{margin:0 0 3px;font-size:0.76em;font-weight:700;color:#43277d;letter-spacing:0.02em;line-height:1.25;}' +
+        '.invoice-footer-text{margin:0;color:#e72060;font-size:0.66em;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;line-height:1.3;}' +
+        '.invoice-footer--solo .invoice-footer-text{text-transform:none;font-size:0.8em;font-weight:600;letter-spacing:0.03em;}' +
         '.invoice-footer-qr{flex-shrink:0;line-height:0;}' +
-        '.invoice-qr-img{display:block;width:76px;height:76px;border-radius:8px;border:2px solid #eee;box-shadow:0 2px 8px rgba(67,39,125,0.12);}';
+        '.invoice-qr-img{display:block;width:64px;height:64px;border-radius:6px;border:1px solid #eee;box-shadow:0 1px 6px rgba(67,39,125,0.1);}' +
+        '.invoice-branding{margin:6px 0 0;padding:0;text-align:center;font-size:0.64em;color:#9ca3af;letter-spacing:0.02em;line-height:1.35;}';
 }
 
 function getSyncErrorMessage(error) {
@@ -9113,13 +9271,11 @@ function displayTransactions(filter = currentFilter) {
         filteredTransactions = filteredTransactions.filter(t => t.type === filter);
     }
     
-    // Filtre par mot-clé (description ou montant)
+    // Filtre par mot-clé (description, montant ou n° facture)
     if (searchKeyword.trim() !== '') {
-        const keyword = searchKeyword.toLowerCase().trim();
-        filteredTransactions = filteredTransactions.filter(t => {
-            const descriptionMatch = t.description.toLowerCase().includes(keyword);
-            const amountMatch = t.amount.toString().includes(keyword);
-            return descriptionMatch || amountMatch;
+        const keyword = searchKeyword.trim();
+        filteredTransactions = filteredTransactions.filter(function (t) {
+            return transactionMatchesSearchKeyword(t, keyword);
         });
     }
 
@@ -9359,11 +9515,9 @@ function getFilteredTransactions() {
     }
     
     if (searchKeyword.trim() !== '') {
-        const keyword = searchKeyword.toLowerCase().trim();
-        filteredTransactions = filteredTransactions.filter(t => {
-            const descriptionMatch = t.description.toLowerCase().includes(keyword);
-            const amountMatch = t.amount.toString().includes(keyword);
-            return descriptionMatch || amountMatch;
+        const keyword = searchKeyword.trim();
+        filteredTransactions = filteredTransactions.filter(function (t) {
+            return transactionMatchesSearchKeyword(t, keyword);
         });
     }
 
@@ -9872,28 +10026,16 @@ function getAppBaseUrl() {
     return new URL('.', window.location.href).href;
 }
 
-function preloadInvoiceLogo() {
-    if (invoiceLogoDataUrlCache) return Promise.resolve(invoiceLogoDataUrlCache);
-    var logoUrl = (window.XALISS_DJANGO && window.XALISS_DJANGO.logoUrl)
-        ? window.XALISS_DJANGO.logoUrl
-        : new URL('images/xaliss2.png', getAppBaseUrl()).href;
-    var isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
-    return new Promise(function (resolve) {
-        var img = new Image();
-        if (isHttp) img.crossOrigin = 'anonymous';
-        img.onload = function () {
-            try {
-                var canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                invoiceLogoDataUrlCache = canvas.toDataURL('image/png');
-            } catch (e) { }
-            resolve(invoiceLogoDataUrlCache);
-        };
-        img.onerror = function () { resolve(null); };
-        img.src = logoUrl;
+function preloadInvoiceLogo(forceReload) {
+    if (invoiceLogoDataUrlCache && !forceReload) return Promise.resolve(invoiceLogoDataUrlCache);
+    var logoUrl = resolveInvoiceLogoSource();
+    if (String(logoUrl).indexOf('data:image/') === 0) {
+        invoiceLogoDataUrlCache = logoUrl;
+        return Promise.resolve(logoUrl);
+    }
+    return imageUrlToDataUrl(logoUrl).then(function (dataUrl) {
+        if (dataUrl) invoiceLogoDataUrlCache = dataUrl;
+        return invoiceLogoDataUrlCache;
     });
 }
 
@@ -9914,8 +10056,8 @@ function openInvoiceModal(id) {
     const typeLabel = transaction.type === 'income' ? 'Entrant' : 'Sortant';
     const dateFormatted = formatDate(transaction.date);
     const hasRemaining = transaction.remainingAmount != null && transaction.remainingAmount > 0;
-    const factureNum = getInvoiceDocumentNumPrefix(transaction) + String(transaction.id).slice(-8).toUpperCase();
-    var logoSrc = invoiceLogoDataUrlCache || 'images/xaliss2.png';
+    const factureNum = getInvoiceDocumentNumber(transaction);
+    var logoSrc = resolveInvoiceLogoSource();
 
     const company = loadCompanyProfile();
     const addressLines = formatAddressLines(company.address);
@@ -9964,13 +10106,13 @@ function openInvoiceModal(id) {
                 '<p class="invoice-footer-text">Merci pour votre confiance</p>' +
                 '</div>' +
                 '<div class="invoice-footer-arrow" aria-hidden="true">' +
-                '<svg viewBox="0 0 56 28" width="48" height="24" xmlns="http://www.w3.org/2000/svg">' +
+                '<svg viewBox="0 0 56 28" width="40" height="20" xmlns="http://www.w3.org/2000/svg">' +
                 '<defs><linearGradient id="invFootArG" x1="0" y1="0" x2="1" y2="0">' +
                 '<stop offset="0%" stop-color="#43277d"/><stop offset="100%" stop-color="#e72060"/></linearGradient></defs>' +
                 '<path d="M4 14h36M38 8l12 6-12 6" stroke="url(#invFootArG)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>' +
                 '</div>' +
                 '<div class="invoice-footer-qr">' +
-                '<img class="invoice-qr-img" src="' + qrDataUrl + '" width="76" height="76" alt="QR code">' +
+                '<img class="invoice-qr-img" src="' + qrDataUrl + '" width="64" height="64" alt="QR code">' +
                 '</div></div>'
             : '<div class="invoice-footer invoice-footer--solo">' +
                 '<p class="invoice-footer-text">Merci pour votre confiance</p></div>';
@@ -9978,9 +10120,11 @@ function openInvoiceModal(id) {
         const invoiceHtml = `
         <div class="invoice-paper" id="invoicePaper">
             <div class="invoice-header">
-                <img src="${logoSrc}" alt="${escapeHtml((company.name && String(company.name).trim()) || 'Xaliss')}" class="invoice-logo">
+                <div class="invoice-logo-frame">
+                    <img src="${logoSrc}" alt="${escapeHtml((company.name && String(company.name).trim()) || 'Xaliss')}" class="invoice-logo">
+                </div>
                 <p class="invoice-title">${getInvoiceDocumentTitleUpper(transaction)}</p>
-                <span class="invoice-num">N° ${factureNum}</span>
+                <span class="invoice-num">N° : ${factureNum}</span>
             </div>
             ${companyBlockHtml}
             ${clientBlockHtml}
@@ -9994,21 +10138,19 @@ function openInvoiceModal(id) {
                 </table>
             </div>
             ${footerHtml}
+            <p class="invoice-branding">Facture générée depuis www.xaliss.com</p>
         </div>
     `;
         const contentEl = document.getElementById('invoiceContent');
         if (contentEl) contentEl.innerHTML = invoiceHtml;
         const modal = document.getElementById('invoiceModal');
         if (modal) modal.style.display = 'flex';
-        if (!invoiceLogoDataUrlCache) {
-            preloadInvoiceLogo().then(function (url) {
-                if (url) {
-                    var paper = document.getElementById('invoicePaper');
-                    var logoImg = paper && paper.querySelector('img.invoice-logo');
-                    if (logoImg) logoImg.src = url;
-                }
-            });
-        }
+        preloadInvoiceLogo(true).then(function (url) {
+            if (!url) return;
+            var paper = document.getElementById('invoicePaper');
+            var logoImg = paper && paper.querySelector('img.invoice-logo');
+            if (logoImg) logoImg.src = url;
+        });
     });
 }
 

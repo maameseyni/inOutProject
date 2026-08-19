@@ -144,6 +144,7 @@ def transaction_to_js(transaction: Transaction) -> dict:
         'remainingAmount': remaining,
         'invoiceClient': client_nom or None,
         'invoiceClientId': transaction.client_id,
+        'documentNumber': transaction.numero_document or None,
         'cree_par_nom': transaction.cree_par_nom or None,
         'cree_par_role': transaction.cree_par_role or None,
         'updatedAt': format_iso_date(transaction.modifie_le),

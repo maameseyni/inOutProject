@@ -2,7 +2,7 @@ import json
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 
@@ -385,7 +385,7 @@ def organisation_profil(request):
     org = request.organisation
 
     if request.method == 'GET':
-        return JsonResponse({'profil': org_service.get_profile(org)})
+        return JsonResponse({'profil': org_service.get_profile(org, request=request)})
 
     if not membre_a_permission(request.membre, PERM_ORGANISATION_MODIFIER):
         return _permission_denied()
@@ -395,11 +395,42 @@ def organisation_profil(request):
         return JsonResponse({'erreur': 'Corps JSON invalide.'}, status=400)
 
     try:
-        profil = org_service.update_profile(org, data)
+        profil = org_service.update_profile(org, data, request=request)
     except org_service.OrganisationServiceError as exc:
         return _service_error_response(exc)
 
     return JsonResponse({'profil': profil})
+
+
+@login_required
+@organisation_required
+@csrf_protect
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def organisation_logo(request):
+    org = request.organisation
+
+    if request.method == 'GET':
+        if not org.logo_facture:
+            return JsonResponse({'erreur': 'Aucun logo.'}, status=404)
+        return FileResponse(org.logo_facture.open('rb'), content_type='image/png')
+
+    if not membre_a_permission(request.membre, PERM_ORGANISATION_MODIFIER):
+        return _permission_denied()
+
+    if request.method == 'DELETE':
+        profil = org_service.delete_logo(org, request=request)
+        return JsonResponse({'profil': profil})
+
+    uploaded = request.FILES.get('logo')
+    try:
+        profil, warnings = org_service.upload_logo(org, uploaded, request=request)
+    except org_service.OrganisationServiceError as exc:
+        return _service_error_response(exc)
+
+    payload = {'profil': profil}
+    if warnings:
+        payload['avertissements'] = warnings
+    return JsonResponse(payload)
 
 
 @login_required

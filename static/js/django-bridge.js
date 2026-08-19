@@ -234,10 +234,11 @@
         const opts = options || {};
         const method = String(opts.method || 'GET').toUpperCase();
         const csrfToken = readCsrfToken();
+        const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
         const headers = Object.assign(
             {},
             isUnsafeHttpMethod(method) ? { 'X-CSRFToken': csrfToken } : {},
-            opts.body ? { 'Content-Type': 'application/json' } : {},
+            opts.body && !isFormData ? { 'Content-Type': 'application/json' } : {},
             opts.headers || {}
         );
         // Toujours envoyer le token si on en a un (comportement historique + APIs mixtes).
@@ -368,6 +369,11 @@
             applyCompanyProfileToForm(profil);
             if (typeof applyOrgAppSettingsFromApi === 'function') {
                 applyOrgAppSettingsFromApi(snapshot.profil);
+            }
+            if (profil.hasCustomLogo && profil.logoUrl && typeof cacheCompanyLogoFromUrl === 'function') {
+                cacheCompanyLogoFromUrl(profil.logoUrl);
+            } else if (typeof clearCompanyLogoDataLocal === 'function') {
+                clearCompanyLogoDataLocal(accountId);
             }
         }
         updateDisplay();
@@ -1314,6 +1320,12 @@
         const profil = normalizeCompanyProfilePayload(data.profil || {});
         persistCompanyProfileLocal(accountId, profil);
         applyCompanyProfileToForm(profil);
+        if (profil.hasCustomLogo && profil.logoUrl && typeof cacheCompanyLogoFromUrl === 'function') {
+            await cacheCompanyLogoFromUrl(profil.logoUrl);
+        } else if (typeof clearCompanyLogoDataLocal === 'function') {
+            clearCompanyLogoDataLocal(accountId);
+            if (typeof updateCompanyLogoPreview === 'function') updateCompanyLogoPreview(profil);
+        }
         if (typeof applyOrgAppSettingsFromApi === 'function') {
             applyOrgAppSettingsFromApi(data.profil || {});
         }
@@ -1988,6 +2000,8 @@
 
         show(document.getElementById('clientsClearAllBtn'), !!p.canDeleteClient);
         show(document.getElementById('companyProfileSave'), !!p.canEditOrganisation);
+        show(document.getElementById('companyLogoChooseBtn'), !!p.canEditOrganisation);
+        show(document.getElementById('companyLogoRemoveBtn'), !!p.canEditOrganisation && !!loadCompanyProfile().hasCustomLogo);
         show(document.getElementById('categoriesViewAllBtn'), !!p.canEditOrganisation);
 
         ['companyName', 'companyAddress', 'companyPhone', 'companyEmail', 'companyWebsite'].forEach(function (id) {
@@ -2034,6 +2048,106 @@
         });
     }
     window.applyRolePermissionsUI = applyRolePermissionsUI;
+
+    function patchCompanyLogoControls() {
+        const input = document.getElementById('companyLogoInput');
+        const chooseBtn = document.getElementById('companyLogoChooseBtn');
+        const removeBtn = document.getElementById('companyLogoRemoveBtn');
+        if (!input || !chooseBtn || input.dataset.xalissDjangoBound === '1') return;
+        if (cfg.permissions && !cfg.permissions.canEditOrganisation) return;
+        input.dataset.xalissDjangoBound = '1';
+
+        chooseBtn.addEventListener('click', function () {
+            input.click();
+        });
+
+        input.addEventListener('change', function () {
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+
+            if (typeof setCompanyLogoHint === 'function') setCompanyLogoHint('', '');
+
+            const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+            if (allowed.indexOf(file.type) === -1) {
+                if (typeof setCompanyLogoHint === 'function') {
+                    setCompanyLogoHint('Format non supporté. Utilisez PNG, JPG ou WebP.', 'error');
+                }
+                return;
+            }
+            if (file.size > 500 * 1024) {
+                if (typeof setCompanyLogoHint === 'function') {
+                    setCompanyLogoHint('Logo trop lourd (max 500 Ko).', 'error');
+                }
+                return;
+            }
+
+            if (offline && !offline.isOnline()) {
+                showNotification('Connexion requise pour changer le logo.', 'warning');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                if (typeof persistCompanyLogoDataLocal === 'function') {
+                    persistCompanyLogoDataLocal(getCurrentAccountId(), reader.result);
+                }
+                const draftProfile = normalizeCompanyProfilePayload(Object.assign({}, loadCompanyProfile(), {
+                    hasCustomLogo: true,
+                }));
+                if (typeof updateCompanyLogoPreview === 'function') updateCompanyLogoPreview(draftProfile);
+            };
+            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('logo', file);
+            apiFetchNetwork('/organisation/logo/', {
+                method: 'POST',
+                body: formData,
+            }).then(function (data) {
+                const profil = normalizeCompanyProfilePayload(data.profil || {});
+                persistCompanyProfileLocal(getCurrentAccountId(), profil);
+                applyCompanyProfileToForm(profil);
+                if (Array.isArray(data.avertissements) && data.avertissements.length && typeof setCompanyLogoHint === 'function') {
+                    setCompanyLogoHint(data.avertissements.join(' '), 'warning');
+                } else if (typeof setCompanyLogoHint === 'function') {
+                    setCompanyLogoHint('');
+                }
+                showNotification('Logo entreprise enregistré.', 'success');
+                applyRolePermissionsUI(cfg.permissions || {});
+                if (profil.logoUrl && typeof cacheCompanyLogoFromUrl === 'function') {
+                    return cacheCompanyLogoFromUrl(profil.logoUrl);
+                }
+                return null;
+            }).then(function () {
+                return persistOfflineSnapshot();
+            }).catch(function (error) {
+                notifyApiError(error, 'Impossible d\'enregistrer le logo.');
+            });
+        });
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                if (offline && !offline.isOnline()) {
+                    showNotification('Connexion requise pour supprimer le logo.', 'warning');
+                    return;
+                }
+                apiFetchNetwork('/organisation/logo/', { method: 'DELETE' }).then(function (data) {
+                    const accountId = getCurrentAccountId();
+                    const profil = normalizeCompanyProfilePayload(data.profil || {});
+                    if (typeof clearCompanyLogoDataLocal === 'function') clearCompanyLogoDataLocal(accountId);
+                    persistCompanyProfileLocal(accountId, profil);
+                    applyCompanyProfileToForm(profil);
+                    if (typeof setCompanyLogoHint === 'function') setCompanyLogoHint('');
+                    showNotification('Logo entreprise supprimé.', 'success');
+                    applyRolePermissionsUI(cfg.permissions || {});
+                    return persistOfflineSnapshot();
+                }).catch(function (error) {
+                    notifyApiError(error, 'Impossible de supprimer le logo.');
+                });
+            });
+        }
+    }
 
     function patchCompanyProfileSave() {
         const btn = document.getElementById('companyProfileSave');
@@ -2189,6 +2303,7 @@
 
     function bootDjangoApp() {
         patchCompanyProfileSave();
+        patchCompanyLogoControls();
         patchUserProfileSave();
         patchUserPasswordSave();
         initParametresPasswordToggles();

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from finances.models import Client, Paiement, Transaction
 from finances.serializers import transaction_from_js, transaction_to_js
+from finances.services.document_numbers import allocate_document_number
 from finances.services.optimistic import OptimisticLockError, verifier_verrou_optimiste
 from finances.services.sync import notifier_changement_organisation
 
@@ -90,6 +91,7 @@ def create_transaction(org, user, membre, data: dict) -> dict:
     client, nom_client = _resolve_client(org, parsed['client_id'], parsed['nom_client_facture'])
 
     with db_transaction.atomic():
+        numero_document = allocate_document_number(org, parsed['type'], parsed['date'])
         tx = Transaction(
             id=tx_id,
             organisation=org,
@@ -102,6 +104,7 @@ def create_transaction(org, user, membre, data: dict) -> dict:
             montant_restant=parsed['montant_restant'],
             nom_client_facture=nom_client,
             client=client,
+            numero_document=numero_document,
         )
         Transaction.remplir_auteur(tx, user, membre)
         tx.save()

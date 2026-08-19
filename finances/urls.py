@@ -40,6 +40,7 @@ urlpatterns = [
     ),
     path('api/categories/', api_views.categories_list_replace, name='api_categories'),
     path('api/organisation/profil/', api_views.organisation_profil, name='api_organisation_profil'),
+    path('api/organisation/logo/', api_views.organisation_logo, name='api_organisation_logo'),
     path('api/utilisateur/profil/', api_views.utilisateur_profil, name='api_utilisateur_profil'),
     path('api/utilisateur/mot-de-passe/', api_views.utilisateur_mot_de_passe, name='api_utilisateur_mot_de_passe'),
     path('api/sync/', api_views.sync_status, name='api_sync'),

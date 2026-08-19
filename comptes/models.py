@@ -7,6 +7,10 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
 
+def organisation_logo_upload_to(instance, filename):
+    return f'org_logos/{instance.pk}/logo.png'
+
+
 class Organisation(models.Model):
     slug = models.SlugField(max_length=120, unique=True)
     nom = models.CharField(max_length=200, default='')
@@ -14,6 +18,12 @@ class Organisation(models.Model):
     email = models.EmailField(max_length=80, blank=True, default='')
     adresse = models.TextField(blank=True, default='')
     site_web = models.CharField(max_length=120, blank=True, default='')
+    logo_facture = models.ImageField(
+        upload_to=organisation_logo_upload_to,
+        blank=True,
+        null=True,
+        help_text='Logo affiché sur les factures de l’organisation.',
+    )
     libelle_devise = models.CharField(max_length=16, default='XOF')
     categories_produits = models.JSONField(default=list, blank=True)
     rafraichissement_auto = models.BooleanField(default=True)
