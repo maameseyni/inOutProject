@@ -9,6 +9,7 @@ const PRECACHE_URLS = [
     '/static/js/django-bridge.js',
     '/static/js/pwa.js',
     '/static/images/xaliss2.png',
+    '/static/images/xaliss2bleu.png',
     '/static/images/xaliss%20icone.png',
     '/static/manifest.webmanifest',
     '/static/offline.html',

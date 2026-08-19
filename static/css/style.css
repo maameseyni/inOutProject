@@ -5941,62 +5941,52 @@ body.app-tab-notes header {
 }
 
 .form-group-company-website .company-website-panel {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    background: linear-gradient(135deg, #faf8fc 0%, #f4f1f9 100%);
-    border: 1px solid #e4ddf0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(67, 39, 125, 0.06);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.form-group-company-website .company-website-panel:focus-within {
-    border-color: #43277d;
-    box-shadow: 0 0 0 3px rgba(67, 39, 125, 0.1), 0 4px 14px rgba(67, 39, 125, 0.08);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    min-height: 52px;
+    height: 52px;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
 }
 
 .form-group-company-website .company-website-field,
 .parametres-layout .company-profile-banner .form-group-company-website .company-website-field,
 .parametres-layout .form-group-company-website input.company-website-field {
-    flex: 1 1 auto;
+    grid-column: 1;
+    flex: none;
     min-width: 0;
-    width: auto;
+    width: 100%;
     max-width: 100%;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
     margin: 0;
-    border: none !important;
-    border-radius: 0;
-    box-shadow: none !important;
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-.form-group-company-website .company-website-field:hover,
-.parametres-layout .form-group-company-website input.company-website-field:hover {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-.form-group-company-website .company-website-field:focus,
-.parametres-layout .form-group-company-website input.company-website-field:focus {
-    outline: none;
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    background-color: transparent !important;
+    padding: 0 16px;
+    font-size: 1em;
+    border-radius: 10px;
+    box-sizing: border-box;
 }
 
 .company-website-qr-block {
+    grid-column: 2;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
-    flex-shrink: 0;
-    padding: 6px 10px 6px 12px;
-    border-left: 1px solid #e0d8ec;
-    background: rgba(255, 255, 255, 0.45);
+    flex: 0 0 auto;
+    height: 52px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-sizing: border-box;
 }
 
 .company-website-qr-frame {
@@ -6004,21 +5994,24 @@ body.app-tab-notes header {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    padding: 5px;
+    width: 48px;
+    height: 48px;
+    padding: 3px;
     background: #fff;
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid #ece8f4;
     box-shadow: 0 2px 8px rgba(67, 39, 125, 0.1);
     line-height: 0;
+    box-sizing: border-box;
 }
 
 .company-website-qr-img {
     display: block;
     box-sizing: border-box;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     object-fit: contain;
-    border-radius: 6px;
+    border-radius: 4px;
     border: none;
     background: #fff;
     flex-shrink: 0;
@@ -6034,12 +6027,12 @@ body.app-tab-notes header {
 }
 
 .company-website-qr-btn {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border: none;
     background: rgba(67, 39, 125, 0.1);
-    border-radius: 9px;
+    border-radius: 10px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -6050,8 +6043,8 @@ body.app-tab-notes header {
 }
 
 .company-website-qr-btn svg {
-    width: 17px;
-    height: 17px;
+    width: 20px;
+    height: 20px;
 }
 
 .company-website-qr-btn:hover {
@@ -6087,19 +6080,22 @@ body.app-tab-notes header {
 
 @media (max-width: 768px) {
     .form-group-company-website .company-website-panel {
-        flex-direction: column;
-        align-items: stretch;
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+        height: auto;
+        min-height: 0;
     }
 
     .form-group-company-website .company-website-field {
-        width: 100%;
+        grid-column: 1;
+        max-width: 100%;
     }
 
     .company-website-qr-block {
-        border-left: none;
-        border-top: 1px solid #e0d8ec;
-        padding: 10px 12px;
+        grid-column: 1;
         justify-content: flex-start;
+        height: auto;
+        padding: 0;
     }
 
     .company-website-qr-actions {
@@ -6955,6 +6951,14 @@ body.app-tab-notes header {
     overflow-y: auto;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.invoice-content::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .invoice-paper {
@@ -6990,12 +6994,12 @@ body.app-tab-notes header {
 }
 
 .invoice-logo-frame {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 168px;
+    width: 100%;
     min-height: 64px;
-    margin: 0 auto 6px;
+    margin: 0 0 6px;
     padding: 0;
     background: transparent;
 }

@@ -241,9 +241,11 @@ function applyCompanyProfileToForm(p) {
 }
 
 function getDefaultInvoiceLogoUrl() {
-    return (window.XALISS_DJANGO && window.XALISS_DJANGO.logoUrl)
-        ? window.XALISS_DJANGO.logoUrl
-        : new URL('images/xaliss2.png', getAppBaseUrl()).href;
+    var url = (window.XALISS_DJANGO && window.XALISS_DJANGO.invoiceLogoUrl)
+        || '/static/images/xaliss2bleu.png';
+    if (/^https?:\/\//i.test(url) || url.indexOf('data:image/') === 0) return url;
+    if (url.charAt(0) === '/') return new URL(url, window.location.origin).href;
+    return new URL(url, getAppBaseUrl()).href;
 }
 
 function resolveInvoiceLogoSource(profile) {
@@ -7284,7 +7286,7 @@ function getInvoicePaperCssString() {
     return 'body{font-family:\'Segoe UI\',Tahoma,Geneva,Verdana,sans-serif;padding:24px;background:#f8f8f8;}' +
         '@media print{@page{margin:12mm;}body{padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-paper{box-shadow:none !important;max-width:100%;}.invoice-header{background:linear-gradient(180deg,#fde8f0 0%,#faf0f5 45%,#f6f4fa 100%) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-num,.invoice-company-block,.invoice-client-row,.invoice-footer-text{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}}' +
         '.invoice-paper{width:420px;max-width:420px;min-width:420px;min-height:580px;box-sizing:border-box;font-size:14px;line-height:1.4;margin:0 auto;display:flex;flex-direction:column;background:#fff;border-radius:12px;padding:20px 28px 20px;box-shadow:0 4px 24px rgba(0,0,0,0.08),0 0 0 1px rgba(67,39,125,0.04);border:1px solid #e8e8e8;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-text-size-adjust:100%;text-size-adjust:100%;}' +
-        '.invoice-logo-frame{display:inline-flex;align-items:center;justify-content:center;max-width:168px;min-height:64px;margin:0 auto 6px;padding:0;background:transparent;}' +
+        '.invoice-logo-frame{display:flex;align-items:center;justify-content:center;width:100%;min-height:64px;margin:0 0 6px;padding:0;background:transparent;}' +
         '.invoice-logo{display:block;max-width:140px;max-height:80px;width:auto;height:auto;object-fit:contain;margin:0;}' +
         '.invoice-header{text-align:center;margin:-20px -28px 10px -28px;padding:14px 28px 10px;border-bottom:2px solid #43277d;border-radius:12px 12px 0 0;background:linear-gradient(180deg,rgba(231,32,96,0.08) 0%,rgba(231,32,96,0.04) 50%,rgba(67,39,125,0.03) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
         '.invoice-title{font-size:1.05em;font-weight:800;margin:0 0 6px;color:#43277d;letter-spacing:0.14em;}' +
@@ -10165,7 +10167,14 @@ function printInvoice() {
     if (!paper) return;
     const win = window.open('', '_blank');
     const base = getAppBaseUrl();
-    const printHtml = paper.outerHTML.replace('src="images/xaliss2.png"', 'src="' + new URL('images/xaliss2.png', base).href + '"');
+    const defaultLogoPath = (window.XALISS_DJANGO && window.XALISS_DJANGO.invoiceLogoUrl) || '/static/images/xaliss2bleu.png';
+    const defaultLogoAbs = /^https?:\/\//i.test(defaultLogoPath)
+        ? defaultLogoPath
+        : new URL(defaultLogoPath, window.location.origin).href;
+    let printHtml = paper.outerHTML;
+    if (printHtml.indexOf(defaultLogoPath) !== -1) {
+        printHtml = printHtml.split(defaultLogoPath).join(defaultLogoAbs);
+    }
     const printStyles = getInvoicePaperCssString();
     const printTitle = getInvoiceDocumentTitle(currentInvoiceTransaction);
     win.document.write('<html><head><title>' + printTitle + '</title><base href="' + base + '"><style>' + printStyles + '</style></head><body>' + printHtml + '</body></html>');
@@ -11595,7 +11604,7 @@ function exportToPDF() {
         try {
             const logoImg = new Image();
             logoImg.crossOrigin = 'anonymous';
-            logoImg.src = 'images/xaliss2.png';
+            logoImg.src = (window.XALISS_DJANGO && window.XALISS_DJANGO.invoiceLogoUrl) || '/static/images/xaliss2bleu.png';
             
             logoImg.onload = function() {
                 try {

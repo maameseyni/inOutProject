@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'partials/pwa_head.html' %}
     <title>Xaliss - Gestion Financière</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=invoice-logo-org-18">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=invoice-logo-center-1">
     <!-- jsPDF pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Chart.js pour les graphiques -->
@@ -26,6 +26,7 @@
         userId: {{ request.user.id }},
         orgSlug: '{{ organisation.slug|escapejs }}',
         logoUrl: '{% static "images/xaliss2.png" %}',
+        invoiceLogoUrl: '{% static "images/xaliss2bleu.png" %}',
         permissions: {{ permissions_json|safe }}
     };
     </script>
@@ -1523,7 +1524,7 @@
     <script src="{% static 'js/xaliss-offline.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}?v=sondage-1"></script>
     <script src="{% static 'js/geo-selects.js' %}"></script>
-    <script src="{% static 'js/script.js' %}?v=invoice-doc-num-3"></script>
+    <script src="{% static 'js/script.js' %}?v=invoice-logo-bleu-2"></script>
     <script src="{% static 'js/django-bridge.js' %}?v=sondage-1"></script>
     <script src="{% static 'js/pwa.js' %}"></script>
 </body>
