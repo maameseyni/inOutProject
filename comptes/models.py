@@ -24,6 +24,11 @@ class Organisation(models.Model):
         null=True,
         help_text='Logo affiché sur les factures de l’organisation.',
     )
+    theme_facture = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Personnalisation visuelle des factures (couleurs, cadre logo).',
+    )
     libelle_devise = models.CharField(max_length=16, default='XOF')
     categories_produits = models.JSONField(default=list, blank=True)
     rafraichissement_auto = models.BooleanField(default=True)

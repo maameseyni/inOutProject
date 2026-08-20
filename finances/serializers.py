@@ -292,7 +292,71 @@ def note_from_js(data: dict) -> dict:
     }
 
 
+import re
+
+HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+INVOICE_THEME_PRESETS = frozenset({
+    'xaliss', 'blue', 'green', 'neutral', 'coral', 'teal', 'wine', 'gold', 'violet', 'custom',
+})
+
+INVOICE_LAYOUTS = frozenset({
+    'classique', 'editorial', 'signature',
+})
+
+INVOICE_LAYOUT_ALIASES = {
+    'classic': 'classique',
+    'élégant': 'editorial',
+    'elegant': 'editorial',
+    'edito': 'editorial',
+    'bold': 'signature',
+    'impact': 'signature',
+    'audacieux': 'signature',
+}
+
+
+def normalize_invoice_layout(value) -> str:
+    key = str(value or 'classique').strip().lower()
+    key = INVOICE_LAYOUT_ALIASES.get(key, key)
+    return key if key in INVOICE_LAYOUTS else 'classique'
+
+
+def normalize_invoice_theme(data) -> dict | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    preset = str(data.get('preset') or 'xaliss').strip().lower()
+    if preset not in INVOICE_THEME_PRESETS:
+        preset = 'custom'
+
+    def norm_color(key: str, default: str) -> str:
+        val = str(data.get(key) or default).strip()
+        return val if HEX_COLOR_RE.match(val) else default
+
+    def norm_bool(key: str) -> bool:
+        value = data.get(key)
+        if isinstance(value, str):
+            return value.lower() in ('1', 'true', 'yes', 'on')
+        return bool(value)
+
+    return {
+        'preset': preset,
+        'layout': normalize_invoice_layout(data.get('layout')),
+        'accent': norm_color('accent', '#43277d'),
+        'accentSecondary': norm_color('accentSecondary', '#e72060'),
+        'gradientStart': norm_color('gradientStart', '#fde8f0'),
+        'gradientMid': norm_color('gradientMid', '#faf0f5'),
+        'gradientEnd': norm_color('gradientEnd', '#f6f4fa'),
+        'logoFrame': norm_bool('logoFrame'),
+        'logoFrameColor': norm_color('logoFrameColor', '#ffffff'),
+        'logoFrameBorder': norm_bool('logoFrameBorder'),
+        'logoFrameBorderColor': norm_color('logoFrameBorderColor', '#43277d'),
+    }
+
+
 def organisation_profile_to_js(organisation) -> dict:
+    theme = normalize_invoice_theme(getattr(organisation, 'theme_facture', None) or {})
     return {
         'name': organisation.nom,
         'address': organisation.adresse,
@@ -301,29 +365,42 @@ def organisation_profile_to_js(organisation) -> dict:
         'website': organisation.site_web,
         'currencyLabel': organisation.libelle_devise or 'FCFA',
         'autoRefreshLocal': organisation.rafraichissement_auto,
+        'invoiceTheme': theme or normalize_invoice_theme({}),
     }
 
 
 def organisation_profile_from_js(data: dict) -> dict:
-    libelle = None
+    """Ne retourne que les champs présents dans le corps PATCH (mise à jour partielle)."""
+    result = {}
+
+    if 'name' in data or 'nom' in data:
+        result['nom'] = str(data.get('name') or data.get('nom') or '').strip()[:200]
+    if 'address' in data or 'adresse' in data:
+        result['adresse'] = str(data.get('address') or data.get('adresse') or '').strip()
+    if 'phone' in data or 'telephone' in data:
+        result['telephone'] = str(data.get('phone') or data.get('telephone') or '').strip()[:40]
+    if 'email' in data:
+        result['email'] = str(data.get('email') or '').strip()[:80]
+    if 'website' in data or 'site_web' in data:
+        result['site_web'] = str(data.get('website') or data.get('site_web') or '').strip()[:120]
+
     if 'currencyLabel' in data or 'libelle_devise' in data:
-        libelle = str(data.get('currencyLabel') or data.get('libelle_devise') or 'FCFA').strip()[:16] or 'FCFA'
+        result['libelle_devise'] = (
+            str(data.get('currencyLabel') or data.get('libelle_devise') or 'FCFA').strip()[:16] or 'FCFA'
+        )
 
-    auto_refresh = None
     if 'autoRefreshLocal' in data:
-        auto_refresh = data.get('autoRefreshLocal') is not False
+        result['rafraichissement_auto'] = data.get('autoRefreshLocal') is not False
     elif 'rafraichissement_auto' in data:
-        auto_refresh = data.get('rafraichissement_auto') is not False
+        result['rafraichissement_auto'] = data.get('rafraichissement_auto') is not False
 
-    return {
-        'nom': str(data.get('name') or '').strip()[:200],
-        'adresse': str(data.get('address') or '').strip(),
-        'telephone': str(data.get('phone') or '').strip()[:40],
-        'email': str(data.get('email') or '').strip()[:80],
-        'site_web': str(data.get('website') or '').strip()[:120],
-        'libelle_devise': libelle,
-        'rafraichissement_auto': auto_refresh,
-    }
+    if 'invoiceTheme' in data or 'themeFacture' in data:
+        raw_theme = data.get('invoiceTheme') if 'invoiceTheme' in data else data.get('themeFacture')
+        normalized = normalize_invoice_theme(raw_theme)
+        if normalized is not None:
+            result['theme_facture'] = normalized
+
+    return result
 
 
 def utilisateur_profil_to_js(utilisateur, organisation, membre, profil=None) -> dict:

@@ -59,16 +59,25 @@ def get_profile(org, request=None) -> dict:
 
 def update_profile(org, data: dict, request=None) -> dict:
     parsed = organisation_profile_from_js(data)
-    org.nom = parsed['nom']
-    org.adresse = parsed['adresse']
-    org.telephone = parsed['telephone']
-    org.email = parsed['email']
-    org.site_web = parsed['site_web']
-    if parsed['libelle_devise'] is not None:
-        org.libelle_devise = parsed['libelle_devise']
-    if parsed['rafraichissement_auto'] is not None:
-        org.rafraichissement_auto = parsed['rafraichissement_auto']
-    org.save()
+    if not parsed:
+        return get_profile(org, request=request)
+
+    update_fields = []
+    for key, attr in (
+        ('nom', 'nom'),
+        ('adresse', 'adresse'),
+        ('telephone', 'telephone'),
+        ('email', 'email'),
+        ('site_web', 'site_web'),
+        ('libelle_devise', 'libelle_devise'),
+        ('rafraichissement_auto', 'rafraichissement_auto'),
+        ('theme_facture', 'theme_facture'),
+    ):
+        if key in parsed:
+            setattr(org, attr, parsed[key])
+            update_fields.append(attr)
+
+    org.save(update_fields=update_fields)
     notifier_changement_organisation(org)
     return get_profile(org, request=request)
 

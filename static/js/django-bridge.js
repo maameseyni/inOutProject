@@ -287,6 +287,14 @@
                     { csrfFailure: true }
                 );
             }
+            if (response.status >= 500) {
+                throw new ApiError(
+                    'Le serveur a rencontré une erreur. Réessayez dans un instant.',
+                    response.status,
+                    null,
+                    { serverError: true }
+                );
+            }
             throw createSessionExpiredError();
         }
 
@@ -1188,6 +1196,16 @@
 
             if (!newcomers.length) return;
 
+            newcomers = newcomers.filter(function (n) {
+                return !n.read;
+            });
+            if (!newcomers.length) return;
+
+            if (typeof window.xalissEnableNotificationToasts === 'function'
+                && !window._xalissNotificationToastsEnabled) {
+                return;
+            }
+
             newcomers.sort(function (a, b) {
                 return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
             });
@@ -1391,9 +1409,15 @@
                     duration: 2800,
                 });
             }
+            if (typeof window.xalissEnableNotificationToasts === 'function') {
+                window.xalissEnableNotificationToasts();
+            }
         } catch (error) {
             // Ne pas laisser le badge bloqué masqué si le chargement échoue.
             window._xalissNotifBootReady = true;
+            if (typeof window.xalissEnableNotificationToasts === 'function') {
+                window.xalissEnableNotificationToasts();
+            }
             if (typeof updateNotificationsBadge === 'function') {
                 updateNotificationsBadge();
             }
@@ -2002,7 +2026,9 @@
         show(document.getElementById('companyProfileSave'), !!p.canEditOrganisation);
         show(document.getElementById('companyLogoChooseBtn'), !!p.canEditOrganisation);
         show(document.getElementById('companyLogoRemoveBtn'), !!p.canEditOrganisation && !!loadCompanyProfile().hasCustomLogo);
-        show(document.getElementById('categoriesViewAllBtn'), !!p.canEditOrganisation);
+        show(document.getElementById('invoiceThemeOpenBtn'), !!p.canEditOrganisation);
+        show(document.getElementById('invoiceThemeSaveBtn'), !!p.canEditOrganisation);
+        show(document.getElementById('invoiceThemeResetBtn'), !!p.canEditOrganisation);
 
         ['companyName', 'companyAddress', 'companyPhone', 'companyEmail', 'companyWebsite'].forEach(function (id) {
             const el = document.getElementById(id);
@@ -2161,18 +2187,25 @@
             const phoneEl = document.getElementById('companyPhone');
             const emailEl = document.getElementById('companyEmail');
             const webEl = document.getElementById('companyWebsite');
-            const payload = normalizeCompanyProfilePayload({
+            const payload = normalizeCompanyProfilePayload(Object.assign({}, loadCompanyProfile(), {
                 name: nameEl && nameEl.value ? nameEl.value : '',
                 address: addrEl && addrEl.value ? addrEl.value : '',
                 phone: phoneEl && phoneEl.value ? phoneEl.value : '',
                 email: emailEl && emailEl.value ? emailEl.value : '',
                 website: webEl && webEl.value ? webEl.value : ''
-            });
+            }));
             const accId = getCurrentAccountId();
+            const apiBody = {
+                name: payload.name,
+                address: payload.address,
+                phone: payload.phone,
+                email: payload.email,
+                website: payload.website,
+            };
 
             apiWriteOrQueue('/organisation/profil/', {
                 method: 'PATCH',
-                body: JSON.stringify(payload)
+                body: JSON.stringify(apiBody)
             }, {
                 label: 'Profil organisation',
                 localApply: function () {
@@ -2301,9 +2334,51 @@
         });
     }
 
+    function patchInvoiceThemeSave() {
+        window.xalissSaveInvoiceTheme = function (theme) {
+            if (cfg.permissions && !cfg.permissions.canEditOrganisation) {
+                showNotification('Vous n\'avez pas la permission de modifier la facture.', 'warning');
+                return Promise.resolve();
+            }
+            const normalized = typeof normalizeInvoiceTheme === 'function'
+                ? normalizeInvoiceTheme(theme)
+                : theme;
+            const accId = getCurrentAccountId();
+            const baseProfile = typeof getCompanyProfileForInvoice === 'function'
+                ? getCompanyProfileForInvoice()
+                : loadCompanyProfile();
+            const payload = normalizeCompanyProfilePayload(Object.assign({}, baseProfile, {
+                invoiceTheme: normalized,
+            }));
+            return apiWriteOrQueue('/organisation/profil/', {
+                method: 'PATCH',
+                body: JSON.stringify({ invoiceTheme: normalized }),
+            }, {
+                label: 'Personnalisation facture',
+                localApply: function () {
+                    persistCompanyProfileLocal(accId, payload);
+                    if (typeof updateCompanyLogoPreview === 'function') updateCompanyLogoPreview(payload);
+                },
+            }).then(function (result) {
+                if (!result.queued) {
+                    persistCompanyProfileLocal(accId, payload);
+                }
+                if (typeof updateCompanyLogoPreview === 'function') updateCompanyLogoPreview(payload);
+                showNotification('Personnalisation de la facture enregistrée.', 'success');
+                if (typeof closeInvoiceThemeModal === 'function') closeInvoiceThemeModal();
+                if (!result.queued) return xalissReloadAfterWrite();
+            }).catch(function (error) {
+                notifyApiError(error, 'Impossible d\'enregistrer la personnalisation.');
+                persistCompanyProfileLocal(accId, payload);
+                if (typeof closeInvoiceThemeModal === 'function') closeInvoiceThemeModal();
+            });
+        };
+    }
+
     function bootDjangoApp() {
         patchCompanyProfileSave();
         patchCompanyLogoControls();
+        patchInvoiceThemeSave();
         patchUserProfileSave();
         patchUserPasswordSave();
         initParametresPasswordToggles();

@@ -68,15 +68,80 @@ function sanitizeFirestoreDocId(raw) {
 
 function normalizeCompanyProfilePayload(obj) {
     const o = obj && typeof obj === 'object' ? obj : {};
-    return {
-        name: o.name != null ? String(o.name).trim() : '',
-        address: o.address != null ? String(o.address).trim() : '',
-        phone: o.phone != null ? String(o.phone).trim() : '',
+    const out = {
+        name: pickCompanyProfileField(o.name, o.nom),
+        address: pickCompanyProfileField(o.address, o.adresse),
+        phone: pickCompanyProfileField(o.phone, o.telephone),
         email: o.email != null ? String(o.email).trim() : '',
-        website: o.website != null ? String(o.website).trim() : '',
+        website: pickCompanyProfileField(o.website, o.site_web),
         logoUrl: o.logoUrl != null ? String(o.logoUrl).trim() : '',
         hasCustomLogo: o.hasCustomLogo === true || o.hasCustomLogo === 'true',
     };
+    const theme = o.invoiceTheme || o.themeFacture;
+    if (theme && typeof theme === 'object' && !Array.isArray(theme)) {
+        out.invoiceTheme = theme;
+    }
+    return out;
+}
+
+function pickCompanyProfileField() {
+    for (let i = 0; i < arguments.length; i++) {
+        const value = arguments[i];
+        if (value != null && String(value).trim()) return String(value).trim();
+    }
+    return '';
+}
+
+function getCompanyProfileFromFormFields() {
+    const read = function (id) {
+        const el = document.getElementById(id);
+        return el && el.value != null ? String(el.value).trim() : '';
+    };
+    return {
+        name: read('companyName'),
+        address: read('companyAddress'),
+        phone: read('companyPhone'),
+        email: read('companyEmail'),
+        website: read('companyWebsite'),
+    };
+}
+
+function ensureCompanyProfileHydratedForInvoice() {
+    const accountId = getCurrentAccountId();
+    const stored = loadCompanyProfileFromLocalStorage(accountId);
+    const cached = normalizeCompanyProfilePayload(cachedCompanyProfile);
+    const merged = normalizeCompanyProfilePayload({
+        name: pickCompanyProfileField(stored.name, cached.name),
+        address: pickCompanyProfileField(stored.address, cached.address),
+        phone: pickCompanyProfileField(stored.phone, cached.phone),
+        email: pickCompanyProfileField(stored.email, cached.email),
+        website: pickCompanyProfileField(stored.website, cached.website),
+        logoUrl: pickCompanyProfileField(stored.logoUrl, cached.logoUrl),
+        hasCustomLogo: stored.hasCustomLogo || cached.hasCustomLogo,
+        invoiceTheme: stored.invoiceTheme || cached.invoiceTheme,
+    });
+    cachedCompanyProfile = merged;
+    const form = getCompanyProfileFromFormFields();
+    const formEmpty = !form.name && !form.address && !form.phone && !form.email && !form.website;
+    if (formEmpty && (merged.name || merged.address || merged.phone || merged.email || merged.website)) {
+        applyCompanyProfileToForm(merged);
+    }
+    return merged;
+}
+
+function getCompanyProfileForInvoice() {
+    const form = getCompanyProfileFromFormFields();
+    const cached = ensureCompanyProfileHydratedForInvoice();
+    return normalizeCompanyProfilePayload({
+        name: pickCompanyProfileField(form.name, cached.name),
+        address: pickCompanyProfileField(form.address, cached.address),
+        phone: pickCompanyProfileField(form.phone, cached.phone),
+        email: pickCompanyProfileField(form.email, cached.email),
+        website: pickCompanyProfileField(form.website, cached.website),
+        logoUrl: cached.logoUrl,
+        hasCustomLogo: cached.hasCustomLogo,
+        invoiceTheme: cached.invoiceTheme,
+    });
 }
 
 function loadCompanyLogoDataFromLocalStorage(accountId) {
@@ -7287,13 +7352,16 @@ function getInvoicePaperCssString() {
         '@media print{@page{margin:12mm;}body{padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-paper{box-shadow:none !important;max-width:100%;}.invoice-header{background:linear-gradient(180deg,#fde8f0 0%,#faf0f5 45%,#f6f4fa 100%) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.invoice-num,.invoice-company-block,.invoice-client-row,.invoice-footer-text{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}}' +
         '.invoice-paper{width:420px;max-width:420px;min-width:420px;min-height:580px;box-sizing:border-box;font-size:14px;line-height:1.4;margin:0 auto;display:flex;flex-direction:column;background:#fff;border-radius:12px;padding:20px 28px 20px;box-shadow:0 4px 24px rgba(0,0,0,0.08),0 0 0 1px rgba(67,39,125,0.04);border:1px solid #e8e8e8;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-text-size-adjust:100%;text-size-adjust:100%;}' +
         '.invoice-logo-frame{display:flex;align-items:center;justify-content:center;width:100%;min-height:64px;margin:0 0 6px;padding:0;background:transparent;}' +
+        '.invoice-logo-frame.has-logo-frame,.invoice-logo-frame.has-logo-outline{width:auto;max-width:168px;margin-left:auto;margin-right:auto;padding:8px 12px;border-radius:10px;}' +
+        '.invoice-logo-frame.has-logo-frame{background:var(--inv-logo-frame-bg,#fff);}' +
+        '.invoice-logo-frame.has-logo-outline{border:2px solid var(--inv-logo-frame-border,#43277d);}' +
         '.invoice-logo{display:block;max-width:140px;max-height:80px;width:auto;height:auto;object-fit:contain;margin:0;}' +
         '.invoice-header{text-align:center;margin:-20px -28px 10px -28px;padding:14px 28px 10px;border-bottom:2px solid #43277d;border-radius:12px 12px 0 0;background:linear-gradient(180deg,rgba(231,32,96,0.08) 0%,rgba(231,32,96,0.04) 50%,rgba(67,39,125,0.03) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
         '.invoice-title{font-size:1.05em;font-weight:800;margin:0 0 6px;color:#43277d;letter-spacing:0.14em;}' +
         '.invoice-num{display:inline-block;font-size:0.64em;color:#5a4a7a;font-weight:600;letter-spacing:0.04em;padding:3px 10px;background:rgba(67,39,125,0.08);border-radius:20px;}' +
-        '.invoice-company-block{margin:0 0 6px;padding:8px 12px;background:#fafafa;border-radius:8px;border:1px solid #eee;font-size:0.88em;color:#555;text-align:center;line-height:1.35;}' +
+        '.invoice-company-block{margin:0 0 6px;padding:8px 12px;background:#fafafa;border-radius:8px;border:1px solid #eee;font-size:1em;color:#333;text-align:center;line-height:1.35;}' +
         '.invoice-company-name{font-weight:700;color:#43277d;margin:0 0 3px;font-size:1.22em;line-height:1.2;}' +
-        '.invoice-company-line{margin:0;font-size:1em;}' +
+        '.invoice-company-line{margin:0;font-size:0.9em;color:#333;}' +
         '.invoice-client-row{margin:10px 0;padding:10px 12px;background:rgba(67,39,125,0.06);border-radius:8px;font-size:0.9em;color:#333;text-align:left;border-left:3px solid #43277d;}' +
         '.invoice-client-label{font-weight:600;color:#43277d;margin-right:6px;}' +
         'table{width:100%;border-collapse:collapse;}' +
@@ -7320,7 +7388,7 @@ function getInvoicePaperCssString() {
         '.invoice-footer--solo .invoice-footer-text{text-transform:none;font-size:0.8em;font-weight:600;letter-spacing:0.03em;}' +
         '.invoice-footer-qr{flex-shrink:0;line-height:0;}' +
         '.invoice-qr-img{display:block;width:64px;height:64px;border-radius:6px;border:1px solid #eee;box-shadow:0 1px 6px rgba(67,39,125,0.1);}' +
-        '.invoice-branding{margin:6px 0 0;padding:0;text-align:center;font-size:0.64em;color:#9ca3af;letter-spacing:0.02em;line-height:1.35;}';
+        '.invoice-branding{margin:6px 0 0;padding:0;text-align:center;font-size:calc(9.5px / var(--inv-fit-scale, 1));color:#9ca3af;letter-spacing:0.02em;line-height:1.35;}';
 }
 
 function getSyncErrorMessage(error) {
@@ -10061,7 +10129,7 @@ function openInvoiceModal(id) {
     const factureNum = getInvoiceDocumentNumber(transaction);
     var logoSrc = resolveInvoiceLogoSource();
 
-    const company = loadCompanyProfile();
+    const company = getCompanyProfileForInvoice();
     const addressLines = formatAddressLines(company.address);
     const hasCompany = (company.name && String(company.name).trim()) ||
         addressLines.length ||

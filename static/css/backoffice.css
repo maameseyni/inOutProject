@@ -2745,8 +2745,8 @@ body.bo-body.is-bo-loading .bo-shell {
 }
 
 .bo-fiche-fact--tags {
-    grid-column: 1 / -1;
-}
+        grid-column: 1 / -1;
+    }
 
 .bo-fiche-fact--tags dd {
     margin-top: 2px;
@@ -2980,7 +2980,7 @@ body.bo-body.is-bo-loading .bo-shell {
 
 .bo-abo-field input,
 .bo-abo-field select {
-    width: 100%;
+        width: 100%;
     box-sizing: border-box;
     padding: 8px 10px;
     border-radius: 8px;
@@ -3084,7 +3084,7 @@ body.bo-body.is-bo-loading .bo-shell {
 
 .bo-charge-form {
     display: flex;
-    flex-direction: column;
+        flex-direction: column;
     gap: 0;
 }
 
@@ -3206,7 +3206,7 @@ body.bo-body.is-bo-loading .bo-shell {
     border-top: 1px solid rgba(67, 39, 125, 0.08);
     display: flex;
     flex-wrap: nowrap;
-    gap: 10px;
+        gap: 10px;
     align-items: center;
 }
 

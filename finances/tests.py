@@ -432,3 +432,117 @@ class OrganisationLogoTest(TestCase):
         self.assertFalse(deleted.json()['profil']['hasCustomLogo'])
         self.org.refresh_from_db()
         self.assertFalse(self.org.logo_facture)
+
+    def test_patch_invoice_theme_persiste_en_base(self):
+        theme = {
+            'preset': 'blue',
+            'accent': '#1e3a8a',
+            'accentSecondary': '#2563eb',
+            'gradientStart': '#eff6ff',
+            'gradientMid': '#f0f7ff',
+            'gradientEnd': '#f8fafc',
+            'logoFrame': True,
+            'logoFrameColor': '#ffffff',
+            'logoFrameBorder': True,
+            'logoFrameBorderColor': '#43277d',
+        }
+        response = self.client.patch(
+            reverse('finances:api_organisation_profil'),
+            data=json.dumps({'invoiceTheme': theme}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()['profil']['invoiceTheme']
+        self.assertEqual(payload['preset'], 'blue')
+        self.assertTrue(payload['logoFrame'])
+        self.assertTrue(payload['logoFrameBorder'])
+        self.assertEqual(payload['logoFrameBorderColor'], '#43277d')
+        self.assertEqual(payload.get('layout'), 'classique')
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.theme_facture['accent'], '#1e3a8a')
+
+    def test_patch_invoice_layout_persiste_en_base(self):
+        response = self.client.patch(
+            reverse('finances:api_organisation_profil'),
+            data=json.dumps({
+                'invoiceTheme': {
+                    'preset': 'xaliss',
+                    'layout': 'signature',
+                    'accent': '#43277d',
+                    'accentSecondary': '#e72060',
+                    'gradientStart': '#fde8f0',
+                    'gradientMid': '#faf0f5',
+                    'gradientEnd': '#f6f4fa',
+                    'logoFrame': False,
+                    'logoFrameColor': '#ffffff',
+                    'logoFrameBorder': False,
+                    'logoFrameBorderColor': '#43277d',
+                }
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['profil']['invoiceTheme']['layout'], 'signature')
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.theme_facture['layout'], 'signature')
+        self.assertEqual(self.org.nom, 'Logo Org')
+
+    def test_patch_invoice_theme_conserve_profil_entreprise(self):
+        self.org.adresse = '123 Rue Test, Dakar'
+        self.org.telephone = '+221 77 000 00 00'
+        self.org.email = 'contact@logo-org.test'
+        self.org.save(update_fields=['adresse', 'telephone', 'email', 'modifie_le'])
+
+        response = self.client.patch(
+            reverse('finances:api_organisation_profil'),
+            data=json.dumps({'invoiceTheme': {'preset': 'green'}}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.nom, 'Logo Org')
+        self.assertEqual(self.org.adresse, '123 Rue Test, Dakar')
+        self.assertEqual(self.org.telephone, '+221 77 000 00 00')
+        self.assertEqual(self.org.email, 'contact@logo-org.test')
+        self.assertEqual(self.org.theme_facture['preset'], 'green')
+
+    def test_patch_profil_entreprise_conserve_theme_facture_existant(self):
+        self.org.theme_facture = {'preset': 'blue', 'accent': '#1e3a8a'}
+        self.org.save(update_fields=['theme_facture', 'modifie_le'])
+
+        response = self.client.patch(
+            reverse('finances:api_organisation_profil'),
+            data=json.dumps({
+                'name': 'Kaay Print',
+                'address': 'HLM 4 Dakar',
+                'phone': '+221 77 000 00 00',
+                'email': 'contact@kaayprint.com',
+                'website': 'https://link.kaayprint.com',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content[:500])
+        payload = response.json()['profil']
+        self.assertEqual(payload['name'], 'Kaay Print')
+        self.assertEqual(payload['address'], 'HLM 4 Dakar')
+        self.assertEqual(payload['invoiceTheme']['preset'], 'blue')
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.nom, 'Kaay Print')
+        self.assertEqual(self.org.theme_facture['preset'], 'blue')
+
+    def test_patch_profil_ignore_invoice_theme_null(self):
+        self.org.theme_facture = {'preset': 'blue', 'accent': '#1e3a8a'}
+        self.org.save(update_fields=['theme_facture', 'modifie_le'])
+
+        response = self.client.patch(
+            reverse('finances:api_organisation_profil'),
+            data=json.dumps({
+                'name': 'Kaay Print',
+                'invoiceTheme': None,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content[:500])
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.nom, 'Kaay Print')
+        self.assertEqual(self.org.theme_facture['preset'], 'blue')

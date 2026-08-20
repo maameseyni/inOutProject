@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'partials/pwa_head.html' %}
     <title>Xaliss - Gestion Financière</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=invoice-logo-center-1">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=invoice-theme-96">
     <!-- jsPDF pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Chart.js pour les graphiques -->
@@ -857,8 +857,8 @@
                     <div class="notes-list" id="notesList" aria-label="Liste des notes">
                         <div class="notes-empty-state" id="notesEmptyState">
                             <svg class="notes-empty-illustration" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <rect x="28" y="12" width="64" height="72" rx="8" stroke="#43277d" stroke-width="2.5" fill="#f8f6fc"/>
-                                <path d="M44 12v10a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V12" stroke="#43277d" stroke-width="2.5"/>
+                                <rect x="28" y="12" width="64" height="72" rx="8" stroke="#43277d" stroke-width="2" fill="#f8f6fc"/>
+                                <path d="M44 12v10a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V12" stroke="#43277d" stroke-width="2"/>
                                 <path d="M44 44h32M44 56h24M44 68h28" stroke="#43277d" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
                             </svg>
                             <p class="notes-empty-title">Aucune note pour le moment</p>
@@ -1026,6 +1026,7 @@
                                 <p class="company-logo-help clients-settings-hint">PNG recommandé (fond transparent). JPG ou WebP acceptés. Max 500 Ko. Le logo s’intègre directement à l’en-tête de la facture.</p>
                                 <input type="file" id="companyLogoInput" accept="image/png,image/jpeg,image/webp" hidden>
                                 <button type="button" class="company-logo-btn company-logo-btn--ghost" id="companyLogoRemoveBtn" hidden>Supprimer</button>
+                                <button type="button" class="company-logo-btn company-logo-btn--primary" id="invoiceThemeOpenBtn">Personnaliser</button>
                             </div>
                             <p id="companyLogoHint" class="company-logo-hint" hidden></p>
                         </div>
@@ -1241,6 +1242,225 @@
                 <button type="button" class="btn-invoice-icon-btn" onclick="printInvoice()" title="Imprimer">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal personnalisation facture -->
+    <div id="invoiceThemeModal" class="modal">
+        <div class="modal-content modal-content-invoice-theme">
+            <div class="modal-header invoice-theme-header">
+                <div class="invoice-theme-header-copy">
+                    <h2>
+                        <svg class="icon-inline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="#43277d" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" stroke="#43277d" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        Personnaliser la facture
+                    </h2>
+                    <p class="invoice-theme-header-sub">Ajustez les couleurs, le logo et l’en-tête — l’aperçu se met à jour en direct.</p>
+                </div>
+                <button type="button" class="modal-close" onclick="closeInvoiceThemeModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="invoice-theme-layout">
+                <div class="invoice-theme-preview-col">
+                    <div id="invoiceThemePreviewHost" class="invoice-theme-preview-host"></div>
+                </div>
+                <div class="invoice-theme-controls-col">
+                    <input type="hidden" id="invoiceThemePreset" value="xaliss">
+                    <div class="invoice-theme-panel">
+                        <div class="invoice-theme-section">
+                            <h3 class="invoice-theme-section-title">Mise en page</h3>
+                            <input type="hidden" id="invoiceThemeLayout" value="classique">
+                            <div class="invoice-theme-layout-row" role="radiogroup" aria-label="Mise en page de la facture">
+                                <button type="button" class="invoice-theme-layout-card is-active" data-layout="classique" role="radio" aria-checked="true">
+                                    <span class="invoice-theme-layout-preview" aria-hidden="true">
+                                        <span class="ilp-bar"></span>
+                                        <span class="ilp-line ilp-line--center"></span>
+                                        <span class="ilp-block"></span>
+                                        <span class="ilp-lines"></span>
+                                    </span>
+                                    <span class="invoice-theme-layout-copy">
+                                        <strong>Classique</strong>
+                                        <em>Centré et doux</em>
+                                    </span>
+                                </button>
+                                <button type="button" class="invoice-theme-layout-card" data-layout="editorial" role="radio" aria-checked="false">
+                                    <span class="invoice-theme-layout-preview invoice-theme-layout-preview--editorial" aria-hidden="true">
+                                        <span class="ilp-row">
+                                            <span class="ilp-dot"></span>
+                                            <span class="ilp-stack">
+                                                <span class="ilp-line"></span>
+                                                <span class="ilp-line ilp-line--short"></span>
+                                            </span>
+                                        </span>
+                                        <span class="ilp-cols">
+                                            <span class="ilp-col"></span>
+                                            <span class="ilp-col ilp-col--thin"></span>
+                                        </span>
+                                        <span class="ilp-lines"></span>
+                                    </span>
+                                    <span class="invoice-theme-layout-copy">
+                                        <strong>Éditorial</strong>
+                                        <em>Fin et raffiné</em>
+                                    </span>
+                                </button>
+                                <button type="button" class="invoice-theme-layout-card" data-layout="signature" role="radio" aria-checked="false">
+                                    <span class="invoice-theme-layout-preview invoice-theme-layout-preview--signature" aria-hidden="true">
+                                        <span class="ilp-hero"></span>
+                                        <span class="ilp-cols">
+                                            <span class="ilp-col"></span>
+                                            <span class="ilp-col"></span>
+                                        </span>
+                                        <span class="ilp-amount"></span>
+                                    </span>
+                                    <span class="invoice-theme-layout-copy">
+                                        <strong>Signature</strong>
+                                        <em>Marque affirmée</em>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="invoice-theme-section">
+                            <h3 class="invoice-theme-section-title">Thèmes prédéfinis</h3>
+                            <div class="invoice-theme-preset-row">
+                                <button type="button" class="invoice-theme-preset-chip is-active" data-preset="xaliss">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Xaliss
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="blue">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Bleu
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="green">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Vert
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="neutral">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Neutre
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="coral">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Corail
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="teal">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Turquoise
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="wine">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Bordeaux
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="gold">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Or
+                                </button>
+                                <button type="button" class="invoice-theme-preset-chip" data-preset="violet">
+                                    <span class="invoice-theme-preset-swatch" aria-hidden="true"></span>
+                                    Violet
+                                </button>
+                            </div>
+                        </div>
+                        <div class="invoice-theme-section">
+                            <h3 class="invoice-theme-section-title">Couleurs</h3>
+                            <div class="invoice-theme-color-grid">
+                                <div class="invoice-theme-field">
+                                    <span>Principale</span>
+                                    <span class="invoice-theme-color-picker">
+                                        <input type="color" id="invoiceThemeAccent" value="#43277d" title="Choisir la couleur principale" aria-label="Couleur principale">
+                                        <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="invoice-theme-field">
+                                    <span>Secondaire</span>
+                                    <span class="invoice-theme-color-picker">
+                                        <input type="color" id="invoiceThemeAccentSecondary" value="#e72060" title="Choisir la couleur secondaire" aria-label="Couleur secondaire">
+                                        <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="invoice-theme-field">
+                                    <span>Dégradé haut</span>
+                                    <span class="invoice-theme-color-picker">
+                                        <input type="color" id="invoiceThemeGradientStart" value="#fde8f0" title="Choisir la couleur du dégradé haut" aria-label="Couleur dégradé haut">
+                                        <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="invoice-theme-field">
+                                    <span>Dégradé bas</span>
+                                    <span class="invoice-theme-color-picker">
+                                        <input type="color" id="invoiceThemeGradientEnd" value="#f6f4fa" title="Choisir la couleur du dégradé bas" aria-label="Couleur dégradé bas">
+                                        <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="invoice-theme-hint">La couleur principale colore le nom, le trait, le montant et les accents.</p>
+                        </div>
+                        <div class="invoice-theme-section">
+                            <h3 class="invoice-theme-section-title">Logo</h3>
+                            <div class="invoice-theme-logo-options">
+                                <div class="invoice-theme-logo-option">
+                                    <label class="invoice-theme-switch">
+                                        <input type="checkbox" id="invoiceThemeLogoFrame">
+                                        <span class="invoice-theme-switch-ui" aria-hidden="true"></span>
+                                        <span class="invoice-theme-switch-label">Cadre autour du logo</span>
+                                    </label>
+                                    <span class="invoice-theme-logo-color" id="invoiceThemeLogoFrameColorGroup" hidden>
+                                        <span class="invoice-theme-color-picker" title="Couleur du cadre">
+                                            <input type="color" id="invoiceThemeLogoFrameColor" value="#ffffff" title="Choisir la couleur du cadre logo" aria-label="Couleur du cadre logo">
+                                            <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                            </span>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="invoice-theme-logo-option">
+                                    <label class="invoice-theme-switch">
+                                        <input type="checkbox" id="invoiceThemeLogoFrameBorder">
+                                        <span class="invoice-theme-switch-ui" aria-hidden="true"></span>
+                                        <span class="invoice-theme-switch-label">Contour du logo</span>
+                                    </label>
+                                    <span class="invoice-theme-logo-color" id="invoiceThemeLogoFrameBorderColorGroup" hidden>
+                                        <span class="invoice-theme-color-picker" title="Couleur du contour">
+                                            <input type="color" id="invoiceThemeLogoFrameBorderColor" value="#43277d" title="Choisir la couleur du contour logo" aria-label="Couleur du contour logo">
+                                            <span class="invoice-theme-color-picker-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4 10.5-10.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                                            </span>
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="invoice-theme-hint">Le cadre ajoute un fond ; le contour trace un trait autour du logo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions invoice-theme-actions">
+                <button type="button" class="invoice-theme-btn invoice-theme-btn--ghost" id="invoiceThemeResetBtn">Réinitialiser</button>
+                <button type="button" class="invoice-theme-btn invoice-theme-btn--ghost" onclick="closeInvoiceThemeModal()">Annuler</button>
+                <button type="button" class="invoice-theme-btn invoice-theme-btn--primary" id="invoiceThemeSaveBtn">Enregistrer</button>
+            </div>
+            <div id="invoiceThemeColorPopover" class="invoice-theme-color-popover" hidden role="dialog" aria-label="Choisir une couleur">
+                <div class="invoice-theme-color-popover-sv" id="invoiceThemeColorSv" role="slider" aria-label="Saturation et luminosité">
+                    <span class="invoice-theme-color-popover-sv-thumb" id="invoiceThemeColorSvThumb"></span>
+                </div>
+                <div class="invoice-theme-color-popover-hue" id="invoiceThemeColorHue" role="slider" aria-label="Teinte">
+                    <span class="invoice-theme-color-popover-hue-thumb" id="invoiceThemeColorHueThumb"></span>
+                </div>
+                <div class="invoice-theme-color-popover-footer">
+                    <span class="invoice-theme-color-popover-preview" id="invoiceThemeColorPreview" aria-hidden="true"></span>
+                    <label class="invoice-theme-color-popover-hex-wrap">
+                        <input type="text" id="invoiceThemeColorHex" class="invoice-theme-color-popover-hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Code hexadécimal">
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -1522,10 +1742,11 @@
     </div>
 
     <script src="{% static 'js/xaliss-offline.js' %}"></script>
-    <script src="{% static 'js/xaliss-flash.js' %}?v=sondage-1"></script>
+    <script src="{% static 'js/xaliss-flash.js' %}?v=notif-boot-1"></script>
     <script src="{% static 'js/geo-selects.js' %}"></script>
-    <script src="{% static 'js/script.js' %}?v=invoice-logo-bleu-2"></script>
-    <script src="{% static 'js/django-bridge.js' %}?v=sondage-1"></script>
+    <script src="{% static 'js/script.js' %}?v=invoice-theme-96"></script>
+    <script src="{% static 'js/invoice-theme.js' %}?v=invoice-theme-96"></script>
+    <script src="{% static 'js/django-bridge.js' %}?v=invoice-theme-96"></script>
     <script src="{% static 'js/pwa.js' %}"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@
     var lastAlertSoundAt = 0;
     var pendingToastBatch = [];
     var toastBatchTimer = null;
+    var notificationToastsEnabled = false;
     var memoryCache = null;
     /** Clé localStorage liée au cache mémoire — invalide si le compte change. */
     var memoryCacheKey = null;
@@ -321,7 +322,10 @@
 
     function flushToastBatch() {
         toastBatchTimer = null;
-        if (!pendingToastBatch.length) return;
+        if (!notificationToastsEnabled || !pendingToastBatch.length) {
+            pendingToastBatch = [];
+            return;
+        }
         var items = pendingToastBatch.slice();
         pendingToastBatch = [];
         if (items.length === 1) {
@@ -342,6 +346,7 @@
     }
 
     function queueCenterToast(message, type) {
+        if (!notificationToastsEnabled) return;
         pendingToastBatch.push({ message: String(message || ''), type: type || 'info' });
         if (toastBatchTimer) return;
         toastBatchTimer = global.setTimeout(flushToastBatch, 180);
@@ -381,13 +386,18 @@
         }
 
         var silent = !!extras.silent;
-        if (!silent) {
+        if (!silent && notificationToastsEnabled) {
             alertNewNotification();
             if (extras.toast !== false) {
                 queueCenterToast(item.message, item.type);
             }
         }
         return item;
+    }
+
+    function enableNotificationToasts() {
+        notificationToastsEnabled = true;
+        global._xalissNotificationToastsEnabled = true;
     }
 
     function saveNotificationToHistory(message, type) {
@@ -487,6 +497,7 @@
         ensureWelcomeNotification();
         showFlashMessageFromStorage();
         showDjangoMessages();
+        enableNotificationToasts();
     }
 
     global.showNotification = showNotification;
@@ -546,6 +557,7 @@
     };
     global.showFlashMessageFromStorage = showFlashMessageFromStorage;
     global.showDjangoMessages = showDjangoMessages;
+    global.xalissEnableNotificationToasts = enableNotificationToasts;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bootFlashMessages);
