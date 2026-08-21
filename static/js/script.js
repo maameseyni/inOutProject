@@ -3112,14 +3112,28 @@ function notePlainText(value) {
     const raw = String(value || '');
     if (!raw) return '';
     if (!noteContentLooksLikeHtml(raw)) {
-        return raw.replace(/\s+/g, ' ').trim();
+        // Retours à la ligne → espace (pas suppression, sinon les mots se collent)
+        return raw.replace(/[\r\n]+/g, ' ').replace(/[ \t\f\v]+/g, ' ').trim();
     }
     // DOMParser : pas d'exécution de scripts (contrairement à innerHTML sur un div live).
     try {
         const doc = new DOMParser().parseFromString(raw, 'text/html');
-        return String((doc.body && doc.body.textContent) || '').replace(/\s+/g, ' ').trim();
+        const root = doc.body;
+        if (!root) return '';
+        root.querySelectorAll('br').forEach(function (br) {
+            br.replaceWith(doc.createTextNode(' '));
+        });
+        root.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote, tr, pre').forEach(function (el) {
+            el.appendChild(doc.createTextNode(' '));
+        });
+        return String(root.textContent || '').replace(/\s+/g, ' ').trim();
     } catch (e) {
-        return raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        return raw
+            .replace(/<br\s*\/?>/gi, ' ')
+            .replace(/<\/(p|div|li|h[1-6]|blockquote|tr|pre)>/gi, ' ')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 }
 
@@ -4521,7 +4535,13 @@ function truncateNotePreview(text, maxLen) {
     if (!raw) return '';
     const limit = Number(maxLen) || 160;
     if (raw.length <= limit) return raw;
-    return raw.slice(0, limit).replace(/\s+\S*$/, '').trim() + '…';
+    const cut = raw.slice(0, limit);
+    const atWord = cut.replace(/\s+\S*$/, '').trim();
+    if (atWord) return atWord + '…';
+    // Aucun espace dans la zone : ne pas coller un morceau de mot
+    const firstSpace = raw.indexOf(' ');
+    if (firstSpace === -1) return raw.slice(0, limit) + '…';
+    return raw.slice(0, firstSpace).trim() + '…';
 }
 
 function getNotesEmptyStateHtml(isSearchOrFilter) {
@@ -4570,7 +4590,7 @@ function buildNoteItemHtml(note, index) {
     const dateLabel = formatNoteRelativeDate(isoDate);
     const dateFull = formatNoteDate(isoDate);
     const plainContent = notePlainText(note.content);
-    const preview = plainContent ? escapeHtml(truncateNotePreview(plainContent, 180)) : '';
+    const preview = plainContent ? escapeHtml(truncateNotePreview(plainContent, 110)) : '';
     const linkBits = [];
     if (note.clientName) {
         linkBits.push('<span class="transaction-client"><span class="transaction-client-label">Client\u00A0: </span><span class="transaction-client-name">' + escapeHtml(note.clientName) + '</span></span>');
