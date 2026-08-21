@@ -7358,7 +7358,7 @@ function getInvoicePaperCssString() {
         '.invoice-logo{display:block;max-width:140px;max-height:80px;width:auto;height:auto;object-fit:contain;margin:0;}' +
         '.invoice-header{text-align:center;margin:-20px -28px 10px -28px;padding:14px 28px 10px;border-bottom:2px solid #43277d;border-radius:12px 12px 0 0;background:linear-gradient(180deg,rgba(231,32,96,0.08) 0%,rgba(231,32,96,0.04) 50%,rgba(67,39,125,0.03) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}' +
         '.invoice-title{font-size:1.05em;font-weight:800;margin:0 0 6px;color:#43277d;letter-spacing:0.14em;}' +
-        '.invoice-num{display:inline-block;font-size:0.64em;color:#5a4a7a;font-weight:600;letter-spacing:0.04em;padding:3px 10px;background:rgba(67,39,125,0.08);border-radius:20px;}' +
+        '.invoice-num{display:inline-block;font-size:0.64em;color:#5a4a7a;font-weight:700;letter-spacing:0.04em;padding:3px 10px;background:rgba(67,39,125,0.08);border-radius:20px;}' +
         '.invoice-company-block{margin:0 0 6px;padding:8px 12px;background:#fafafa;border-radius:8px;border:1px solid #eee;font-size:1em;color:#333;text-align:center;line-height:1.35;}' +
         '.invoice-company-name{font-weight:700;color:#43277d;margin:0 0 3px;font-size:1.22em;line-height:1.2;}' +
         '.invoice-company-line{margin:0;font-size:0.9em;color:#333;}' +

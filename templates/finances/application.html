@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'partials/pwa_head.html' %}
     <title>Xaliss - Gestion Financière</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=invoice-theme-96">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=tx-hist-21">
     <!-- jsPDF pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Chart.js pour les graphiques -->
@@ -238,14 +238,21 @@
                         <input type="number" id="expenseRemainingAmount" step="0.01" min="0" placeholder="Montant restant à payer">
                         <span class="error-message" id="expenseRemainingAmountError"></span>
                     </div>
-                    <div class="form-group">
-                        <label for="expenseInvoiceClient">Payé à (optionnel)</label>
-                        <select id="expenseInvoiceClient" class="kp-select-native">
-                            <option value="">— Aucun —</option>
-                            <option value="__new__">+ Ajouter</option>
-                        </select>
-                        <input type="text" id="expenseInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du prestataire" hidden>
+                    <div class="income-client-category-row expense-contact-row">
+                        <label for="expenseInvoiceClient" class="income-row-label income-client-label">Payé à (optionnel)</label>
+                        <div class="income-row-label income-category-label" aria-hidden="true"></div>
+                        <div class="form-group income-client-control">
+                            <select id="expenseInvoiceClient" class="kp-select-native">
+                                <option value="">— Aucun —</option>
+                                <option value="__new__">+ Ajouter</option>
+                            </select>
+                            <input type="text" id="expenseInvoiceClientOther" class="client-other-input" maxlength="200" placeholder="Nom du prestataire" hidden>
+                        </div>
+                        <div class="form-group income-category-lines-group expense-contact-spacer" aria-hidden="true">
+                            <div class="expense-contact-spacer-field"></div>
+                        </div>
                     </div>
+                    <div class="category-lines-add expense-contact-add-spacer" aria-hidden="true"></div>
                     <div class="form-group">
                         <label for="expenseDescription">Description</label>
                         <textarea id="expenseDescription" placeholder="Ex: Achat papier A4" required maxlength="500" rows="4"></textarea>
@@ -842,6 +849,7 @@
                 </div>
                 <div class="action-card notes-list-card">
                     <h2 class="notes-list-title">Mes notes</h2>
+                    <p class="notes-intro">Retrouvez vos notes, filtrez-les et assignez-les à un client ou une catégorie.</p>
                     <div class="form-group notes-panel-search">
                         <label for="noteSearch">Rechercher</label>
                         <input type="text" id="noteSearch" placeholder="Titre, contenu, client…" autocomplete="off" aria-label="Rechercher une note">
@@ -1106,7 +1114,7 @@
                         </div>
                         <div class="form-group">
                             <label for="clientFormNote">Notes</label>
-                            <textarea id="clientFormNote" rows="3" maxlength="500" placeholder="Infos utiles (optionnel)"></textarea>
+                            <textarea id="clientFormNote" rows="5" maxlength="500" placeholder="Infos utiles (optionnel)"></textarea>
                             <p class="clients-settings-hint">Pour vous uniquement : rappel de commande, préférences, adresse… Ces notes ne s'affichent pas sur la facture.</p>
                         </div>
                     </form>
@@ -1744,9 +1752,9 @@
     <script src="{% static 'js/xaliss-offline.js' %}"></script>
     <script src="{% static 'js/xaliss-flash.js' %}?v=notif-boot-1"></script>
     <script src="{% static 'js/geo-selects.js' %}"></script>
-    <script src="{% static 'js/script.js' %}?v=invoice-theme-96"></script>
-    <script src="{% static 'js/invoice-theme.js' %}?v=invoice-theme-96"></script>
-    <script src="{% static 'js/django-bridge.js' %}?v=invoice-theme-96"></script>
+    <script src="{% static 'js/script.js' %}?v=tx-hist-21"></script>
+    <script src="{% static 'js/invoice-theme.js' %}?v=tx-hist-21"></script>
+    <script src="{% static 'js/django-bridge.js' %}?v=tx-hist-21"></script>
     <script src="{% static 'js/pwa.js' %}"></script>
 </body>
 </html>

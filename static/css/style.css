@@ -605,7 +605,7 @@ body.app-tab-notes header {
 
     .app-notifications-btn {
         top: 12px;
-        right: 2px;
+        right: 0;
         width: 36px;
         height: 36px;
         border-radius: 11px;
@@ -631,7 +631,7 @@ body.app-tab-notes header {
 
     .logo {
         max-width: 260px;
-        width: min(78vw, 260px);
+        width: min(100%, 260px);
         margin-top: 6px;
         margin-bottom: 6px;
     }
@@ -794,12 +794,23 @@ body.app-tab-notes header {
 @media (max-width: 768px) {
     body.app-body {
         --app-layout-gutter: 12px;
+        --app-mobile-edge: 12px;
         --app-max-width: 100%;
-        padding: 12px 12px calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 22px);
+        /* Marge externe toujours visible (fond violet), toutes tailles */
+        padding-top: max(12px, env(safe-area-inset-top, 0px));
+        padding-left: max(var(--app-mobile-edge), env(safe-area-inset-left, 0px));
+        padding-right: max(var(--app-mobile-edge), env(safe-area-inset-right, 0px));
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 22px);
+        overflow-x: hidden;
+        overflow-x: clip;
+        box-sizing: border-box;
     }
 
     .app-shell {
         display: block;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .app-sidebar {
@@ -808,12 +819,24 @@ body.app-tab-notes header {
 
     .app-main {
         margin-left: 0;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
     }
 
+    /* Marge interne du contenu — ne jamais la retirer */
     .app-main .container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
         padding-left: var(--app-layout-gutter);
         padding-right: var(--app-layout-gutter);
         box-sizing: border-box;
+    }
+
+    .app-notifications-btn {
+        right: 0;
     }
 
     .app-bottom-nav.main-tabs {
@@ -822,8 +845,8 @@ body.app-tab-notes header {
         align-items: stretch;
         gap: 4px;
         position: fixed;
-        left: 12px;
-        right: 12px;
+        left: max(var(--app-mobile-edge), env(safe-area-inset-left, 0px));
+        right: max(var(--app-mobile-edge), env(safe-area-inset-right, 0px));
         bottom: calc(10px + env(safe-area-inset-bottom, 0px));
         z-index: 900;
         margin: 0;
@@ -839,6 +862,7 @@ body.app-tab-notes header {
         scroll-snap-type: x proximity;
         scrollbar-width: none;
         overscroll-behavior-x: contain;
+        box-sizing: border-box;
     }
 
     .app-bottom-nav.main-tabs::-webkit-scrollbar {
@@ -977,6 +1001,8 @@ body.app-tab-notes header {
     --param-btn-fs: 1rem;
     --param-btn-fw: 600;
     --param-btn-radius: 8px;
+    --tx-input-h: 44px;
+    --tx-input-fs: 0.95rem;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--app-layout-gutter);
@@ -1038,6 +1064,24 @@ body.app-tab-notes header {
     margin-bottom: 8px;
 }
 
+.notes-layout .notes-form-card .form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value),
+.notes-layout .notes-form-card .form-group select,
+.notes-layout .notes-form-card .kp-select-trigger {
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
+    padding: 0 16px;
+    line-height: 1.2;
+    font-size: var(--tx-input-fs);
+    border-radius: var(--param-btn-radius, 8px);
+    box-sizing: border-box;
+}
+
+.notes-layout .notes-form-card .kp-select-trigger-label {
+    font-size: var(--tx-input-fs);
+    line-height: 1.2;
+}
+
 .notes-form-card .note-form > .note-content-group {
     flex: 1 1 auto;
     display: flex;
@@ -1051,6 +1095,10 @@ body.app-tab-notes header {
     color: #64748b;
     font-size: 0.95rem;
     line-height: 1.45;
+}
+
+.notes-list-card > .notes-intro {
+    white-space: nowrap;
 }
 
 .notes-attach-label {
@@ -1089,20 +1137,20 @@ body.app-tab-notes header {
 .notes-attach-row .kp-select-trigger,
 .notes-attach-row .form-group select,
 .notes-attach-row .client-other-input {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
     border-radius: var(--param-btn-radius, 8px);
     box-sizing: border-box;
-    font-size: 1rem;
+    font-size: var(--tx-input-fs);
 }
 
 .notes-attach-row .kp-select-trigger-label {
     padding: 0;
     line-height: 1.2;
-    font-size: 1rem;
+    font-size: var(--tx-input-fs);
 }
 
 .notes-form-actions {
@@ -1130,17 +1178,18 @@ body.app-tab-notes header {
 
 .notes-layout .note-reminder-trigger,
 .notes-layout .note-reminder-clear {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
     border-radius: var(--param-btn-radius, 8px);
     box-sizing: border-box;
 }
 
 .notes-layout .note-reminder-clear {
-    width: 48px;
+    width: var(--tx-input-h);
     padding: 0;
 }
 
@@ -1305,7 +1354,7 @@ body.app-tab-notes header {
 }
 
 .notes-list-title {
-    margin: 0 0 14px;
+    margin: 0 0 12px;
 }
 
 .notes-panel-search {
@@ -1315,10 +1364,11 @@ body.app-tab-notes header {
 }
 
 .notes-layout .notes-panel-search input {
-    height: 48px;
-    min-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
-    font-size: 1rem;
+    font-size: var(--tx-input-fs);
     border-radius: 8px;
     box-sizing: border-box;
     width: 100%;
@@ -2448,6 +2498,10 @@ body.app-tab-notes header {
         grid-template-columns: 1fr;
     }
 
+    .notes-list-card > .notes-intro {
+        white-space: normal;
+    }
+
     .notes-attach-row {
         grid-template-columns: 1fr;
     }
@@ -2486,6 +2540,8 @@ body.app-tab-notes header {
     --param-btn-fs: 1rem;
     --param-btn-fw: 600;
     --param-btn-radius: 8px;
+    --tx-input-h: 44px;
+    --tx-input-fs: 0.95rem;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--app-layout-gutter);
@@ -2587,6 +2643,7 @@ body.app-tab-notes header {
     border-radius: 10px;
     box-sizing: border-box;
     resize: vertical;
+    font-size: var(--tx-input-fs);
 }
 
 .parametres-layout .parametres-categories-card .clients-card-bottom {
@@ -3107,14 +3164,16 @@ body.app-tab-notes header {
     justify-content: space-between;
     gap: 10px;
     padding: 0 16px;
-    min-height: 48px;
-    height: 48px;
-    max-height: none;
-    line-height: 1.35;
+    min-height: var(--tx-input-h);
+    height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
+    line-height: 1.2;
+    font-size: var(--tx-input-fs);
 }
 
 .parametres-layout .parametres-settings-card .kp-select-trigger-label {
-    line-height: 1.35;
+    line-height: 1.2;
+    font-size: var(--tx-input-fs);
     overflow: visible;
     text-overflow: clip;
 }
@@ -3132,27 +3191,32 @@ body.app-tab-notes header {
 .parametres-layout .parametres-settings-card .kp-select-trigger,
 .parametres-layout .clients-settings-card .form-group input,
 .parametres-layout .clients-settings-card .form-group select,
-.parametres-layout .clients-settings-card .form-group textarea,
 .parametres-layout .clients-settings-card .kp-select-trigger {
     width: 100%;
     max-width: 100%;
     padding: 0 16px;
-    min-height: 48px;
-    height: 48px;
-    font-size: 1em;
+    min-height: var(--tx-input-h);
+    height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
+    font-size: var(--tx-input-fs);
     border-radius: 10px;
     box-sizing: border-box;
 }
 
-.parametres-layout .company-profile-banner .form-group textarea,
-.parametres-layout .clients-settings-card .form-group textarea {
+.parametres-layout .company-profile-banner .form-group textarea {
     height: auto;
+    max-height: none;
     min-height: 72px;
     padding: 14px 16px;
+    font-size: var(--tx-input-fs);
 }
 
 .parametres-layout .clients-settings-card .form-group textarea {
-    min-height: 72px;
+    height: auto;
+    max-height: 260px;
+    min-height: 140px;
+    padding: 14px 16px;
+    font-size: var(--tx-input-fs);
     resize: vertical;
 }
 
@@ -3164,11 +3228,12 @@ body.app-tab-notes header {
 
 .parametres-layout .clients-settings-card .client-add-form .form-group input,
 .parametres-layout .clients-settings-card .client-add-form .kp-select-trigger {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
 }
 
 .parametres-layout .clients-settings-card .client-add-form .kp-select-trigger {
@@ -3357,12 +3422,14 @@ body.app-tab-notes header {
 
 /* Page Transactions */
 .transactions-layout {
-    --tx-btn-h: 48px;
-    --tx-btn-py: 12px;
-    --tx-btn-px: 20px;
-    --tx-btn-fs: 1rem;
+    --tx-btn-h: 44px;
+    --tx-btn-py: 10px;
+    --tx-btn-px: 18px;
+    --tx-btn-fs: 0.95rem;
     --tx-btn-fw: 600;
     --tx-btn-radius: 8px;
+    --tx-input-h: 44px;
+    --tx-input-fs: 0.95rem;
     display: flex;
     flex-direction: column;
     gap: var(--app-layout-gutter);
@@ -3489,6 +3556,20 @@ body.app-tab-notes header {
     margin-bottom: 0;
 }
 
+/* Alignement Description Entrant / Sortant : même hauteur avant le champ */
+.transactions-layout .expense-contact-spacer-field {
+    height: var(--tx-input-h, 44px);
+    min-height: var(--tx-input-h, 44px);
+}
+
+.transactions-layout .expense-contact-add-spacer {
+    visibility: hidden;
+    pointer-events: none;
+    min-height: 1.25em;
+    margin-bottom: 28px;
+    user-select: none;
+}
+
 .transactions-layout .income-row-label {
     display: block;
     margin: 0;
@@ -3572,11 +3653,11 @@ body.app-tab-notes header {
 
 .category-lines-editor.is-simple .category-line-row .kp-select-trigger,
 .category-lines-editor.is-simple .category-line-row select {
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    height: var(--tx-input-h, 44px) !important;
+    min-height: var(--tx-input-h, 44px) !important;
+    max-height: var(--tx-input-h, 44px) !important;
     padding: 0 16px !important;
-    font-size: 1em;
+    font-size: var(--tx-input-fs, 0.95rem);
 }
 
 .category-line-row .form-group {
@@ -3587,26 +3668,26 @@ body.app-tab-notes header {
 .category-line-row .kp-select-trigger,
 .category-line-row select,
 .category-line-row input[type="number"] {
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    height: var(--tx-input-h, 44px) !important;
+    min-height: var(--tx-input-h, 44px) !important;
+    max-height: var(--tx-input-h, 44px) !important;
     padding: 0 16px !important;
-    font-size: 1em;
+    font-size: var(--tx-input-fs, 0.95rem);
     box-sizing: border-box;
 }
 
 .category-line-row .client-other-input {
     margin-top: 6px;
-    height: 48px;
-    min-height: 48px;
+    height: var(--tx-input-h, 44px);
+    min-height: var(--tx-input-h, 44px);
     padding: 0 16px;
-    font-size: 1em;
+    font-size: var(--tx-input-fs, 0.95rem);
     box-sizing: border-box;
 }
 
 .category-line-remove {
     width: 36px;
-    height: 48px;
+    height: var(--tx-input-h, 44px);
     border: none;
     border-radius: 8px;
     background: transparent;
@@ -3679,28 +3760,51 @@ body.app-tab-notes header {
 .transactions-layout .action-card .form-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.note-reminder-spin-value),
 .transactions-layout .action-card .form-group select,
 .transactions-layout .action-card .kp-select-trigger {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
     border-radius: var(--tx-btn-radius);
     box-sizing: border-box;
+}
+
+.transactions-layout .action-card .form-group textarea {
+    font-size: var(--tx-input-fs);
+}
+
+.transactions-layout .action-card .payment-type-group .radio-label {
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
+    padding: 0 14px;
+    box-sizing: border-box;
+    font-size: var(--tx-input-fs);
+    border-radius: var(--tx-btn-radius);
+}
+
+.transactions-layout .action-card .payment-type-group .radio-label input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
 }
 
 .transactions-layout .action-card .note-reminder-trigger,
 .transactions-layout .action-card .note-reminder-clear {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
     border-radius: var(--tx-btn-radius);
     box-sizing: border-box;
 }
 
 .transactions-layout .action-card .note-reminder-clear {
-    width: 48px;
+    width: var(--tx-input-h);
     padding: 0;
 }
 
@@ -3710,17 +3814,18 @@ body.app-tab-notes header {
 
 .transactions-layout .date-filters .note-reminder-trigger,
 .transactions-layout .date-filters .note-reminder-clear {
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 16px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
     border-radius: var(--tx-btn-radius);
     box-sizing: border-box;
 }
 
 .transactions-layout .date-filters .note-reminder-clear {
-    width: 48px;
+    width: var(--tx-input-h);
     padding: 0;
 }
 
@@ -3832,14 +3937,27 @@ body.app-tab-notes header {
 
 .transactions-layout .search-input,
 .transactions-layout .date-input {
-    height: 48px;
-    min-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
     border-radius: var(--tx-btn-radius);
     box-sizing: border-box;
+    font-size: var(--tx-input-fs);
+}
+
+.transactions-layout .search-input::placeholder {
+    font-size: 0.9rem;
+    opacity: 0.85;
 }
 
 .transactions-layout .search-input-wrapper {
-    min-height: 48px;
+    min-height: var(--tx-input-h);
+}
+
+.transactions-layout .history-filters-grid .note-reminder-trigger,
+.transactions-layout .history-filters-grid .kp-select-trigger {
+    font-size: var(--tx-input-fs);
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
 }
 
 .transactions-layout .date-filters {
@@ -3880,11 +3998,12 @@ body.app-tab-notes header {
 .transactions-layout .history-clear-wrap .clear-filters-btn {
     width: auto;
     white-space: nowrap;
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h);
+    min-height: var(--tx-input-h);
+    max-height: var(--tx-input-h);
     padding: 0 14px;
     line-height: 1.2;
+    font-size: var(--tx-input-fs);
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -3928,13 +4047,13 @@ body.app-tab-notes header {
 
 .transactions-layout .history-filter-select,
 .transactions-layout .history-entity-filter .kp-select {
-    min-height: 48px;
-    height: 48px;
+    min-height: var(--tx-input-h);
+    height: var(--tx-input-h);
 }
 
 .transactions-layout .history-entity-filter .kp-select-trigger {
-    min-height: 48px;
-    height: 48px;
+    min-height: var(--tx-input-h);
+    height: var(--tx-input-h);
 }
 
 /* Pas de bouton X dans les filtres de l'historique */
@@ -3982,16 +4101,60 @@ body.app-tab-notes header {
     border-radius: 12px;
 }
 
+.transactions-layout .action-card .form-group label,
+.transactions-layout .income-row-label,
+.transactions-layout .income-category-label.category-lines-head label {
+    font-size: 0.9rem;
+}
+
 .transactions-layout .transactions-list {
     margin-top: 4px;
+    font-size: 0.9rem;
 }
 
 .transactions-layout .transaction-item {
-    padding: 16px 18px;
-    margin-bottom: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
     border-radius: 12px;
     background: #faf9fc;
     border: 1px solid #ebe6f2;
+}
+
+.transactions-layout .transaction-description {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.transactions-layout .transaction-amount {
+    font-size: 1.35em;
+    margin-right: 14px;
+}
+
+.transactions-layout .transaction-date {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.transactions-layout .transaction-client,
+.transactions-layout .transaction-category {
+    font-size: 0.8rem;
+    padding: 3px 9px 3px 8px;
+    line-height: 1.35;
+}
+
+.transactions-layout .transaction-client-label {
+    font-size: inherit;
+    letter-spacing: 0.04em;
+}
+
+.transactions-layout .transaction-category-pill,
+.transactions-layout .transaction-category-more {
+    font-size: inherit;
+}
+
+.transactions-layout .transaction-author {
+    font-size: 0.75rem !important;
 }
 
 .transactions-layout .pagination {
@@ -4031,7 +4194,7 @@ body.app-tab-notes header {
 }
 
 .clients-settings-card .form-group textarea {
-    min-height: 72px;
+    min-height: 140px;
     resize: vertical;
 }
 
@@ -5336,6 +5499,307 @@ body.app-tab-notes header {
     margin-bottom: 30px;
 }
 
+/* Accueil : tout un cran plus grand */
+#section-statistiques {
+    --accueil-input-h: 50px;
+    font-size: 1.12rem;
+}
+
+#section-statistiques .dashboard {
+    gap: 22px;
+    margin-bottom: 38px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+#section-statistiques .stat-card {
+    padding: 34px 28px;
+}
+
+#section-statistiques .stat-info h3 {
+    font-size: 0.95em;
+    margin-bottom: 14px;
+    letter-spacing: 0.7px;
+}
+
+#section-statistiques .stat-value {
+    font-size: 2.15em;
+}
+
+#section-statistiques .stat-hint {
+    margin-top: 14px;
+    font-size: 0.95em;
+}
+
+#section-statistiques .stats-benefits {
+    gap: 30px;
+    margin-top: 30px;
+}
+
+#section-statistiques .benefit-card {
+    padding: 32px;
+}
+
+#section-statistiques .benefit-card h3 {
+    font-size: 1.22em;
+    margin-bottom: 20px;
+    gap: 12px;
+}
+
+#section-statistiques .benefit-period-hint {
+    font-size: 0.92em;
+}
+
+#section-statistiques .stats-filter-header {
+    margin-bottom: 22px;
+    gap: 18px;
+}
+
+#section-statistiques .stats-filter-mode {
+    padding: 5px;
+}
+
+#section-statistiques .stats-filter-mode-btn {
+    font-size: 0.9em;
+    padding: 10px 18px;
+}
+
+#section-statistiques .period-preset-btn {
+    padding: 10px 16px;
+    font-size: 0.9em;
+}
+
+#section-statistiques .stats-period-presets {
+    gap: 10px;
+    margin: 8px 0 16px;
+}
+
+#section-statistiques .clear-benefit-btn {
+    height: var(--accueil-input-h);
+    padding: 10px 20px;
+    font-size: 0.98em;
+}
+
+#section-statistiques .benefit-controls .date-input,
+#section-statistiques .benefit-card .date-input {
+    height: var(--accueil-input-h);
+    min-height: var(--accueil-input-h);
+    font-size: 1.02em;
+    padding: 0 14px;
+}
+
+#section-statistiques .benefit-controls label,
+#section-statistiques .benefit-input-wrap label {
+    font-size: 0.98em;
+}
+
+#section-statistiques .benefit-value {
+    font-size: 1.95em;
+}
+
+#section-statistiques .benefit-card.benefit-main .benefit-value {
+    font-size: 2.15em;
+}
+
+#section-statistiques .benefit-margin-pill {
+    font-size: 0.98em;
+    padding: 7px 14px;
+}
+
+#section-statistiques .benefit-insight-label {
+    font-size: 0.92em;
+}
+
+#section-statistiques .benefit-insight-value {
+    font-size: 1.1em;
+}
+
+#section-statistiques .charts-filter-period-label {
+    font-size: 1.05em;
+}
+
+#section-statistiques .charts-section {
+    margin-top: 40px;
+    gap: 30px;
+}
+
+#section-statistiques .chart-card {
+    padding: 32px;
+}
+
+#section-statistiques .chart-title {
+    font-size: 1.22em;
+}
+
+#section-statistiques .chart-subtitle {
+    font-size: 0.92em;
+    margin-bottom: 16px;
+}
+
+#section-statistiques .chart-container {
+    height: 320px;
+}
+
+/* Tablette : même taille qu’en grand écran (évite les cartes trop étroites) */
+@media (min-width: 769px) and (max-width: 1280px) {
+    #section-statistiques {
+        --accueil-input-h: 50px;
+        font-size: 1.12rem;
+    }
+
+    #section-statistiques .dashboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+        margin-bottom: 38px;
+    }
+
+    #section-statistiques .stat-card {
+        padding: 34px 28px;
+    }
+
+    #section-statistiques .stat-info h3 {
+        font-size: 0.95em;
+        margin-bottom: 14px;
+    }
+
+    #section-statistiques .stat-value {
+        font-size: 2.15em;
+    }
+
+    #section-statistiques .stat-hint {
+        margin-top: 14px;
+        font-size: 0.95em;
+    }
+
+    #section-statistiques .stats-benefits {
+        grid-template-columns: 1fr;
+        gap: 28px;
+        margin-top: 30px;
+    }
+
+    #section-statistiques .benefit-card {
+        padding: 32px;
+    }
+
+    #section-statistiques .benefit-card h3 {
+        font-size: 1.22em;
+    }
+
+    #section-statistiques .benefit-value,
+    #section-statistiques .benefit-card.benefit-main .benefit-value {
+        font-size: 2.15em;
+    }
+
+    #section-statistiques .period-preset-btn {
+        padding: 10px 16px;
+        font-size: 0.9em;
+    }
+
+    #section-statistiques .stats-filter-mode-btn {
+        font-size: 0.9em;
+        padding: 10px 18px;
+    }
+
+    #section-statistiques .chart-card {
+        padding: 32px;
+    }
+
+    #section-statistiques .chart-title {
+        font-size: 1.22em;
+    }
+
+    #section-statistiques .chart-container {
+        height: 320px;
+    }
+}
+
+/* Tablette portrait / mobile large : garder l’échelle agrandie */
+@media (max-width: 768px) {
+    #section-statistiques {
+        --accueil-input-h: 48px;
+        font-size: 1.1rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: clip;
+    }
+
+    #section-statistiques .dashboard {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 28px;
+        width: 100%;
+        min-width: 0;
+    }
+
+    #section-statistiques .stats-benefits {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        margin-top: 20px;
+        width: 100%;
+        min-width: 0;
+    }
+
+    #section-statistiques .stat-card,
+    #section-statistiques .benefit-card,
+    #section-statistiques .chart-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 28px 22px;
+    }
+
+    #section-statistiques .benefit-card,
+    #section-statistiques .chart-card {
+        padding: 26px;
+    }
+
+    #section-statistiques .stat-value,
+    #section-statistiques .benefit-card.benefit-main .benefit-value {
+        font-size: 2.05em;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    #section-statistiques .stat-info h3,
+    #section-statistiques .stat-hint {
+        font-size: 0.95em;
+    }
+
+    #section-statistiques .benefit-card h3 {
+        font-size: 1.18em;
+    }
+
+    #section-statistiques .charts-section {
+        width: 100%;
+        min-width: 0;
+        gap: 20px;
+        margin-top: 28px;
+    }
+
+    #section-statistiques .chart-container {
+        height: 280px;
+        max-width: 100%;
+    }
+
+    #section-statistiques .stats-period-presets {
+        width: 100%;
+    }
+
+    #section-statistiques .benefit-controls.benefit-controls-row {
+        width: 100%;
+    }
+
+    #section-statistiques .stats-filter-day-row .benefit-input-wrap {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    #section-statistiques .clear-benefit-btn {
+        flex: 0 0 auto;
+    }
+}
+
 .stat-card {
     background: var(--kp-color-surface-solid);
     border-radius: var(--kp-radius-card);
@@ -5965,12 +6429,12 @@ body.app-tab-notes header {
     min-width: 0;
     width: 100%;
     max-width: 100%;
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    height: var(--tx-input-h, 44px);
+    min-height: var(--tx-input-h, 44px);
+    max-height: var(--tx-input-h, 44px);
     margin: 0;
     padding: 0 16px;
-    font-size: 1em;
+    font-size: var(--tx-input-fs, 0.95rem);
     border-radius: 10px;
     box-sizing: border-box;
 }
@@ -6226,6 +6690,7 @@ body.app-tab-notes header {
     margin-top: 8px;
 }
 
+.form-group .radio-label,
 .radio-label {
     display: flex;
     align-items: center;
@@ -6238,6 +6703,8 @@ body.app-tab-notes header {
     border-radius: 8px;
     transition: all 0.3s ease;
     flex: 1;
+    margin-bottom: 0;
+    line-height: 1.2;
 }
 
 .radio-label:hover {
@@ -6257,10 +6724,22 @@ body.app-tab-notes header {
     box-shadow: none;
     background: transparent;
     flex-shrink: 0;
+    align-self: center;
     cursor: pointer;
     accent-color: #43277d;
     appearance: auto;
-    -webkit-appearance: auto;
+    -webkit-appearance: radio;
+    vertical-align: middle;
+    position: relative;
+    top: 0;
+}
+
+.radio-label > span {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
+    margin: 0;
+    padding: 0;
 }
 
 .radio-label input[type="radio"]:hover,
@@ -6714,10 +7193,10 @@ body.app-tab-notes header {
 .transaction-client,
 .transaction-category {
     display: inline-block;
-    padding: 4px 10px 4px 8px;
-    font-size: 0.84em;
+    padding: 3px 9px 3px 8px;
+    font-size: 0.8rem;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.35;
     color: #43277d;
     background: rgba(67, 39, 125, 0.08);
     border-radius: 999px;
@@ -7009,7 +7488,7 @@ body.app-tab-notes header {
 
 .invoice-theme-layout {
     display: grid;
-    grid-template-columns: minmax(460px, 0.92fr) minmax(340px, 1.08fr);
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     gap: 0;
     flex: 1 1 auto;
     min-height: 0;
@@ -7021,7 +7500,7 @@ body.app-tab-notes header {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 14px 12px 6px 16px;
+    padding: 14px 14px 10px;
     background: #fff;
     align-items: stretch;
 }
@@ -7032,7 +7511,7 @@ body.app-tab-notes header {
     min-height: 0;
     max-height: calc(97vh - 200px);
     overflow: hidden;
-    padding: 14px 16px 18px;
+    padding: 16px;
     background: #fafafa;
     border: 1px solid #e8e2f0;
     border-radius: 14px;
@@ -7040,13 +7519,19 @@ body.app-tab-notes header {
     -ms-overflow-style: none;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
+    box-sizing: border-box;
 }
 
 .invoice-theme-preview-host .invoice-paper-scale-wrap {
     overflow: visible;
     margin: 0 auto;
     flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    box-sizing: border-box;
+    padding-bottom: 2px;
 }
 
 .invoice-theme-preview-host::-webkit-scrollbar {
@@ -7063,6 +7548,7 @@ body.app-tab-notes header {
     max-width: 420px;
     min-width: 420px;
     min-height: 580px;
+    height: auto;
     box-sizing: border-box;
     font-size: 14px;
     line-height: 1.4;
@@ -7072,6 +7558,15 @@ body.app-tab-notes header {
         0 0 0 1px rgba(67, 39, 125, 0.04);
     border-radius: 12px;
     overflow: hidden;
+}
+
+.invoice-theme-preview-host .invoice-paper.invoice-layout--classique,
+.invoice-theme-preview-host .invoice-paper.invoice-layout--editorial,
+.invoice-theme-preview-host .invoice-paper.invoice-layout--signature {
+    width: 420px;
+    max-width: 420px;
+    min-width: 420px;
+    min-height: 580px;
 }
 
 .invoice-theme-controls-col {
@@ -7803,36 +8298,51 @@ body.app-tab-notes header {
     box-shadow: 0 6px 18px rgba(5, 150, 105, 0.32);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
     .invoice-theme-layout {
         grid-template-columns: 1fr;
-        overflow: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-    }
-
-    .invoice-theme-layout::-webkit-scrollbar {
-        display: none;
-        width: 0;
-        height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .invoice-theme-preview-col {
         border-bottom: 1px solid var(--kp-color-border);
-        padding: 8px 16px 12px;
-    }
-
-    .invoice-theme-controls-col {
-        overflow: hidden;
-        padding: 24px 16px 12px;
+        padding: 12px 16px;
+        flex: 0 0 auto;
+        min-height: min(58vh, 520px);
     }
 
     .invoice-theme-preview-host {
-        padding: 12px 16px 16px;
+        min-height: min(52vh, 480px);
+        max-height: min(58vh, 520px);
+        padding: 12px;
+        align-items: center;
+    }
+
+    .invoice-theme-controls-col {
+        overflow: visible;
+        padding: 20px 16px 12px;
+    }
+
+    .invoice-theme-layout-row {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .invoice-theme-preset-row {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    }
+
+    .invoice-theme-color-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .invoice-theme-color-grid .invoice-theme-field:nth-child(2n) {
+        justify-content: flex-start;
     }
 
     .invoice-theme-actions {
         padding: 6px 16px 26px;
+        flex-wrap: wrap;
     }
 
     .invoice-theme-actions .invoice-theme-btn {
@@ -7842,6 +8352,37 @@ body.app-tab-notes header {
 
     .invoice-theme-actions .invoice-theme-btn--primary {
         flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 900px) {
+    .modal-content.modal-content-invoice-theme {
+        width: 98%;
+        max-height: 98vh;
+    }
+
+    .invoice-theme-header {
+        padding: 14px 16px 10px;
+    }
+
+    .invoice-theme-header-sub {
+        max-width: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .invoice-theme-preview-col {
+        min-height: min(48vh, 420px);
+    }
+
+    .invoice-theme-preview-host {
+        min-height: min(42vh, 380px);
+        max-height: min(48vh, 420px);
+        padding: 10px;
+    }
+
+    .invoice-theme-logo-options {
+        flex-wrap: wrap;
     }
 }
 
@@ -7913,6 +8454,17 @@ body.app-tab-notes header {
 /* ——— Layout Classique (défaut) ——— */
 .invoice-layout--classique .invoice-header-meta {
     margin-top: 2px;
+}
+
+.invoice-layout--classique .invoice-company-block {
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.invoice-layout--classique .invoice-company-name {
+    text-align: center;
 }
 
 .invoice-layout--classique,
@@ -8117,13 +8669,13 @@ body.app-tab-notes header {
 }
 
 .invoice-layout--signature .invoice-logo-frame.has-logo-frame {
-    background: #fff;
+    background: var(--inv-logo-frame-bg, #fff);
     margin-left: 0;
     margin-right: 0;
 }
 
 .invoice-layout--signature .invoice-logo-frame.has-logo-outline {
-    border-color: rgba(255, 255, 255, 0.9);
+    border-color: var(--inv-logo-frame-border, #43277d);
     margin-left: 0;
     margin-right: 0;
 }
@@ -8378,7 +8930,7 @@ body.app-tab-notes header {
     display: inline-block;
     font-size: 0.64em;
     color: rgba(var(--inv-accent-rgb, 67, 39, 125), 0.72);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.04em;
     padding: 3px 10px;
     background: rgba(var(--inv-accent-rgb, 67, 39, 125), 0.08);
@@ -9102,6 +9654,18 @@ body.app-tab-notes header {
 
     .transactions-layout .income-client-category-row .income-category-label {
         margin-top: 12px;
+    }
+
+    .transactions-layout .expense-contact-row {
+        grid-template-areas:
+            "client-label"
+            "client-control";
+    }
+
+    .transactions-layout .expense-contact-row .income-category-label,
+    .transactions-layout .expense-contact-spacer,
+    .transactions-layout .expense-contact-add-spacer {
+        display: none;
     }
 
     .parametres-layout {

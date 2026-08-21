@@ -422,35 +422,40 @@
             wrap.appendChild(paper);
         }
 
+        /* Forme fixe 420×580 : on ne change jamais les dimensions CSS, seulement un scale uniforme. */
+        const PAPER_W = 420;
         paper.style.transform = '';
         paper.style.setProperty('--inv-fit-scale', '1');
-        wrap.style.height = '';
+        paper.style.width = PAPER_W + 'px';
+        paper.style.maxWidth = PAPER_W + 'px';
+        paper.style.minWidth = PAPER_W + 'px';
+        paper.style.minHeight = '580px';
         wrap.style.width = '';
+        wrap.style.height = '';
+        wrap.style.marginLeft = 'auto';
+        wrap.style.marginRight = 'auto';
 
         requestAnimationFrame(function () {
             const styles = window.getComputedStyle(container);
             const padY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
-            const available = container.clientHeight - padY - 6;
-            const needed = paper.offsetHeight;
-            const paperWidth = paper.offsetWidth;
-            if (!available || !needed) return;
+            const padX = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+            const availableH = container.clientHeight - padY - 4;
+            const availableW = container.clientWidth - padX - 4;
+            const neededH = Math.max(paper.offsetHeight, 580);
+            const neededW = PAPER_W;
+            if (!availableH || !neededH) return;
 
-            if (needed <= available) {
-                paper.style.transform = '';
-                paper.style.setProperty('--inv-fit-scale', '1');
-                wrap.style.height = (needed + 2) + 'px';
-                wrap.style.width = paperWidth ? paperWidth + 'px' : '';
-                return;
-            }
-
-            const scale = Math.min(1, available / needed);
-            const finalScale = Math.max(0.68, scale);
+            const scaleH = availableH / neededH;
+            const scaleW = availableW > 0 ? availableW / neededW : 1;
+            let finalScale = Math.min(1, scaleH, scaleW);
+            if (finalScale >= 0.98) finalScale = 0.94;
+            finalScale = Math.max(0.62, finalScale);
 
             paper.style.transform = 'scale(' + finalScale + ')';
             paper.style.transformOrigin = 'top center';
             paper.style.setProperty('--inv-fit-scale', String(finalScale));
-            wrap.style.width = paperWidth + 'px';
-            wrap.style.height = Math.ceil(needed * finalScale) + 4 + 'px';
+            wrap.style.width = Math.ceil(neededW * finalScale) + 'px';
+            wrap.style.height = Math.ceil(neededH * finalScale) + 2 + 'px';
         });
     }
 
@@ -932,6 +937,17 @@
                 refreshInvoiceThemePreview(false);
             });
         });
+
+        let themePreviewResizeTimer = null;
+        window.addEventListener('resize', function () {
+            const modal = document.getElementById('invoiceThemeModal');
+            if (!modal || modal.style.display !== 'flex') return;
+            clearTimeout(themePreviewResizeTimer);
+            themePreviewResizeTimer = setTimeout(function () {
+                const host = document.getElementById('invoiceThemePreviewHost');
+                if (host) scaleInvoicePaperToFit(host);
+            }, 120);
+        });
     }
 
     function patchOpenInvoiceModal() {
@@ -977,7 +993,7 @@
     const INVOICE_LAYOUT_PRINT_CSS =
         '.invoice-header{background:linear-gradient(180deg,var(--inv-gradient-start,#fde8f0) 0%,var(--inv-gradient-mid,#faf0f5) 50%,var(--inv-gradient-end,#f6f4fa) 100%) !important;border-bottom-color:var(--inv-accent,#43277d) !important;}' +
         '.invoice-title{color:var(--inv-accent,#43277d) !important;}' +
-        '.invoice-num{color:rgba(var(--inv-accent-rgb,67,39,125),0.72) !important;background:rgba(var(--inv-accent-rgb,67,39,125),0.08) !important;}' +
+        '.invoice-num{color:rgba(var(--inv-accent-rgb,67,39,125),0.72) !important;background:rgba(var(--inv-accent-rgb,67,39,125),0.08) !important;font-weight:700 !important;}' +
         '.invoice-company-name,.invoice-client-label,.invoice-qr-caption{color:var(--inv-accent,#43277d) !important;}' +
         '.invoice-client-row{border-left-color:var(--inv-accent,#43277d) !important;background:rgba(var(--inv-accent-rgb,67,39,125),0.06) !important;}' +
         '.invoice-amount{color:var(--inv-accent,#43277d) !important;}' +
@@ -986,6 +1002,8 @@
         '.invoice-parties{display:block;}' +
         '.invoice-layout--classique .invoice-header{text-align:center;}' +
         '.invoice-layout--classique .invoice-header-meta{margin-top:2px;}' +
+        '.invoice-layout--classique .invoice-company-block{background:#fafafa !important;border:1px solid #eee !important;border-radius:8px;text-align:center;}' +
+        '.invoice-layout--classique .invoice-company-name{text-align:center;}' +
         '.invoice-layout--editorial .invoice-header{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:18px;margin:-20px -28px 14px;padding:18px 28px 16px;text-align:left;border-bottom:none;border-radius:12px 12px 0 0;background:linear-gradient(180deg,var(--inv-gradient-start,#f8fafc) 0%,#fff 100%) !important;box-shadow:inset 0 -2px 0 var(--inv-accent,#43277d);}' +
         '.invoice-layout--editorial .invoice-header-brand{flex:0 0 auto;}' +
         '.invoice-layout--editorial .invoice-logo-frame{justify-content:flex-start;margin:0;min-height:64px;}' +
@@ -1006,8 +1024,8 @@
         '.invoice-layout--signature .invoice-header-brand{flex:0 0 auto;}' +
         '.invoice-layout--signature .invoice-logo-frame{justify-content:flex-start;margin:0;min-height:64px;}' +
         '.invoice-layout--signature .invoice-logo-frame:not(.has-logo-frame):not(.has-logo-outline){padding:0;background:transparent;}' +
-        '.invoice-layout--signature .invoice-logo-frame.has-logo-frame{background:#fff;margin-left:0;margin-right:0;}' +
-        '.invoice-layout--signature .invoice-logo-frame.has-logo-outline{border-color:rgba(255,255,255,0.9);margin-left:0;margin-right:0;}' +
+        '.invoice-layout--signature .invoice-logo-frame.has-logo-frame{background:var(--inv-logo-frame-bg,#fff);margin-left:0;margin-right:0;}' +
+        '.invoice-layout--signature .invoice-logo-frame.has-logo-outline{border-color:var(--inv-logo-frame-border,#43277d);margin-left:0;margin-right:0;}' +
         '.invoice-layout--signature .invoice-header-meta{flex:1 1 auto;text-align:right;}' +
         '.invoice-layout--signature .invoice-title{color:#fff !important;margin:0 0 8px;letter-spacing:0.22em;font-size:1.18em;font-weight:800;text-shadow:none;}' +
         '.invoice-layout--signature .invoice-num{background:rgba(255,255,255,0.18) !important;color:#fff !important;border-radius:999px;padding:5px 12px;font-size:0.66em;}' +
